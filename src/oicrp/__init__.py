@@ -1,0 +1,351 @@
+import hashlib
+import json
+import logging
+import sys
+import traceback
+
+import cherrypy
+from jwkest import as_bytes
+from oiccli import oic
+from oiccli import rndstr
+from oiccli.oic import requests
+
+from oicmsg.oauth2 import ErrorResponse
+from oiccli.client_auth import CLIENT_AUTHN_METHOD
+from oiccli.http import HTTPLib
+from oiccli.webfinger import WebFinger
+
+__author__ = 'Roland Hedberg'
+__version__ = '0.0.1'
+
+logger = logging.getLogger(__name__)
+
+
+class HandlerError(Exception):
+    pass
+
+
+class ConfigurationError(Exception):
+    pass
+
+
+def token_secret_key(sid):
+    return "token_secret_%s" % sid
+
+
+SERVICE_NAME = "OIC"
+CLIENT_CONFIG = {}
+
+
+class RPHandler(object):
+    def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=False,
+                 services=None, service_factory=None, client_configs=None,
+                 client_authn_method=CLIENT_AUTHN_METHOD, **kwargs):
+        self.base_url = base_url
+        self.hash_seed = as_bytes(hash_seed)
+        self.verify_ssl = verify_ssl
+        self.keyjar = keyjar
+
+        self.extra = kwargs
+
+        self.client_cls = oic.Client
+        self.services = services
+        self.service_factory = service_factory or requests.factory
+        self.client_authn_method = client_authn_method
+        self.client_configs = client_configs
+
+        # keep track on which RP instance that serves with OP
+        self.issuer2rp = {}
+        self.hash2issuer = {}
+
+    def state2issuer(self, state):
+        for iss, rp in self.issuer2rp.items():
+            if state in rp.client_info.state_db:
+                return iss
+
+    def pick_config(self, issuer):
+        try:
+            return self.client_configs[issuer]
+        except KeyError:
+            return self.client_configs['']
+
+    def load_provider_info(self, client, issuer):
+        """
+        If the provider info is statically provided not much has to be done.
+        If it's expected to be gotten dynamically Provider Info discovery has
+        to be performed.
+
+        :param client: A :py:class:`oiccli.oic.Client` instance
+        """
+        try:
+            _provider_info = client.client_info.config['provider_info']
+        except KeyError:
+            try:
+                _srv = client.service['provider_info']
+            except KeyError:
+                raise ConfigurationError(
+                    'Can not do dynamic provider info discovery')
+            else:
+                try:
+                    _iss = client.client_info.config['srv_discovery_url']
+                except KeyError:
+                    _iss = issuer
+
+                client.client_info.issuer = _iss
+                _info = _srv.request_info(cli_info=client.client_info)
+                _srv.service_request(url=_info['uri'],
+                                     client_info=client.client_info)
+        else:
+            client.client_info.provider_info = _provider_info
+
+    def load_registration_response(self, client):
+        """
+        If the client has been statically registered that information
+        must be provided during the configuration. If expected to be
+        done dynamically. This method will do dynamic client registration.
+
+        :param client: A :py:class:òiccli.oic.Client` instance
+        """
+        try:
+            _client_reg = client.client_info.config['registration_response']
+        except KeyError:
+            try:
+                return client.do_request('registration')
+            except KeyError:
+                raise ConfigurationError('No registration info')
+            except Exception as err:
+                logger.error(err)
+                raise
+        else:
+            client.client_info.registration_info = _client_reg
+
+    def setup(self, callback, logout_callback, issuer):
+        """
+        If no client exists for this issuer one is created and initiated with
+        the necessary information for them to be able to communicate.
+
+        :param callback: The URI to which the authorization response should be
+            sent by the OP.
+        :param logout_callback: Where the user should be redirected after
+            logout
+        :param issuer: The issuer ID
+        :return: A :py:class:`oiccli.oic.Client` instance
+        """
+        try:
+            client = self.issuer2rp[issuer]
+        except KeyError:
+            _cnf = self.pick_config(issuer)
+
+            client = self.client_cls(
+                client_authn_method=self.client_authn_method,
+                verify_ssl=self.verify_ssl, services=self.services,
+                service_factory=self.service_factory, keyjar=self.keyjar,
+                config=_cnf)
+
+            client.client_info.redirect_uris = [callback]
+            client.client_info.post_logout_redirect_uris = [logout_callback]
+            client.client_info.base_url = self.base_url
+
+            self.load_provider_info(client, issuer)
+            self.load_registration_response(client)
+
+            self.issuer2rp[issuer] = client
+
+        return client
+
+    def create_callback(self, issuer):
+        _hash = hashlib.sha256()
+        _hash.update(self.hash_seed)
+        _hash.update(as_bytes(issuer))
+        _hex = _hash.hexdigest()
+        self.hash2issuer[_hex] = issuer
+        return "{}/authz_cb/{}".format(self.base_url, _hex)
+
+    @staticmethod
+    def get_response_type(client, issuer):
+        return client.client_info.behaviour['response_types'][0]
+
+    @staticmethod
+    def get_client_authn_method(client, endpoint):
+        if endpoint == 'token_endpoint':
+            am = client.client_info.behaviour['token_endpoint_auth_method']
+            if isinstance(am, str):
+                return am
+            else:
+                return am[0]
+
+    # noinspection PyUnusedLocal
+    def begin(self, issuer):
+        """
+        First make sure we have a client and that the client has
+        the necessary information. Then construct and send an Authorization
+        request. The response to that request will be sent to the callback
+        URL.
+
+        :param issuer: Issuer ID
+        """
+
+        # Create the necessary callback URLs
+        callback = self.create_callback(issuer)
+        logout_callback = self.base_url
+        # Get the client instance that has been assigned to this issuer
+        client = self.setup(callback, logout_callback, issuer)
+
+        try:
+            _cinfo = client.client_info
+
+            _nonce = rndstr(24)
+            request_args = {
+                'redirect_uri': _cinfo.redirect_uris[0],
+                'scope': _cinfo.behaviour['scope'],
+                'response_type': _cinfo.behaviour['response_types'][0],
+                'nonce': _nonce
+            }
+            _state = client.client_info.state_db.create_state(issuer,
+                                                              request_args)
+            request_args['state'] = _state
+            client.client_info.state_db.bind_nonce_to_state(_nonce, _state)
+
+            _srv = client.service['authorization']
+            _info = _srv.do_request_init(client.client_info,
+                                         request_args=request_args)
+        except Exception as err:
+            message = traceback.format_exception(*sys.exc_info())
+            logger.error(message)
+            raise
+        else:
+            return _info['uri']
+
+    def get_accesstoken(self, client, authresp):
+        req_args = {
+            'code': authresp['code'], 'state': authresp['state'],
+            'redirect_uri': client.client_info.redirect_uris[0],
+            'grant_type': 'authorization_code',
+            'client_id': client.client_info.client_id,
+            'client_secret': client.client_info.client_secret
+        }
+        try:
+            tokenresp = client.do_request(
+                'accesstoken', request_args=req_args,
+                authn_method=self.get_client_authn_method(client,
+                                                          "token_endpoint"),
+                state=authresp['state']
+            )
+        except Exception as err:
+            logger.error("%s", err)
+            raise
+
+        return tokenresp
+
+    # # noinspection PyUnusedLocal
+    # def verify_token(self, client, access_token):
+    #     return {}
+
+    def get_userinfo(self, client, authresp, access_token, **kwargs):
+        # use the access token to get some userinfo
+        request_args = {'access_token': access_token}
+        return client.do_request('userinfo', state=authresp["state"],
+                                 request_args=request_args, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def phaseN(self, issuer, response):
+        """Step 2: Once the consumer has redirected the user back to the
+        callback URL you can request the access token the user has
+        approved.
+
+        :param issuer: Who sent the response
+        :param response: The response in what ever format it was received
+        """
+
+        client = self.issuer2rp[issuer]
+
+        _srv = client.service['authorization']
+        authresp = _srv.parse_response(response, client.client_info,
+                                       sformat='dict')
+
+        if isinstance(authresp, ErrorResponse):
+            return False, authresp
+
+        if client.client_info.state_db[authresp['state']]['as'] != issuer:
+            # got it from the wrong bloke
+            return False, 'Impersonator'
+
+        client.client_info.state_db.add_message_info(authresp)
+
+        if self.get_response_type(client, issuer) == "code":
+            # get the access token
+            token_resp = self.get_accesstoken(client, authresp)
+            if isinstance(token_resp, ErrorResponse):
+                return False, "Invalid response %s." % token_resp["error"]
+
+            client.client_info.state_db.add_message_info(token_resp)
+            access_token = token_resp["access_token"]
+        else:
+            access_token = authresp["access_token"]
+
+        if 'userinfo' in client.service:
+
+            inforesp = self.get_userinfo(client, authresp, access_token)
+
+            if isinstance(inforesp, ErrorResponse):
+                return False, "Invalid response %s." % inforesp["error"]
+
+        else:  # look for it in the ID Token
+            inforesp = {}
+
+        logger.debug("UserInfo: %s", inforesp)
+
+        return True, inforesp, access_token, client
+
+    # noinspection PyUnusedLocal
+    def callback(self, query, hash):
+        """
+        This is where we come back after the OP has done the
+        Authorization Request.
+
+        :param query:
+        :return:
+        """
+
+        try:
+            assert self.state2issuer(query['state']) == self.hash2issuer[hash]
+        except AssertionError:
+            raise HandlerError('Got back state to wrong callback URL')
+        except KeyError:
+            raise HandlerError('Unknown state or callback URL')
+
+        del self.hash2issuer[hash]
+
+        try:
+            client = self.issuer2rp[self.state2issuer(query['state'])]
+        except KeyError:
+            raise HandlerError('Unknown session')
+
+        try:
+            result = self.phaseN(client, query)
+            logger.debug("phaseN response: {}".format(result))
+        except Exception:
+            message = traceback.format_exception(*sys.exc_info())
+            logger.error(message)
+            raise HandlerError("An unknown exception has occurred.")
+
+        return result
+
+    def find_srv_discovery_url(self, resource):
+        """
+        Use Webfinger to find the OP, The input is a unique identifier
+        of the user. Allowed forms are the acct, mail, http and https
+        urls. If no protocol specification is given like if only an
+        email like identifier is given. It will be translated if possible to
+        one of the allowed formats.
+
+        :param resource: unique identifier of the user.
+        :return:
+        """
+
+        try:
+            wf = WebFinger(httpd=HTTPLib(ca_certs=self.extra["ca_bundle"]))
+        except KeyError:
+            wf = WebFinger(httpd=HTTPLib(verify_ssl=False))
+
+        return wf.discovery_query(resource)

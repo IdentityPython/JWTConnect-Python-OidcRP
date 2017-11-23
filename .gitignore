@@ -1,0 +1,139 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# IPython Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# dotenv
+.env
+
+# virtualenv
+venv/
+ENV/
+
+# Spyder project settings
+.spyderproject
+
+# Rope project settings
+.ropeproject
+/.project
+/.pydevproject
+.isort.cfg
+.isort.cfg~
+draft/eval.py
+draft/idfed.xml
+draft/modifications
+draft/out
+draft/parse_ms.py
+draft/pyoidc
+draft/pyoidc.pub
+draft/seq.out
+draft/sequence.py
+draft/sequence_0.1.py
+fed_op/client_db.db
+fed_op/cp_error
+fed_op/jwks/
+fed_op/keys/
+fed_op/modules/
+fed_op/static/jwks.json
+fed_operator/certs/
+fed_operator/jwks/
+fed_operator/keys/
+fed_operator/statement.json
+fed_rp/certs/
+fed_rp/keys/
+fed_rp/static/
+tests/data/
+tests/test_weed.py
+.idea/
+doc/_build/
+doc/_static/
+doc/conf.py~
+fed_conf/
+fo_jwks/
+mds/
+ms_dir/
+scripts/iss.jwks
+scripts/request.json
+test_dir/
+tests/mds_10/
+tests/mds_6/
+tests/mds_dir_6/
+tests/ms_dir_10/
+tests/ms_dir_6/
+tests/ms_path/
+tests/ms_path_6/
+tests/pyoidc
+tests/pyoidc.pub
+tests/xtest_usage.py
