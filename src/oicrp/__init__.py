@@ -1,19 +1,18 @@
 import hashlib
-import json
 import logging
 import sys
 import traceback
 
-import cherrypy
 from jwkest import as_bytes
+
 from oiccli import oic
 from oiccli import rndstr
 from oiccli.oic import requests
-
-from oicmsg.oauth2 import ErrorResponse
 from oiccli.client_auth import CLIENT_AUTHN_METHOD
 from oiccli.http import HTTPLib
 from oiccli.webfinger import WebFinger
+
+from oicmsg.oauth2 import ErrorResponse
 
 __author__ = 'Roland Hedberg'
 __version__ = '0.0.1'
@@ -40,7 +39,8 @@ CLIENT_CONFIG = {}
 class RPHandler(object):
     def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=False,
                  services=None, service_factory=None, client_configs=None,
-                 client_authn_method=CLIENT_AUTHN_METHOD, **kwargs):
+                 client_authn_method=CLIENT_AUTHN_METHOD, client_cls=None,
+                 **kwargs):
         self.base_url = base_url
         self.hash_seed = as_bytes(hash_seed)
         self.verify_ssl = verify_ssl
@@ -48,7 +48,7 @@ class RPHandler(object):
 
         self.extra = kwargs
 
-        self.client_cls = oic.Client
+        self.client_cls = client_cls or oic.Client
         self.services = services
         self.service_factory = service_factory or requests.factory
         self.client_authn_method = client_authn_method
@@ -93,8 +93,8 @@ class RPHandler(object):
 
                 client.client_info.issuer = _iss
                 _info = _srv.request_info(cli_info=client.client_info)
-                _srv.service_request(url=_info['uri'],
-                                     client_info=client.client_info)
+                _srv.request_and_return(url=_info['uri'],
+                                        client_info=client.client_info)
         else:
             client.client_info.provider_info = _provider_info
 
@@ -119,13 +119,13 @@ class RPHandler(object):
         else:
             client.client_info.registration_info = _client_reg
 
-    def setup(self, callback, logout_callback, issuer):
+    def setup(self, callbacks, logout_callback, issuer):
         """
         If no client exists for this issuer one is created and initiated with
         the necessary information for them to be able to communicate.
 
-        :param callback: The URI to which the authorization response should be
-            sent by the OP.
+        :param callbacks: A dictionary of redirect_uris to which the
+            authorization response should be sent by the OP.
         :param logout_callback: Where the user should be redirected after
             logout
         :param issuer: The issuer ID
@@ -142,9 +142,10 @@ class RPHandler(object):
                 service_factory=self.service_factory, keyjar=self.keyjar,
                 config=_cnf)
 
-            client.client_info.redirect_uris = [callback]
+            client.client_info.redirect_uris = list(callbacks.values())
             client.client_info.post_logout_redirect_uris = [logout_callback]
             client.client_info.base_url = self.base_url
+            client.client_info.callbacks = callbacks
 
             self.load_provider_info(client, issuer)
             self.load_registration_response(client)
@@ -153,13 +154,14 @@ class RPHandler(object):
 
         return client
 
-    def create_callback(self, issuer):
+    def create_callbacks(self, issuer):
         _hash = hashlib.sha256()
         _hash.update(self.hash_seed)
         _hash.update(as_bytes(issuer))
         _hex = _hash.hexdigest()
         self.hash2issuer[_hex] = issuer
-        return "{}/authz_cb/{}".format(self.base_url, _hex)
+        return {'code': "{}/authz_cb/{}".format(self.base_url, _hex),
+                'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex)}
 
     @staticmethod
     def get_response_type(client, issuer):
@@ -186,10 +188,10 @@ class RPHandler(object):
         """
 
         # Create the necessary callback URLs
-        callback = self.create_callback(issuer)
+        callbacks = self.create_callbacks(issuer)
         logout_callback = self.base_url
         # Get the client instance that has been assigned to this issuer
-        client = self.setup(callback, logout_callback, issuer)
+        client = self.setup(callbacks, logout_callback, issuer)
 
         try:
             _cinfo = client.client_info
