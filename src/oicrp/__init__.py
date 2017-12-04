@@ -153,6 +153,7 @@ class RPHandler(object):
 
             if not client.client_info.provider_info:
                 self.load_provider_info(client, issuer)
+                issuer = client.client_info.provider_info['iss']
             else:
                 _pi = client.client_info.provider_info
                 for endp in ['authorization_endpoint', 'token_endpoint',
