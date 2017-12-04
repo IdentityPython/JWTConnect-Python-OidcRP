@@ -46,12 +46,10 @@ CLIENTS = {
     },
     # Supports OP information lookup but not client registration
     "google": {
-        "srv_discovery_url": "https://accounts.google.com/",
-        "client_registration": {
-            "client_id": "xxxxxxxxx.apps.googleusercontent.com",
-            "client_secret": "2222222222",
-            "redirect_uris": ["{}/google".format(BASEURL)],
-        },
+        "issuer": "https://accounts.google.com/",
+        "client_id": "xxxxxxxxx.apps.googleusercontent.com",
+        "client_secret": "2222222222",
+        "redirect_uris": ["{}:{}/google"],
         "client_prefs": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"]

@@ -1,4 +1,8 @@
+#!/usr/bin/env python3
+import importlib
+import sys
 
+pre = """
 <!DOCTYPE html>
 
 <html>
@@ -20,11 +24,22 @@
   <input type="text" id="uid" name="uid" class="form-control" placeholder="UID" autofocus>  
   <h3><em>Or</em> you can chose one of the preconfigured OpenID Connect Providers</h3>
   <select name="iss">
-  <option value=""></option>
-<option value="google">google</option>
+  {select}
   </select>
   <button type="submit">Start</button>
 </form>
 </body>
 </html>
+"""
 
+config = importlib.import_module(sys.argv[1])
+
+option = []
+for key in config.CLIENTS.keys():
+    if key == '':
+        option.append('<option value=""></option>')
+    else:
+        option.append('<option value="{}">{}</option>'.format(key, key))
+
+_html = pre.format(select='\n'.join(option))
+print(_html)

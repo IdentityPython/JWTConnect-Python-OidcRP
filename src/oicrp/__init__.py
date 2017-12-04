@@ -93,8 +93,8 @@ class RPHandler(object):
 
                 client.client_info.issuer = _iss
                 _info = _srv.request_info(cli_info=client.client_info)
-                _srv.request_and_return(url=_info['uri'],
-                                        client_info=client.client_info)
+                _srv.service_request(url=_info['uri'],
+                                     client_info=client.client_info)
         else:
             client.client_info.provider_info = _provider_info
 
@@ -119,15 +119,11 @@ class RPHandler(object):
         else:
             client.client_info.registration_info = _client_reg
 
-    def setup(self, callbacks, logout_callback, issuer):
+    def setup(self, issuer):
         """
         If no client exists for this issuer one is created and initiated with
         the necessary information for them to be able to communicate.
 
-        :param callbacks: A dictionary of redirect_uris to which the
-            authorization response should be sent by the OP.
-        :param logout_callback: Where the user should be redirected after
-            logout
         :param issuer: The issuer ID
         :return: A :py:class:`oiccli.oic.Client` instance
         """
@@ -148,13 +144,26 @@ class RPHandler(object):
                 logger.error(message)
                 raise
 
-            client.client_info.redirect_uris = list(callbacks.values())
-            client.client_info.post_logout_redirect_uris = [logout_callback]
             client.client_info.base_url = self.base_url
-            client.client_info.callbacks = callbacks
+            try:
+                issuer = _cnf['issuer']
+            except KeyError:
+                pass
 
-            self.load_provider_info(client, issuer)
-            self.load_registration_response(client)
+            if not client.client_info.provider_info:
+                self.load_provider_info(client, issuer)
+
+            if not client.client_info.redirect_uris:
+                # Create the necessary callback URLs
+                callbacks = self.create_callbacks(issuer)
+                logout_callback = self.base_url
+
+                client.client_info.redirect_uris = list(callbacks.values())
+                client.client_info.post_logout_redirect_uris = [logout_callback]
+                client.client_info.callbacks = callbacks
+
+            if not client.client_info.client_id:
+                self.load_registration_response(client)
 
             self.issuer2rp[issuer] = client
 
@@ -193,11 +202,8 @@ class RPHandler(object):
         :param issuer: Issuer ID
         """
 
-        # Create the necessary callback URLs
-        callbacks = self.create_callbacks(issuer)
-        logout_callback = self.base_url
         # Get the client instance that has been assigned to this issuer
-        client = self.setup(callbacks, logout_callback, issuer)
+        client = self.setup(issuer)
 
         try:
             _cinfo = client.client_info
