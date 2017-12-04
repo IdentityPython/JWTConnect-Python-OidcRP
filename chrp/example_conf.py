@@ -1,5 +1,11 @@
 # BASE = "https://lingon.ladok.umu.se"
-BASEURL = "https://localhost"
+
+PORT=8089
+
+# If PORT and not default port
+BASEURL = "https://localhost:{}".format(PORT)
+# else
+# BASEURL = "https://localhost"
 
 # If BASE is https these has to be specified
 SERVER_CERT = "certs/cert.pem"
@@ -49,7 +55,7 @@ CLIENTS = {
         "issuer": "https://accounts.google.com/",
         "client_id": "xxxxxxxxx.apps.googleusercontent.com",
         "client_secret": "2222222222",
-        "redirect_uris": ["{}:{}/google"],
+        "redirect_uris": ["{}/google".format(BASEURL)],
         "client_prefs": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"]
@@ -58,6 +64,24 @@ CLIENTS = {
             "issuer_mismatch": True
         },
         "userinfo_request_method": "GET"
+    },
+    "linkedin": {
+        "issuer": "https://www.linkedin.com/oauth/v2/",
+        "client_id": "xxxxxxxxx",
+        "client_secret": "aaaaaaaa",
+        "redirect_uris": ["{}/authz_cb/linkedin".format(BASEURL)],
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["r_basicprofile", "r_emailaddress"],
+            "token_endpoint_auth_method": ['client_secret_post']
+        },
+        "provider_info": {
+            "authorization_endpoint":
+                "https://www.linkedin.com/oauth/v2/authorization",
+            "token_endpoint": "https://www.linkedin.com/oauth/v2/accessToken",
+            "userinfo_endpoint":
+                "https://api.linkedin.com/v1/people/~?format=json"
+        }
     }
 }
 

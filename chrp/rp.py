@@ -51,13 +51,21 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', dest='port', default=80, type=int)
     parser.add_argument('-t', dest='tls', action='store_true')
     parser.add_argument('-k', dest='insecure', action='store_true')
     parser.add_argument(dest="config")
     args = parser.parse_args()
 
     folder = os.path.abspath(os.curdir)
+    sys.path.insert(0, ".")
+    config = importlib.import_module(args.config)
+    try:
+        _port = config.PORT
+    except AttributeError:
+        if args.tls:
+            _port = 443
+        else:
+            _port = 80
 
     cherrypy.config.update(
         {'environment': 'production',
@@ -69,7 +77,7 @@ if __name__ == '__main__':
          'tools.sessions.on': True,
          'tools.encode.on': True,
          'tools.encode.encoding': 'utf-8',
-         'server.socket_port': args.port
+         'server.socket_port': _port
          })
 
     provider_config = {
@@ -90,14 +98,9 @@ if __name__ == '__main__':
             'cors.expose_public.on': True
         }}
 
-    sys.path.insert(0, ".")
-    config = importlib.import_module(args.config)
     cprp = importlib.import_module('cprp')
 
-    if args.port:
-        _base_url = "{}:{}".format(config.BASEURL, args.port)
-    else:
-        _base_url = config.BASEURL
+    _base_url = config.BASEURL
 
     _kj = get_jwks(config.PRIVATE_JWKS_PATH, config.KEYDEFS,
                    config.PUBLIC_JWKS_PATH)

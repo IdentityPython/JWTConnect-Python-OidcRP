@@ -145,6 +145,7 @@ class RPHandler(object):
                 raise
 
             client.client_info.base_url = self.base_url
+            orig_issuer = issuer
             try:
                 issuer = _cnf['issuer']
             except KeyError:
@@ -152,6 +153,14 @@ class RPHandler(object):
 
             if not client.client_info.provider_info:
                 self.load_provider_info(client, issuer)
+            else:
+                _pi = client.client_info.provider_info
+                for endp in ['authorization_endpoint', 'token_endpoint',
+                             'userinfo_endpoint']:
+                    if endp in _pi:
+                        for srv in client.service.values():
+                            if srv.endpoint_name == endp:
+                                srv.endpoint = _pi[endp]
 
             if not client.client_info.redirect_uris:
                 # Create the necessary callback URLs
@@ -161,6 +170,8 @@ class RPHandler(object):
                 client.client_info.redirect_uris = list(callbacks.values())
                 client.client_info.post_logout_redirect_uris = [logout_callback]
                 client.client_info.callbacks = callbacks
+            else:
+                self.hash2issuer[orig_issuer] = issuer
 
             if not client.client_info.client_id:
                 self.load_registration_response(client)
@@ -292,7 +303,8 @@ class RPHandler(object):
             if isinstance(token_resp, ErrorResponse):
                 return False, "Invalid response %s." % token_resp["error"]
 
-            client.client_info.state_db.add_message_info(token_resp)
+            client.client_info.state_db.add_message_info(
+                token_resp, state=authresp['state'])
             access_token = token_resp["access_token"]
         else:
             access_token = authresp["access_token"]
