@@ -226,7 +226,7 @@ class RPHandler(object):
                 'response_type': _cinfo.behaviour['response_types'][0],
                 'nonce': _nonce
             }
-            _state = client.client_info.state_db.create_state(issuer,
+            _state = client.client_info.state_db.create_state(_cinfo.issuer,
                                                               request_args)
             request_args['state'] = _state
             client.client_info.state_db.bind_nonce_to_state(_nonce, _state)
