@@ -2,17 +2,20 @@ import hashlib
 import logging
 import sys
 import traceback
+from importlib import import_module
 
 from jwkest import as_bytes
 
+from oiccli import oauth2
 from oiccli import oic
 from oiccli import rndstr
-from oiccli.oic import requests
 from oiccli.client_auth import CLIENT_AUTHN_METHOD
 from oiccli.http import HTTPLib
 from oiccli.webfinger import WebFinger
 
 from oicmsg.oauth2 import ErrorResponse
+
+from oicrp import provider
 
 __author__ = 'Roland Hedberg'
 __version__ = '0.0.1'
@@ -50,7 +53,7 @@ class RPHandler(object):
 
         self.client_cls = client_cls or oic.Client
         self.services = services
-        self.service_factory = service_factory or requests.factory
+        self.service_factory = service_factory or factory
         self.client_authn_method = client_authn_method
         self.client_configs = client_configs
 
@@ -133,9 +136,14 @@ class RPHandler(object):
             _cnf = self.pick_config(issuer)
 
             try:
+                _services = _cnf['services']
+            except KeyError:
+                _services = self.services
+
+            try:
                 client = self.client_cls(
                     client_authn_method=self.client_authn_method,
-                    verify_ssl=self.verify_ssl, services=self.services,
+                    verify_ssl=self.verify_ssl, services=_services,
                     service_factory=self.service_factory, keyjar=self.keyjar,
                     config=_cnf)
             except Exception as err:
@@ -376,3 +384,35 @@ class RPHandler(object):
             wf = WebFinger(httpd=HTTPLib(verify_ssl=False))
 
         return wf.discovery_query(resource)
+
+
+def get_service_unique_request(service, request, **kwargs):
+    """
+    Get a class instance of a :py:class:`oiccli.request.Request` subclass
+    specific to a specified service
+
+    :param service: The name of the service
+    :param request: The name of the request
+    :param kwargs: Arguments provided when initiating the class
+    :return: An initiated subclass of oiccli.request.Request or None if
+        the service or the request could not be found.
+    """
+    if service in provider.__all__:
+        mod = import_module('oicrp.provider.' + service)
+        cls = getattr(mod, request)
+        return cls(**kwargs)
+
+    return None
+
+
+def factory(req_name, **kwargs):
+    if isinstance(req_name, tuple):
+        if req_name[0] == 'oauth2':
+            oauth2.requests.factory(req_name[1], **kwargs)
+        elif req_name[0] == 'oidc':
+            oic.requests.factory(req_name[1], **kwargs)
+        else:
+            return get_service_unique_request(req_name[0], req_name[1],
+                                              **kwargs)
+    else:
+        return oic.requests.factory(req_name, **kwargs)

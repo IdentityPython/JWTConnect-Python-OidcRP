@@ -55,10 +55,12 @@ CLIENTS = {
         "issuer": "https://accounts.google.com/",
         "client_id": "xxxxxxxxx.apps.googleusercontent.com",
         "client_secret": "2222222222",
-        "redirect_uris": ["{}/google".format(BASEURL)],
+        "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
         "client_prefs": {
             "response_types": ["code"],
-            "scope": ["openid", "profile", "email"]
+            "scope": ["openid", "profile", "email"],
+            "token_endpoint_auth_method": ["client_secret_basic",
+                                           'client_secret_post']
         },
         "allow": {
             "issuer_mismatch": True
@@ -81,7 +83,9 @@ CLIENTS = {
             "token_endpoint": "https://www.linkedin.com/oauth/v2/accessToken",
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
-        }
+        },
+        "services": ['AuthorizationRequest', 'LinkedInAccessTokenRequest',
+                     'UserInfoRequest']
     }
 }
 
