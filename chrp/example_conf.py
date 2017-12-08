@@ -23,6 +23,10 @@ PRIVATE_JWKS_PATH = "jwks_dir/jwks.json"
 PUBLIC_JWKS_PATH = 'static/jwks.json'
 # information used when registering the client, this may be the same for all OPs
 
+SERVICES = ['ProviderInfoDiscovery', 'RegistrationRequest',
+            'AuthorizationRequest', 'AccessTokenRequest',
+            'RefreshAccessTokenRequest', 'UserInfoRequest']
+
 CLIENT_PREFS = {
     "application_type": "web",
     "application_name": "rphandler",
@@ -30,15 +34,9 @@ CLIENT_PREFS = {
     "response_types": ["code", "id_token", "id_token token", "code id_token",
                        "code id_token token", "code token"],
     "scope": ["openid", "profile", "email", "address", "phone"],
-    "token_endpoint_auth_method": ["client_secret_basic", 'client_secret_post']
+    "token_endpoint_auth_method": ["client_secret_basic", 'client_secret_post'],
+    'services': SERVICES
 }
-
-SERVICES = ['ProviderInfoDiscovery', 'RegistrationRequest',
-            'AuthorizationRequest', 'AccessTokenRequest',
-            'RefreshAccessTokenRequest', 'UserInfoRequest']
-
-# default
-# SERVICE_FACTORY = 'oiccli.oic.requests.factory'
 
 # The keys in this dictionary are the OPs short user friendly name
 # not the issuer (iss) name.
@@ -55,7 +53,7 @@ CLIENTS = {
         "issuer": "https://accounts.google.com/",
         "client_id": "xxxxxxxxx.apps.googleusercontent.com",
         "client_secret": "2222222222",
-        "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
+        "redirect_uris": ["{}/google".format(BASEURL)],
         "client_prefs": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
@@ -65,12 +63,15 @@ CLIENTS = {
         "allow": {
             "issuer_mismatch": True
         },
-        "userinfo_request_method": "GET"
+        "userinfo_request_method": "GET",
+        "services": ['ProviderInfoDiscovery', 'AuthorizationRequest',
+                     'AccessTokenRequest', 'RefreshAccessTokenRequest',
+                     'UserInfoRequest']
     },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
-        "client_id": "xxxxxxxxx",
-        "client_secret": "aaaaaaaa",
+        "client_id": "xxxxxxx",
+        "client_secret": "yyyyyyy",
         "redirect_uris": ["{}/authz_cb/linkedin".format(BASEURL)],
         "behaviour": {
             "response_types": ["code"],
@@ -84,7 +85,8 @@ CLIENTS = {
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
         },
-        "services": ['AuthorizationRequest', 'LinkedInAccessTokenRequest',
+        'services': ['AuthorizationRequest',
+                     ('linkedin', 'AccessTokenRequest'),
                      'UserInfoRequest']
     }
 }
