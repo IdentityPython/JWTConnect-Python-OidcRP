@@ -88,7 +88,7 @@ CLIENTS = {
         "userinfo_request_method": "GET",
         'services': ['AuthorizationRequest',
                      ('linkedin', 'AccessTokenRequest'),
-                     'UserInfoRequest']
+                     ('linkedin', 'UserInfoRequest')]
     }
 }
 
