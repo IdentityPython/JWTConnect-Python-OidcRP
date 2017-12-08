@@ -278,6 +278,13 @@ class RPHandler(object):
     def get_userinfo(self, client, authresp, access_token, **kwargs):
         # use the access token to get some userinfo
         request_args = {'access_token': access_token}
+
+        try:
+            kwargs['method'] = client.client_info.config[
+                'userinfo_request_method']
+        except KeyError:
+            pass
+
         return client.do_request('userinfo', state=authresp["state"],
                                  request_args=request_args, **kwargs)
 

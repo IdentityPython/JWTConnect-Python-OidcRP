@@ -63,7 +63,7 @@ CLIENTS = {
         "allow": {
             "issuer_mismatch": True
         },
-        "userinfo_request_method": "GET",
+        #"userinfo_request_method": "GET",
         "services": ['ProviderInfoDiscovery', 'AuthorizationRequest',
                      'AccessTokenRequest', 'RefreshAccessTokenRequest',
                      'UserInfoRequest']
@@ -85,6 +85,7 @@ CLIENTS = {
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
         },
+        "userinfo_request_method": "GET",
         'services': ['AuthorizationRequest',
                      ('linkedin', 'AccessTokenRequest'),
                      'UserInfoRequest']
