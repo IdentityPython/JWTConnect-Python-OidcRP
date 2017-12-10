@@ -23,9 +23,8 @@ PRIVATE_JWKS_PATH = "jwks_dir/jwks.json"
 PUBLIC_JWKS_PATH = 'static/jwks.json'
 # information used when registering the client, this may be the same for all OPs
 
-SERVICES = ['ProviderInfoDiscovery', 'RegistrationRequest',
-            'AuthorizationRequest', 'AccessTokenRequest',
-            'RefreshAccessTokenRequest', 'UserInfoRequest']
+SERVICES = ['ProviderInfoDiscovery', 'Registration', 'Authorization',
+            'AccessToken', 'RefreshAccessToken', 'UserInfo']
 
 CLIENT_PREFS = {
     "application_type": "web",
@@ -64,9 +63,8 @@ CLIENTS = {
             "issuer_mismatch": True
         },
         #"userinfo_request_method": "GET",
-        "services": ['ProviderInfoDiscovery', 'AuthorizationRequest',
-                     'AccessTokenRequest', 'RefreshAccessTokenRequest',
-                     'UserInfoRequest']
+        "services": ['ProviderInfoDiscovery', 'Authorization', 'AccessToken',
+                     'RefreshAccessToken', 'UserInfo']
     },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
@@ -86,9 +84,8 @@ CLIENTS = {
                 "https://api.linkedin.com/v1/people/~?format=json"
         },
         "userinfo_request_method": "GET",
-        'services': ['AuthorizationRequest',
-                     ('linkedin', 'AccessTokenRequest'),
-                     ('linkedin', 'UserInfoRequest')]
+        'services': ['Authorization', ('linkedin', 'AccessToken'),
+                     ('linkedin', 'UserInfo')]
     }
 }
 

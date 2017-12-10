@@ -1,5 +1,5 @@
 from oiccli import oic as oicc
-from oiccli.oauth2 import requests
+from oiccli.oauth2 import service
 
 from oicmsg import oauth2
 from oicmsg import oic as oicm
@@ -29,13 +29,13 @@ class UserSchema(Message):
         "siteStandardProfileRequest": SINGLE_OPTIONAL_JSON
     }
 
-class AccessTokenRequest(requests.AccessTokenRequest):
+class AccessToken(service.AccessToken):
     msg_type = oauth2.AccessTokenRequest
     response_cls = AccessTokenResponse
     error_msg = oauth2.TokenErrorResponse
 
 
-class UserInfoRequest(oicc.requests.UserInfoRequest):
+class UserInfo(oicc.service.UserInfo):
     msg_type = Message
     response_cls =  UserSchema
     error_msg = oicm.UserInfoErrorResponse
