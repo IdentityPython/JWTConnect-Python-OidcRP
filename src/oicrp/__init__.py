@@ -240,9 +240,12 @@ class RPHandler(object):
             request_args['state'] = _state
             client.client_info.state_db.bind_nonce_to_state(_nonce, _state)
 
+            logger.debug('Authorization request args: {}'.format(request_args))
+
             _srv = client.service['authorization']
             _info = _srv.do_request_init(client.client_info,
                                          request_args=request_args)
+            logger.debug('Authorization info: {}'.format(_info))
         except Exception as err:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
@@ -295,8 +298,12 @@ class RPHandler(object):
         client = self.issuer2rp[issuer]
 
         _srv = client.service['authorization']
-        authresp = _srv.parse_response(response, client.client_info,
-                                       sformat='dict')
+        try:
+            authresp = _srv.parse_response(response, client.client_info,
+                                           sformat='dict')
+        except Exception as err:
+            logger.error('Parsing authresp: {}'.format(err))
+            raise
 
         if isinstance(authresp, ErrorResponse):
             return False, authresp
