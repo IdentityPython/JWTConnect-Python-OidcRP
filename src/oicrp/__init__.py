@@ -416,11 +416,11 @@ def get_service_unique_request(service, request, **kwargs):
 def factory(req_name, **kwargs):
     if isinstance(req_name, tuple):
         if req_name[0] == 'oauth2':
-            oauth2.requests.factory(req_name[1], **kwargs)
+            oauth2.service.factory(req_name[1], **kwargs)
         elif req_name[0] == 'oidc':
-            oic.requests.factory(req_name[1], **kwargs)
+            oic.service.factory(req_name[1], **kwargs)
         else:
             return get_service_unique_request(req_name[0], req_name[1],
                                               **kwargs)
     else:
-        return oic.requests.factory(req_name, **kwargs)
+        return oic.service.factory(req_name, **kwargs)

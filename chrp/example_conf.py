@@ -101,7 +101,9 @@ CLIENTS = {
                 "https://graph.facebook.com/v2.11/oauth/access_token",
             "userinfo_endpoint":
                 "https://graph.facebook.com/me"
-        }
+        },
+        'services': ['Authorization', ('facebook', 'AccessToken'),
+                     ('facebook', 'UserInfo')]
     }
 }
 

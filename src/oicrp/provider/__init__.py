@@ -1,1 +1,1 @@
-__all__ = ['linkedin']
+__all__ = ['linkedin', 'facebook']
