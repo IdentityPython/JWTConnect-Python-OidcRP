@@ -52,7 +52,7 @@ CLIENTS = {
         "issuer": "https://accounts.google.com/",
         "client_id": "xxxxxxxxx.apps.googleusercontent.com",
         "client_secret": "2222222222",
-        "redirect_uris": ["{}/google".format(BASEURL)],
+        "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
         "client_prefs": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
@@ -86,6 +86,22 @@ CLIENTS = {
         "userinfo_request_method": "GET",
         'services': ['Authorization', ('linkedin', 'AccessToken'),
                      ('linkedin', 'UserInfo')]
+    },
+    "Facebook": {
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["email", "public_profile"],
+            "token_endpoint_auth_method": ['client_secret_basic']
+        },
+        "redirect_uris": ["{}/authz_cb/facebook".format(BASEURL)],
+        "provider_info": {
+            "authorization_endpoint":
+                "https://www.facebook.com/v2.11/dialog/oauth",
+            "token_endpoint":
+                "https://graph.facebook.com/v2.11/oauth/access_token",
+            "userinfo_endpoint":
+                "https://graph.facebook.com/me"
+        }
     }
 }
 
