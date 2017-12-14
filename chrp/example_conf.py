@@ -87,7 +87,7 @@ CLIENTS = {
         'services': ['Authorization', ('linkedin', 'AccessToken'),
                      ('linkedin', 'UserInfo')]
     },
-    "Facebook": {
+    "facebook": {
         "behaviour": {
             "response_types": ["code"],
             "scope": ["email", "public_profile"],

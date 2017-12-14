@@ -205,11 +205,15 @@ class RPHandler(object):
     @staticmethod
     def get_client_authn_method(client, endpoint):
         if endpoint == 'token_endpoint':
-            am = client.client_info.behaviour['token_endpoint_auth_method']
-            if isinstance(am, str):
-                return am
+            try:
+                am = client.client_info.behaviour['token_endpoint_auth_method']
+            except KeyError:
+                am = ''
             else:
-                return am[0]
+                if isinstance(am, str):
+                    return am
+                else:
+                    return am[0]
 
     # noinspection PyUnusedLocal
     def begin(self, issuer):
