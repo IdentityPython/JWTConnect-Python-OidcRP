@@ -88,6 +88,7 @@ CLIENTS = {
                      ('linkedin', 'UserInfo')]
     },
     "facebook": {
+        "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
         "behaviour": {
             "response_types": ["code"],
             "scope": ["email", "public_profile"],
@@ -106,6 +107,7 @@ CLIENTS = {
                      ('facebook', 'UserInfo')]
     },
     'github': {
+        "issuer": "https://github.com/login/oauth/authorize",
         'client_id': 'eeeeeeeee',
         'client_secret': 'aaaaaaaaaaaaa',
         "redirect_uris": ["{}/authz_cb/github".format(BASEURL)],
