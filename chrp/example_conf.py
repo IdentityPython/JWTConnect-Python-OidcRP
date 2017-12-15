@@ -1,6 +1,6 @@
 # BASE = "https://lingon.ladok.umu.se"
 
-PORT=8089
+PORT = 8089
 
 # If PORT and not default port
 BASEURL = "https://localhost:{}".format(PORT)
@@ -62,7 +62,7 @@ CLIENTS = {
         "allow": {
             "issuer_mismatch": True
         },
-        #"userinfo_request_method": "GET",
+        # "userinfo_request_method": "GET",
         "services": ['ProviderInfoDiscovery', 'Authorization', 'AccessToken',
                      'RefreshAccessToken', 'UserInfo']
     },
@@ -87,11 +87,11 @@ CLIENTS = {
         'services': ['Authorization', ('linkedin', 'AccessToken'),
                      ('linkedin', 'UserInfo')]
     },
-    "Facebook": {
+    "facebook": {
         "behaviour": {
             "response_types": ["code"],
             "scope": ["email", "public_profile"],
-            "token_endpoint_auth_method": ['client_secret_basic']
+            "token_endpoint_auth_method": ['']
         },
         "redirect_uris": ["{}/authz_cb/facebook".format(BASEURL)],
         "provider_info": {
@@ -104,6 +104,26 @@ CLIENTS = {
         },
         'services': ['Authorization', ('facebook', 'AccessToken'),
                      ('facebook', 'UserInfo')]
+    },
+    'github': {
+        'client_id': 'eeeeeeeee',
+        'client_secret': 'aaaaaaaaaaaaa',
+        "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["user", "public_repo"],
+            "token_endpoint_auth_method": ['']
+        },
+        "provider_info": {
+            "authorization_endpoint":
+                "https://github.com/login/oauth/authorize",
+            "token_endpoint":
+                "https://github.com/login/oauth/access_token",
+            "userinfo_endpoint":
+                "https://api.github.com/user"
+        },
+        'services': ['Authorization', 'AccessToken',
+                     ('github', 'UserInfo')]
     }
 }
 
