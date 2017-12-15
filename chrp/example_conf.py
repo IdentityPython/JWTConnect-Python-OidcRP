@@ -108,7 +108,7 @@ CLIENTS = {
     'github': {
         'client_id': 'eeeeeeeee',
         'client_secret': 'aaaaaaaaaaaaa',
-        "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
+        "redirect_uris": ["{}/authz_cb/github".format(BASEURL)],
         "behaviour": {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
