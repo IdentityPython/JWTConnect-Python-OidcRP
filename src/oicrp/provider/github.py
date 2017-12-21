@@ -1,7 +1,7 @@
-from oic.oauth2 import ErrorResponse
 from oiccli import oic as oicc
-from oiccli.oauth2 import service
 from oicmsg import oauth2
+from oicmsg.oauth2 import ErrorResponse
+from oiccli.oauth2 import service
 
 from oicmsg.message import Message
 from oicmsg.message import SINGLE_OPTIONAL_STRING
