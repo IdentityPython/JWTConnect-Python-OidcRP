@@ -295,7 +295,9 @@ class RPHandler(object):
         """
         Weed out all claims that belong to the JWT
         """
-        return id_token.extra()
+        ui = id_token.extra()
+        ui['sub'] = id_token['sub']
+        return ui
 
     # noinspection PyUnusedLocal
     def phaseN(self, issuer, response):
