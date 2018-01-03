@@ -136,13 +136,20 @@ class Consumer(Root):
     @cherrypy.expose
     def acb(self, op_hash='', **kwargs):
         try:
-            rp = self.rph.issuer2rp[self.rph.hash2issuer[op_hash]]
+            _iss = self.rph.hash2issuer[op_hash]
         except KeyError:
-            raise cherrypy.HTTPError(400,
-                                     "Response to something I hadn't asked for")
+            logger.error('Unkown issuer: {} not among {}'.format(
+                op_hash, list(self.rph.hash2issuer.keys())))
+            raise cherrypy.HTTPError(400, "Unknown hash: {}".format(op_hash))
+        else:
+            try:
+                rp = self.rph.issuer2rp[_iss]
+            except KeyError:
+                raise cherrypy.HTTPError(
+                    400, "Couldn't find client for {}".format(_iss))
 
         x = rp.client_info.state_db[kwargs['state']]
-
+        logger.debug('State info: {}'.format(x))
         res = self.rph.phaseN(x['as'], kwargs)
 
         if res[0] is True:

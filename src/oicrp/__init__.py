@@ -258,6 +258,7 @@ class RPHandler(object):
             return _info['uri']
 
     def get_accesstoken(self, client, authresp):
+        logger.debug('get_accesstoken')
         req_args = {
             'code': authresp['code'], 'state': authresp['state'],
             'redirect_uri': client.client_info.redirect_uris[0],
@@ -265,6 +266,7 @@ class RPHandler(object):
             'client_id': client.client_info.client_id,
             'client_secret': client.client_info.client_secret
         }
+        logger.debug('request_args: {}'.format(req_args))
         try:
             tokenresp = client.do_request(
                 'accesstoken', request_args=req_args,
@@ -308,17 +310,32 @@ class RPHandler(object):
         except Exception as err:
             logger.error('Parsing authresp: {}'.format(err))
             raise
+        else:
+            logger.debug('Authz response: {}'.format(authresp.to_dict()))
 
         if isinstance(authresp, ErrorResponse):
             return False, authresp
 
         if client.client_info.state_db[authresp['state']]['as'] != issuer:
+            logger.error('Issuer problem: {} != {}'.format(
+                client.client_info.state_db[authresp['state']]['as'], issuer))
             # got it from the wrong bloke
             return False, 'Impersonator'
 
         client.client_info.state_db.add_message_info(authresp)
 
-        if self.get_response_type(client, issuer) == "code":
+        _resp_type = set(self.get_response_type(client, issuer).split(' '))
+
+        access_token = None
+
+        if _resp_type in [{'id_token'}, {'id_token', 'token'},
+                          {'code', 'id_token', 'token'}]:
+            id_token = authresp['verified_id_token']
+
+        if _resp_type in [{'token'}, {'id_token', 'token'}, {'code', 'token'},
+                          {'code', 'id_token', 'token'}]:
+            access_token = authresp["access_token"]
+        elif _resp_type in [{'code'}, {'code', 'id_token'}]:
             # get the access token
             token_resp = self.get_accesstoken(client, authresp)
             if isinstance(token_resp, ErrorResponse):
@@ -327,12 +344,7 @@ class RPHandler(object):
             client.client_info.state_db.add_message_info(
                 token_resp, state=authresp['state'])
             access_token = token_resp["access_token"]
-        elif set(self.get_response_type(client, issuer).split(' ')) in [
-                {'code','token'}, {'id_token','token'},
-                {'code', 'id_token', 'token'}]:
-            access_token = authresp["access_token"]
-        else:
-            access_token = None
+            id_token = token_resp['verified_id_token']
 
         if 'userinfo' in client.service and access_token:
 
