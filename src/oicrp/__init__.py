@@ -291,6 +291,12 @@ class RPHandler(object):
         return client.do_request('userinfo', state=authresp["state"],
                                  request_args=request_args, **kwargs)
 
+    def userinfo_in_idtoken(self, id_token):
+        """
+        Weed out all claims that belong to the JWT
+        """
+        return id_token.extra()
+
     # noinspection PyUnusedLocal
     def phaseN(self, issuer, response):
         """Step 2: Once the consumer has redirected the user back to the
@@ -354,7 +360,7 @@ class RPHandler(object):
                 return False, "Invalid response %s." % inforesp["error"]
 
         else:  # look for it in the ID Token
-            inforesp = {}
+            inforesp = self.userinfo_in_id_token(id_token)
 
         logger.debug("UserInfo: %s", inforesp)
 
