@@ -327,10 +327,12 @@ class RPHandler(object):
             client.client_info.state_db.add_message_info(
                 token_resp, state=authresp['state'])
             access_token = token_resp["access_token"]
-        else:
+        elif 'token' in self.get_response_type(client, issuer):
             access_token = authresp["access_token"]
+        else:
+            access_token = None
 
-        if 'userinfo' in client.service:
+        if 'userinfo' in client.service and access_token:
 
             inforesp = self.get_userinfo(client, authresp, access_token)
 
