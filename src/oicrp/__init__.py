@@ -291,7 +291,7 @@ class RPHandler(object):
         return client.do_request('userinfo', state=authresp["state"],
                                  request_args=request_args, **kwargs)
 
-    def userinfo_in_idtoken(self, id_token):
+    def userinfo_in_id_token(self, id_token):
         """
         Weed out all claims that belong to the JWT
         """
@@ -333,7 +333,7 @@ class RPHandler(object):
         _resp_type = set(self.get_response_type(client, issuer).split(' '))
 
         access_token = None
-
+        id_token = None
         if _resp_type in [{'id_token'}, {'id_token', 'token'},
                           {'code', 'id_token', 'token'}]:
             id_token = authresp['verified_id_token']
@@ -359,8 +359,10 @@ class RPHandler(object):
             if isinstance(inforesp, ErrorResponse):
                 return False, "Invalid response %s." % inforesp["error"]
 
-        else:  # look for it in the ID Token
+        elif id_token:  # look for it in the ID Token
             inforesp = self.userinfo_in_id_token(id_token)
+        else:
+            inforesp = {}
 
         logger.debug("UserInfo: %s", inforesp)
 
