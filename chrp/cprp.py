@@ -177,6 +177,9 @@ class Consumer(Root):
             elif a == 'authz_cb':
                 cherrypy.request.params['op_hash'] = b
                 return self.acb
+            elif a == 'ihf_cb':
+                cherrypy.request.params['op_hash'] = b
+                return self.implicit_hybrid_flow
 
         return self
 
@@ -186,7 +189,7 @@ class Consumer(Root):
         return b'OK'
 
     @cherrypy.expose
-    def implicit_hybrid_flow(self, **kwargs):
+    def implicit_hybrid_flow(self, op_hash='', **kwargs):
         logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
         return self._load_HTML_page_from_file("html/repost_fragment.html")
 
