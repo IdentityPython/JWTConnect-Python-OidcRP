@@ -179,3 +179,20 @@ class Consumer(Root):
                 return self.acb
 
         return self
+
+    @cherrypy.expose
+    def repost_fragment(self, **kwargs):
+        logger.debug('repost_fragment kwargs: {}'.format(kwargs))
+        return b'OK'
+
+    @cherrypy.expose
+    def implicit_hybrid_flow(self, **kwargs):
+        return self._load_HTML_page_from_file("htdocs/repost_fragment.html")
+
+    def _load_HTML_page_from_file(self, path):
+        if not path.startswith("/"): # relative path
+            # prepend the root package dir
+            path = os.path.join(os.path.dirname(__file__), path)
+
+        with open(path, "r") as f:
+            return f.read()
