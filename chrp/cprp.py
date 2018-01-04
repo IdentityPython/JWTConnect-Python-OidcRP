@@ -135,6 +135,7 @@ class Consumer(Root):
 
     @cherrypy.expose
     def acb(self, op_hash='', **kwargs):
+        logger.debug('Callback kwargs: {}'.format(kwargs))
         try:
             _iss = self.rph.hash2issuer[op_hash]
         except KeyError:
