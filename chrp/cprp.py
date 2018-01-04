@@ -4,6 +4,7 @@ import logging
 import os
 import re
 from html import entities as htmlentitydefs
+from urllib.parse import parse_qs
 
 import cherrypy
 import requests
@@ -133,9 +134,7 @@ class Consumer(Root):
             else:
                 raise cherrypy.HTTPRedirect(_url)
 
-    @cherrypy.expose
-    def acb(self, op_hash='', **kwargs):
-        logger.debug('Callback kwargs: {}'.format(kwargs))
+    def get_rp(self, op_hash):
         try:
             _iss = self.rph.hash2issuer[op_hash]
         except KeyError:
@@ -148,6 +147,13 @@ class Consumer(Root):
             except KeyError:
                 raise cherrypy.HTTPError(
                     400, "Couldn't find client for {}".format(_iss))
+        return rp
+
+    @cherrypy.expose
+    def acb(self, op_hash='', **kwargs):
+        logger.debug('Callback kwargs: {}'.format(kwargs))
+
+        rp = self.get_rp(op_hash)
 
         x = rp.client_info.state_db[kwargs['state']]
         logger.debug('State info: {}'.format(x))
@@ -186,17 +192,35 @@ class Consumer(Root):
     @cherrypy.expose
     def repost_fragment(self, **kwargs):
         logger.debug('repost_fragment kwargs: {}'.format(kwargs))
-        return b'OK'
+        args = parse_qs(kwargs['url_fragment'])
+        op_hash = kwargs['op_hash']
+
+        rp = self.get_rp(op_hash)
+
+        x = rp.client_info.state_db[args['state']]
+        logger.debug('State info: {}'.format(x))
+        res = self.rph.phaseN(x['as'], args)
+
+        if res[0] is True:
+            fname = os.path.join(self.html_home, 'opresult.html')
+            _pre_html = open(fname, 'r').read()
+            _html = _pre_html.format(result=create_result_page(*res[1:]))
+            return as_bytes(_html)
+        else:
+            raise cherrypy.HTTPError(400, res[1])
 
     @cherrypy.expose
     def implicit_hybrid_flow(self, op_hash='', **kwargs):
         logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
-        return self._load_HTML_page_from_file("html/repost_fragment.html")
+        return self._load_HTML_page_from_file("html/repost_fragment.html",
+                                              op_hash)
 
-    def _load_HTML_page_from_file(self, path):
+    def _load_HTML_page_from_file(self, path, value):
         if not path.startswith("/"): # relative path
             # prepend the root package dir
             path = os.path.join(os.path.dirname(__file__), path)
 
         with open(path, "r") as f:
-            return f.read()
+            txt = f.read()
+            txt = txt % value
+            return txt
