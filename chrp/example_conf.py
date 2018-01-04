@@ -126,6 +126,25 @@ CLIENTS = {
         },
         'services': ['Authorization', 'AccessToken',
                      ('github', 'UserInfo')]
+    },
+    "salesforce": {
+        "issuer": "https://login.salesforce.com",
+        "client_id": "xxxxxxxxx.yyy",
+        "client_secret": "2222222222",
+        "redirect_uris": ["{}/authz_cb/salesforce".format(BASEURL)],
+        "client_prefs": {
+            "response_types": ["code"],
+            "scope": ["openid", "profile", "email"],
+            "token_endpoint_auth_method": ["client_secret_basic",
+                                           'client_secret_post']
+        },
+        # "allow": {
+        #     "issuer_mismatch": True
+        # },
+        # "userinfo_request_method": "GET",
+        "services": ['ProviderInfoDiscovery', 'Authorization', 'AccessToken',
+                     'RefreshAccessToken', 'UserInfo'],
+        "keys": {'file': {'rsa': ['salesforce.key']}}
     }
 }
 

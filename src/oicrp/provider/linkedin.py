@@ -2,7 +2,6 @@ from oiccli import oic as oicc
 from oiccli.oauth2 import service
 
 from oicmsg import oauth2
-from oicmsg import oic as oicm
 from oicmsg.message import Message
 from oicmsg.message import SINGLE_OPTIONAL_JSON
 from oicmsg.message import SINGLE_OPTIONAL_STRING
@@ -29,6 +28,7 @@ class UserSchema(Message):
         "siteStandardProfileRequest": SINGLE_OPTIONAL_JSON
     }
 
+
 class AccessToken(service.AccessToken):
     msg_type = oauth2.AccessTokenRequest
     response_cls = AccessTokenResponse
@@ -36,11 +36,5 @@ class AccessToken(service.AccessToken):
 
 
 class UserInfo(oicc.service.UserInfo):
-    msg_type = Message
-    response_cls =  UserSchema
-    error_msg = oicm.UserInfoErrorResponse
-    endpoint_name = 'userinfo_endpoint'
-    synchronous = True
-    request = 'userinfo'
-    default_authn_method = 'bearer_header'
+    response_cls = UserSchema
     http_method = 'GET'

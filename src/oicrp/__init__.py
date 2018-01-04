@@ -144,8 +144,7 @@ class RPHandler(object):
                 client = self.client_cls(
                     client_authn_method=self.client_authn_method,
                     verify_ssl=self.verify_ssl, services=_services,
-                    service_factory=self.service_factory, keyjar=self.keyjar,
-                    config=_cnf)
+                    service_factory=self.service_factory, config=_cnf)
             except Exception as err:
                 logger.error('Failed initiating client: {}'.format(err))
                 message = traceback.format_exception(*sys.exc_info())
