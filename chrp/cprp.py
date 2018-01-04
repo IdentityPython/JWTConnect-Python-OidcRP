@@ -35,6 +35,17 @@ entity_map = {}
 for i in range(256):
     entity_map[chr(i)] = "&#%d;" % i
 
+
+def compact(qsdict):
+    res = {}
+    for key, val in qsdict.items():
+        if len(val) == 1:
+            res[key] = val[0]
+        else:
+            res[key] = val
+    return res
+
+
 for entity, char in htmlentitydefs.entitydefs.items():
     if char in entity_map:
         entity_map[char] = "&%s;" % entity
@@ -192,7 +203,7 @@ class Consumer(Root):
     @cherrypy.expose
     def repost_fragment(self, **kwargs):
         logger.debug('repost_fragment kwargs: {}'.format(kwargs))
-        args = parse_qs(kwargs['url_fragment'])
+        args = compact(parse_qs(kwargs['url_fragment']))
         op_hash = kwargs['op_hash']
 
         rp = self.get_rp(op_hash)
