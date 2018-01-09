@@ -14,6 +14,7 @@ from oiccli.http import HTTPLib
 from oiccli.webfinger import WebFinger
 
 from oicmsg.oauth2 import ErrorResponse
+from oicmsg.oic import OpenIDSchema
 
 from oicrp import provider
 
@@ -294,9 +295,10 @@ class RPHandler(object):
         """
         Weed out all claims that belong to the JWT
         """
-        ui = id_token.extra()
-        ui['sub'] = id_token['sub']
-        return ui
+        res = dict([(k, id_token[k]) for k in OpenIDSchema.c_param.keys() if
+                    k in id_token])
+        res.update(id_token.extra())
+        return res
 
     # noinspection PyUnusedLocal
     def phaseN(self, issuer, response):
