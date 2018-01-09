@@ -329,7 +329,7 @@ class RPHandler(object):
             # got it from the wrong bloke
             return False, 'Impersonator'
 
-        client.client_info.state_db.add_message_info(authresp)
+        client.client_info.state_db.add_response(authresp)
 
         _resp_type = set(self.get_response_type(client, issuer).split(' '))
 
@@ -348,7 +348,7 @@ class RPHandler(object):
             if isinstance(token_resp, ErrorResponse):
                 return False, "Invalid response %s." % token_resp["error"]
 
-            client.client_info.state_db.add_message_info(
+            client.client_info.state_db.add_response(
                 token_resp, state=authresp['state'])
             access_token = token_resp["access_token"]
             id_token = token_resp['verified_id_token']
