@@ -351,7 +351,11 @@ class RPHandler(object):
             client.client_info.state_db.add_message_info(
                 token_resp, state=authresp['state'])
             access_token = token_resp["access_token"]
-            id_token = token_resp['verified_id_token']
+
+            try:
+                id_token = token_resp['verified_id_token']
+            except KeyError:
+                pass
 
         if 'userinfo' in client.service and access_token:
 
