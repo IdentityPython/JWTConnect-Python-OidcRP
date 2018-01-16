@@ -14,6 +14,7 @@ from oiccli.http import HTTPLib
 from oiccli.webfinger import WebFinger
 
 from oicmsg.oauth2 import ErrorResponse
+from oicmsg.oic import OpenIDSchema
 
 from oicrp import provider
 
@@ -294,9 +295,10 @@ class RPHandler(object):
         """
         Weed out all claims that belong to the JWT
         """
-        ui = id_token.extra()
-        ui['sub'] = id_token['sub']
-        return ui
+        res = dict([(k, id_token[k]) for k in OpenIDSchema.c_param.keys() if
+                    k in id_token])
+        res.update(id_token.extra())
+        return res
 
     # noinspection PyUnusedLocal
     def phaseN(self, issuer, response):
@@ -329,7 +331,7 @@ class RPHandler(object):
             # got it from the wrong bloke
             return False, 'Impersonator'
 
-        client.client_info.state_db.add_message_info(authresp)
+        client.client_info.state_db.add_response(authresp)
 
         _resp_type = set(self.get_response_type(client, issuer).split(' '))
 
@@ -348,7 +350,7 @@ class RPHandler(object):
             if isinstance(token_resp, ErrorResponse):
                 return False, "Invalid response %s." % token_resp["error"]
 
-            client.client_info.state_db.add_message_info(
+            client.client_info.state_db.add_response(
                 token_resp, state=authresp['state'])
             access_token = token_resp["access_token"]
 
