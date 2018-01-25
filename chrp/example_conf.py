@@ -145,7 +145,25 @@ CLIENTS = {
         "services": ['ProviderInfoDiscovery', 'Authorization', 'AccessToken',
                      'RefreshAccessToken', 'UserInfo'],
         "keys": {'file': {'rsa': ['salesforce.key']}}
+    },
+    "okta": {
+        "issuer": "https://dev-968755.oktapreview.com",
+        "client_id": "xxxxxxxxx.yyy",
+        "client_secret": "2222222222",
+        "redirect_uris": ["{}/authz_cb/salesforce".format(BASEURL)],
+        "client_prefs": {
+            "response_types": ["code"],
+            "scope": ["openid", "profile", "email"],
+            "token_endpoint_auth_method": ["client_secret_basic",
+                                           'client_secret_post']
+        },
+        # "allow": {
+        #     "issuer_mismatch": True
+        # },
+        # "userinfo_request_method": "GET",
+        "services": ['Authorization', 'AccessToken', 'UserInfo'],
     }
+
 }
 
 # Whether an attempt to fetch the userinfo should be made

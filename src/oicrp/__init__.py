@@ -409,24 +409,24 @@ class RPHandler(object):
 
         return result
 
-    def find_srv_discovery_url(self, resource):
-        """
-        Use Webfinger to find the OP, The input is a unique identifier
-        of the user. Allowed forms are the acct, mail, http and https
-        urls. If no protocol specification is given like if only an
-        email like identifier is given. It will be translated if possible to
-        one of the allowed formats.
-
-        :param resource: unique identifier of the user.
-        :return:
-        """
-
-        try:
-            wf = WebFinger(httpd=HTTPLib(ca_certs=self.extra["ca_bundle"]))
-        except KeyError:
-            wf = WebFinger(httpd=HTTPLib(verify_ssl=False))
-
-        return wf.discovery_query(resource)
+    # def find_srv_discovery_url(self, resource):
+    #     """
+    #     Use Webfinger to find the OP, The input is a unique identifier
+    #     of the user. Allowed forms are the acct, mail, http and https
+    #     urls. If no protocol specification is given like if only an
+    #     email like identifier is given. It will be translated if possible to
+    #     one of the allowed formats.
+    #
+    #     :param resource: unique identifier of the user.
+    #     :return:
+    #     """
+    #
+    #     try:
+    #         wf = WebFinger(httpd=HTTPLib(ca_certs=self.extra["ca_bundle"]))
+    #     except KeyError:
+    #         wf = WebFinger(httpd=HTTPLib(verify_ssl=False))
+    #
+    #     return wf.discovery_query(resource)
 
 
 def get_service_unique_request(service, request, **kwargs):
@@ -449,13 +449,13 @@ def get_service_unique_request(service, request, **kwargs):
 
 
 def factory(req_name, **kwargs):
-    if isinstance(req_name, tuple):
-        if req_name[0] == 'oauth2':
+    if '.' in req_name:
+        group, name = req_name.split('.')
+        if group == 'oauth2':
             oauth2.service.factory(req_name[1], **kwargs)
-        elif req_name[0] == 'oidc':
+        elif group == 'oidc':
             oic.service.factory(req_name[1], **kwargs)
         else:
-            return get_service_unique_request(req_name[0], req_name[1],
-                                              **kwargs)
+            return get_service_unique_request(group, name, **kwargs)
     else:
         return oic.service.factory(req_name, **kwargs)
