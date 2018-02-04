@@ -37,4 +37,3 @@ class AccessToken(service.AccessToken):
 
 class UserInfo(oicc.service.UserInfo):
     response_cls = UserSchema
-    http_method = 'GET'

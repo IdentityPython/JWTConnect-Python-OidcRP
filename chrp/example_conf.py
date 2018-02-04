@@ -83,7 +83,6 @@ CLIENTS = {
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
         },
-        "userinfo_request_method": "GET",
         'services': ['Authorization', ('linkedin', 'AccessToken'),
                      ('linkedin', 'UserInfo')]
     },
@@ -103,8 +102,7 @@ CLIENTS = {
             "userinfo_endpoint":
                 "https://graph.facebook.com/me"
         },
-        'services': ['Authorization', ('facebook', 'AccessToken'),
-                     ('facebook', 'UserInfo')]
+        'services': ['Authorization', 'AccessToken', 'UserInfo']
     },
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
@@ -125,7 +123,7 @@ CLIENTS = {
                 "https://api.github.com/user"
         },
         'services': ['Authorization', 'AccessToken',
-                     ('github', 'UserInfo')]
+                     ('UserInfo', {'default_authn_method': ''})]
     },
     "salesforce": {
         "issuer": "https://login.salesforce.com",

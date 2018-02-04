@@ -4,24 +4,28 @@ import sys
 import traceback
 from importlib import import_module
 
-from jwkest import as_bytes
+from cryptojwt import as_bytes
 
-from oiccli import oauth2
-from oiccli import oic
 from oiccli import rndstr
 from oiccli.client_auth import CLIENT_AUTHN_METHOD
-from oiccli.http import HTTPLib
-from oiccli.webfinger import WebFinger
+from oiccli.exception import OicCliError
+from oiccli.exception import ParseError
 
 from oicmsg.oauth2 import ErrorResponse
 from oicmsg.oic import OpenIDSchema
 
 from oicrp import provider
+from oicrp import oauth2
+from oicrp import oic
+from oicrp.util import get_response_body_type
+from oicrp.util import get_value_type
 
 __author__ = 'Roland Hedberg'
 __version__ = '0.0.1'
 
 logger = logging.getLogger(__name__)
+
+SUCCESSFUL = [200, 201, 202, 203, 204, 205, 206]
 
 
 class HandlerError(Exception):
@@ -29,6 +33,10 @@ class HandlerError(Exception):
 
 
 class ConfigurationError(Exception):
+    pass
+
+
+class HttpError(OicCliError):
     pass
 
 
@@ -97,8 +105,8 @@ class RPHandler(object):
 
                 client.client_info.issuer = _iss
                 _info = _srv.request_info(cli_info=client.client_info)
-                _srv.service_request(url=_info['uri'],
-                                     client_info=client.client_info)
+                service_request(client, _srv, url=_info['uri'],
+                                client_info=client.client_info)
         else:
             client.client_info.provider_info = _provider_info
 
@@ -408,25 +416,6 @@ class RPHandler(object):
             raise HandlerError("An unknown exception has occurred.")
 
         return result
-
-    # def find_srv_discovery_url(self, resource):
-    #     """
-    #     Use Webfinger to find the OP, The input is a unique identifier
-    #     of the user. Allowed forms are the acct, mail, http and https
-    #     urls. If no protocol specification is given like if only an
-    #     email like identifier is given. It will be translated if possible to
-    #     one of the allowed formats.
-    #
-    #     :param resource: unique identifier of the user.
-    #     :return:
-    #     """
-    #
-    #     try:
-    #         wf = WebFinger(httpd=HTTPLib(ca_certs=self.extra["ca_bundle"]))
-    #     except KeyError:
-    #         wf = WebFinger(httpd=HTTPLib(verify_ssl=False))
-    #
-    #     return wf.discovery_query(resource)
 
 
 def get_service_unique_request(service, request, **kwargs):
