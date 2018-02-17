@@ -3,16 +3,17 @@ import logging
 
 from oiccli.client_auth import CLIENT_AUTHN_METHOD
 from oiccli.client_info import ClientInfo
-from oiccli.exception import ParseError, OicCliError
+from oiccli.exception import OicCliError
+from oiccli.exception import ParseError
 from oiccli.oauth2 import service
-from oiccli.service import build_services, SUCCESSFUL
+from oiccli.service import build_services
 from oiccli.service import REQUEST_INFO
+from oiccli.service import SUCCESSFUL
 
 from oicmsg.key_jar import KeyJar
 
 from oicrp.http import HTTPLib
-from oicrp.util import get_response_body_type
-from oicrp.util import get_value_type
+from oicrp.util import get_deserialization_method
 
 __author__ = 'Roland Hedberg'
 
@@ -36,16 +37,25 @@ class ExpiredToken(Exception):
 
 
 class Client(object):
-    def __init__(self, ca_certs=None, client_authn_method=None,
-                 keyjar=None, verify_ssl=True, config=None, client_cert=None,
-                 httplib=None, services=None, service_factory=None):
+    def __init__(self, ca_certs=None, client_authn_method=None, keyjar=None,
+                 verify_ssl=True, config=None, client_cert=None, httplib=None,
+                 services=None, service_factory=None, jwks_uri=''):
         """
 
         :param ca_certs: Certificates used to verify HTTPS certificates
         :param client_authn_method: Methods that this client can use to
             authenticate itself. It's a dictionary with method names as
             keys and method classes as values.
+        :param keyjar: A py:class:`oicmsg.key_jar.KeyJar` instance
         :param verify_ssl: Whether the SSL certificate should be verified.
+        :param config: Configuration information passed on to the
+            :py:class:`oiccli.client_info.ClientInfo` initialization
+        :param client_cert: Certificate used by the HTTP client
+        :param httplib: A HTTP client to use
+        :param services: A list of service definitions
+        :param service_factory: A factory to use when building the
+            :py:class:`oiccli.service.Service` instances
+        :param jwks_uri: A jwks_uri
         :return: Client instance
         """
 
@@ -58,7 +68,7 @@ class Client(object):
             keyjar = KeyJar()
 
         self.events = None
-        self.client_info = ClientInfo(keyjar, config=config)
+        self.client_info = ClientInfo(keyjar, config=config, jwks_uri=jwks_uri)
         if self.client_info.client_id:
             self.client_id = self.client_info.client_id
         _cam = client_authn_method or CLIENT_AUTHN_METHOD
@@ -179,21 +189,16 @@ class Client(object):
 
         if reqresp.status_code in SUCCESSFUL:
             logger.debug('response_body_type: "{}"'.format(response_body_type))
-            try:
-                _type = get_response_body_type(reqresp)
-            except ValueError as err:
-                logger.warning('Unknown content-type: {}'.format(err))
-                value_type = response_body_type
-            else:
+            _deser_method = get_deserialization_method(reqresp)
 
-                if _type != response_body_type:
-                    logger.warning(
-                        'Not the body type I expected: {} != {}'.format(
-                            _type, response_body_type))
-                if _type in ['json', 'jwt', 'urlencoded']:
-                    value_type = _type
-                else:
-                    value_type = response_body_type
+            if _deser_method != response_body_type:
+                logger.warning(
+                    'Not the body type I expected: {} != {}'.format(
+                        _deser_method, response_body_type))
+            if _deser_method in ['json', 'jwt', 'urlencoded']:
+                value_type = _deser_method
+            else:
+                value_type = response_body_type
 
             logger.debug('Successful response: {}'.format(reqresp.text))
 
@@ -212,14 +217,23 @@ class Client(object):
             logger.error('Error response ({}): {}'.format(reqresp.status_code,
                                                           reqresp.text))
             # expecting an error response
-            value_type = get_value_type(reqresp, response_body_type)
+            _deser_method = get_deserialization_method(reqresp)
 
             try:
-                err_resp = service.parse_error_mesg(reqresp.text, value_type)
+                err_resp = service.parse_error_mesg(reqresp.text, _deser_method)
             except OicCliError:
-                return reqresp.text
-            else:
-                return err_resp
+                if _deser_method != response_body_type:
+                    try:
+                        err_resp = service.parse_error_mesg(reqresp.text,
+                                                            response_body_type)
+                    except OicCliError:
+                        raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
+                            reqresp.text, reqresp.status_code, reqresp.url))
+                else:
+                    raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
+                        reqresp.text, reqresp.status_code, reqresp.url))
+
+            return err_resp
         else:
             logger.error('Error response ({}): {}'.format(reqresp.status_code,
                                                           reqresp.text))

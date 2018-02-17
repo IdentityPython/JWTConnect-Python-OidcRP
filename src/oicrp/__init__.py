@@ -4,12 +4,13 @@ import sys
 import traceback
 from importlib import import_module
 
+import requests
 from cryptojwt import as_bytes
 
 from oiccli import rndstr
 from oiccli.client_auth import CLIENT_AUTHN_METHOD
 from oiccli.exception import OicCliError
-from oiccli.exception import ParseError
+from oiccli.util import add_path
 
 from oicmsg.oauth2 import ErrorResponse
 from oicmsg.oic import OpenIDSchema
@@ -58,6 +59,11 @@ class RPHandler(object):
         self.verify_ssl = verify_ssl
         self.keyjar = keyjar
 
+        try:
+            self.jwks_uri = add_path(base_url, kwargs['jwks_path'])
+        except KeyError:
+            pass
+
         self.extra = kwargs
 
         self.client_cls = client_cls or oic.Client
@@ -104,9 +110,9 @@ class RPHandler(object):
                     _iss = issuer
 
                 client.client_info.issuer = _iss
-                _info = _srv.request_info(cli_info=client.client_info)
-                service_request(client, _srv, url=_info['uri'],
-                                client_info=client.client_info)
+                # info = client.service['provider_info'].do_request_init(
+                #     client.client_info)
+                client.do_request('provider_info')
         else:
             client.client_info.provider_info = _provider_info
 
@@ -116,7 +122,7 @@ class RPHandler(object):
         must be provided during the configuration. If expected to be
         done dynamically. This method will do dynamic client registration.
 
-        :param client: A :py:class:òiccli.oic.Client` instance
+        :param client: A :py:class:`oiccli.oic.Client` instance
         """
         try:
             _client_reg = client.client_info.config['registration_response']
@@ -131,7 +137,7 @@ class RPHandler(object):
         else:
             client.client_info.registration_info = _client_reg
 
-    def setup(self, issuer):
+    def setup(self, issuer, **kwargs):
         """
         If no client exists for this issuer one is created and initiated with
         the necessary information for them to be able to communicate.
@@ -166,6 +172,10 @@ class RPHandler(object):
                 issuer = _cnf['issuer']
             except KeyError:
                 pass
+
+            if not issuer:
+                client.do_request('webfinger', **kwargs)
+                issuer = client.client_info.issuer
 
             if not client.client_info.provider_info:
                 self.load_provider_info(client, issuer)
@@ -224,7 +234,7 @@ class RPHandler(object):
                     return am[0]
 
     # noinspection PyUnusedLocal
-    def begin(self, issuer):
+    def begin(self, issuer, **kwargs):
         """
         First make sure we have a client and that the client has
         the necessary information. Then construct and send an Authorization
@@ -235,7 +245,7 @@ class RPHandler(object):
         """
 
         # Get the client instance that has been assigned to this issuer
-        client = self.setup(issuer)
+        client = self.setup(issuer, **kwargs)
 
         try:
             _cinfo = client.client_info

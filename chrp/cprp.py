@@ -7,7 +7,6 @@ from html import entities as htmlentitydefs
 from urllib.parse import parse_qs
 
 import cherrypy
-import requests
 from jwkest import as_bytes
 
 logger = logging.getLogger(__name__)
@@ -127,19 +126,18 @@ class Consumer(Root):
         if iss:
             link = iss
         elif uid:
-            try:
-                link = self.rph.find_srv_discovery_url(
-                    resource="acct:{}".format(uid))
-            except requests.ConnectionError:
-                raise cherrypy.HTTPError(
-                    message="Webfinger lookup failed, connection error")
+            pass
         else:
             fname = os.path.join(self.html_home, 'opbyuid.html')
             return as_bytes(open(fname, 'r').read())
 
-        if link:
+        if link or uid:
+            if uid:
+                args = {'resource':uid}
+            else:
+                args = {}
             try:
-                _url = self.rph.begin(link)
+                _url = self.rph.begin(link, **args)
             except Exception as err:
                 raise cherrypy.HTTPError(err)
             else:

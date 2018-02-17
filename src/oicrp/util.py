@@ -249,6 +249,36 @@ def verify_header(reqresp, body_type):
     return body_type
 
 
+def get_deserialization_method(reqresp):
+    """
+
+    :param reqresp: Class instance with attributes: ['status', 'text',
+        'headers', 'url']
+    :return: Verified body content type
+    """
+    logger.debug("resp.headers: %s" % (sanitize(reqresp.headers),))
+    logger.debug("resp.txt: %s" % (sanitize(reqresp.text),))
+
+    try:
+        _ctype = reqresp.headers["content-type"]
+    except KeyError:
+        return 'txt'  # reasonable default ??
+
+    if match_to_("application/json", _ctype) or match_to_(
+            'application/jrd+json', _ctype):
+        deser_method = 'json'
+    elif match_to_("application/jwt", _ctype):
+        deser_method = "jwt"
+    elif match_to_(URL_ENCODED, _ctype):
+        deser_method = 'urlencoded'
+    elif match_to_("text/plain", _ctype) or match_to_("test/html", _ctype):
+        deser_method = ''
+    else:
+        deser_method = ''  # reasonable default ??
+
+    return deser_method
+
+
 SORT_ORDER = {'RS': 0, 'ES': 1, 'HS': 2, 'PS': 3, 'no': 4}
 
 
