@@ -45,7 +45,17 @@ CLIENTS = {
     # This is the default, any client that is not listed here is expected to
     # support dynamic discovery and registration.
     "": {
-        "client_prefs": CLIENT_PREFS
+        "client_prefs": CLIENT_PREFS,
+        "redirect_uris": None,
+        "services": [
+            ('WebFinger', {}),
+            ('ProviderInfoDiscovery', {}),
+            ('Registration', {}),
+            ('Authorization', {}),
+            ('AccessToken', {}),
+            ('RefreshAccessToken', {}),
+            ('UserInfo', {})
+        ]
     },
     # Supports OP information lookup but not client registration
     "google": {
@@ -63,8 +73,13 @@ CLIENTS = {
             "issuer_mismatch": True
         },
         # "userinfo_request_method": "GET",
-        "services": ['ProviderInfoDiscovery', 'Authorization', 'AccessToken',
-                     'RefreshAccessToken', 'UserInfo']
+        "services": [
+            ('ProviderInfoDiscovery', {}),
+            ('Authorization', {}),
+            ('AccessToken', {}),
+            ('RefreshAccessToken', {}),
+            ('UserInfo', {})
+        ]
     },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
@@ -83,8 +98,12 @@ CLIENTS = {
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
         },
-        'services': ['Authorization', ('linkedin', 'AccessToken'),
-                     ('linkedin', 'UserInfo')]
+        "userinfo_request_method": "GET",
+        'services': [
+            ('Authorization', {}),
+            ('linkedin.AccessToken', {}),
+            ('linkedin.UserInfo', {})
+        ]
     },
     "facebook": {
         "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
@@ -102,7 +121,11 @@ CLIENTS = {
             "userinfo_endpoint":
                 "https://graph.facebook.com/me"
         },
-        'services': ['Authorization', 'AccessToken', 'UserInfo']
+        'services': [
+            ('Authorization', {}),
+            ('AccessToken', {'default_authn_method': ''}),
+            ('UserInfo', {'default_authn_method':''})
+        ]
     },
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
@@ -122,8 +145,11 @@ CLIENTS = {
             "userinfo_endpoint":
                 "https://api.github.com/user"
         },
-        'services': ['Authorization', 'AccessToken',
-                     ('UserInfo', {'default_authn_method': ''})]
+        'services': [
+            ('Authorization', {}),
+            ('AccessToken', {}),
+            ('UserInfo', {'default_authn_method': ''})
+        ]
     },
     "salesforce": {
         "issuer": "https://login.salesforce.com",
@@ -140,26 +166,41 @@ CLIENTS = {
         #     "issuer_mismatch": True
         # },
         # "userinfo_request_method": "GET",
-        "services": ['ProviderInfoDiscovery', 'Authorization', 'AccessToken',
-                     'RefreshAccessToken', 'UserInfo'],
+        "services": [
+            ('ProviderInfoDiscovery', {}),
+            ('Authorization', {}),
+            ('AccessToken', {}),
+            ('RefreshAccessToken', {}),
+            ('UserInfo', {})
+        ],
         "keys": {'file': {'rsa': ['salesforce.key']}}
     },
     "okta": {
-        "issuer": "https://dev-968755.oktapreview.com",
-        "client_id": "xxxxxxxxx.yyy",
-        "client_secret": "2222222222",
-        "redirect_uris": ["{}/authz_cb/salesforce".format(BASEURL)],
+        "issuer": "https://dev-968755.oktapreview.com/",
+        "client_id": "123456789",
+        "client_secret": "abcdefgh",
+        "redirect_uris": ["{}/authz_cb/okta".format(BASEURL)],
         "client_prefs": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
             "token_endpoint_auth_method": ["client_secret_basic",
                                            'client_secret_post']
         },
-        # "allow": {
-        #     "issuer_mismatch": True
-        # },
+        "provider_info": {
+            "authorization_endpoint":
+                "https://dev-968755.oktapreview.com/oauth2/default/v1"
+                "/authorize",
+            "token_endpoint":
+                "https://dev-968755.oktapreview.com/oauth2/default/v1/token",
+            "userinfo_endpoint":
+                "https://dev-968755.oktapreview.com/oauth2/v1/userinfo"
+        },
         # "userinfo_request_method": "GET",
-        "services": ['Authorization', 'AccessToken', 'UserInfo'],
+        "services": [
+            ('Authorization', {}),
+            ('AccessToken', {}),
+            ('UserInfo', {})
+        ],
     }
 
 }
