@@ -105,6 +105,9 @@ if __name__ == '__main__':
     _kj = get_jwks(config.PRIVATE_JWKS_PATH, config.KEYDEFS,
                    config.PUBLIC_JWKS_PATH)
 
+    if args.insecure:
+        _kj.verify_ssl = False
+
     rph = RPHandler(base_url=_base_url, hash_seed="BabyHoldOn", keyjar=_kj,
                     jwks_path=config.PUBLIC_JWKS_PATH,
                     client_configs=config.CLIENTS,
