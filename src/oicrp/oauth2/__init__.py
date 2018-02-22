@@ -67,6 +67,8 @@ class Client(object):
         if not keyjar:
             keyjar = KeyJar()
 
+        keyjar.verify_ssl = verify_ssl
+
         self.events = None
         self.client_info = ClientInfo(keyjar, config=config, jwks_uri=jwks_uri)
         if self.client_info.client_id:

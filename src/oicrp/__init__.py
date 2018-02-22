@@ -4,7 +4,6 @@ import sys
 import traceback
 from importlib import import_module
 
-import requests
 from cryptojwt import as_bytes
 
 from oiccli import rndstr
