@@ -1,18 +1,15 @@
-from future.backports.http.cookies import SimpleCookie
-from future.builtins import str as newstr
-
 import datetime
+from http.cookies import SimpleCookie
 
 import pytest
-from six import PY2
 
 from oiccli.exception import ImproperlyConfigured
-from oiccli.cookie import CookieDealer
-from oiccli.cookie import InvalidCookieSign
-from oiccli.cookie import cookie_parts
-from oiccli.cookie import cookie_signature
-from oiccli.cookie import parse_cookie
-from oiccli.cookie import verify_cookie_signature
+from oicrp.cookie import CookieDealer
+from oicrp.cookie import InvalidCookieSign
+from oicrp.cookie import cookie_parts
+from oicrp.cookie import cookie_signature
+from oicrp.cookie import parse_cookie
+from oicrp.cookie import verify_cookie_signature
 
 __author__ = 'roland'
 
@@ -71,11 +68,7 @@ class TestCookieDealer(object):
         kaka = cookie_dealer.create_cookie(cookie_value, cookie_typ,
                                            cookie_name)
         C = SimpleCookie()
-        if PY2:
-            # the backported SimpleCookie wants py3 str
-            C.load(newstr(kaka[1]))
-        else:
-            C.load(kaka[1])
+        C.load(kaka[1])
 
         assert C[cookie_name]["domain"] == "op.example.org"
 
@@ -94,11 +87,7 @@ class TestCookieDealer(object):
         kaka = cookie_dealer.create_cookie(cookie_value, cookie_typ,
                                            cookie_name)
         C = SimpleCookie()
-        if PY2:
-            # the backported SimpleCookie wants py3 str
-            C.load(newstr(kaka[1]))
-        else:
-            C.load(kaka[1])
+        C.load(kaka[1])
 
         assert C[cookie_name]["path"] == "/oidc"
 

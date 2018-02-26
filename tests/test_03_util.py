@@ -9,12 +9,12 @@ from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
 from oiccli.exception import WrongContentType
-from oiccli import util
-from oiccli.util import JSON_ENCODED
-
 from oicmsg.exception import UnSupported
 from oicmsg.oic import AuthorizationRequest
 from oicmsg.oic import AccessTokenRequest
+
+from oicrp import util
+from oicrp.util import JSON_ENCODED
 
 __author__ = 'DIRG'
 

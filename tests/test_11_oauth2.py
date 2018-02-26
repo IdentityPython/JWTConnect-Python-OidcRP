@@ -5,7 +5,6 @@ import time
 
 from cryptojwt.jwk import rsa_load
 from oiccli.client_auth import CLIENT_AUTHN_METHOD
-from oiccli.oauth2 import Client
 from oicmsg.key_bundle import KeyBundle
 from oicmsg.oauth2 import AccessTokenRequest
 from oicmsg.oauth2 import AccessTokenResponse
@@ -13,6 +12,7 @@ from oicmsg.oauth2 import AuthorizationRequest
 from oicmsg.oauth2 import RefreshAccessTokenRequest
 from oicmsg.oic import IdToken
 from oicmsg.time_util import utc_time_sans_frac
+from oicrp.oauth2 import Client
 
 sys.path.insert(0, '.')
 

@@ -136,6 +136,72 @@ class RPHandler(object):
         else:
             client.client_info.registration_info = _client_reg
 
+    def init_client(self, issuer):
+        _cnf = self.pick_config(issuer)
+
+        try:
+            _services = _cnf['services']
+        except KeyError:
+            _services = self.services
+
+        try:
+            client = self.client_cls(
+                client_authn_method=self.client_authn_method,
+                verify_ssl=self.verify_ssl, services=_services,
+                service_factory=self.service_factory, config=_cnf)
+        except Exception as err:
+            logger.error('Failed initiating client: {}'.format(err))
+            message = traceback.format_exception(*sys.exc_info())
+            logger.error(message)
+            raise
+
+        client.client_info.base_url = self.base_url
+        return client
+
+    def do_provider_info(self, client, issuer):
+        """
+        Either get the provider info from configuration or from dynamic
+        discovery
+
+        :param client:
+        :param issuer:
+        :return:
+        """
+        if not client.client_info.provider_info:
+            self.load_provider_info(client, issuer)
+            issuer = client.client_info.provider_info['issuer']
+        else:
+            _pi = client.client_info.provider_info
+            for endp in ['authorization_endpoint', 'token_endpoint',
+                         'userinfo_endpoint']:
+                if endp in _pi:
+                    for srv in client.service.values():
+                        if srv.endpoint_name == endp:
+                            srv.endpoint = _pi[endp]
+        return issuer
+
+    def do_client_info(self, client, issuer):
+        """
+        Prepare for and do client registration if configured to do so
+
+        :param client:
+        :param issuer:
+        :return:
+        """
+        if not client.client_info.redirect_uris:
+            # Create the necessary callback URLs
+            callbacks = self.create_callbacks(issuer)
+            logout_callback = self.base_url
+
+            client.client_info.redirect_uris = list(callbacks.values())
+            client.client_info.post_logout_redirect_uris = [logout_callback]
+            client.client_info.callbacks = callbacks
+        else:
+            self.hash2issuer[issuer] = issuer
+
+        if not client.client_info.client_id:
+            self.load_registration_response(client)
+
     def setup(self, issuer, **kwargs):
         """
         If no client exists for this issuer one is created and initiated with
@@ -144,67 +210,22 @@ class RPHandler(object):
         :param issuer: The issuer ID
         :return: A :py:class:`oiccli.oic.Client` instance
         """
-        try:
-            client = self.issuer2rp[issuer]
-        except KeyError:
-            _cnf = self.pick_config(issuer)
 
+        if not issuer:
+            client = self.init_client('')
+            client.do_request('webfinger', **kwargs)
+            issuer = client.client_info.issuer
+        else:
             try:
-                _services = _cnf['services']
+                client = self.issuer2rp[issuer]
             except KeyError:
-                _services = self.services
-
-            try:
-                client = self.client_cls(
-                    client_authn_method=self.client_authn_method,
-                    verify_ssl=self.verify_ssl, services=_services,
-                    service_factory=self.service_factory, config=_cnf)
-            except Exception as err:
-                logger.error('Failed initiating client: {}'.format(err))
-                message = traceback.format_exception(*sys.exc_info())
-                logger.error(message)
-                raise
-
-            client.client_info.base_url = self.base_url
-            orig_issuer = issuer
-            try:
-                issuer = _cnf['issuer']
-            except KeyError:
-                pass
-
-            if not issuer:
-                client.do_request('webfinger', **kwargs)
-                issuer = client.client_info.issuer
-
-            if not client.client_info.provider_info:
-                self.load_provider_info(client, issuer)
-                issuer = client.client_info.provider_info['issuer']
+                client = self.init_client(issuer)
+                issuer = self.do_provider_info(client, issuer)
+                self.do_client_info(client, issuer)
+                self.issuer2rp[issuer] = client
+                return client
             else:
-                _pi = client.client_info.provider_info
-                for endp in ['authorization_endpoint', 'token_endpoint',
-                             'userinfo_endpoint']:
-                    if endp in _pi:
-                        for srv in client.service.values():
-                            if srv.endpoint_name == endp:
-                                srv.endpoint = _pi[endp]
-
-            if not client.client_info.redirect_uris:
-                # Create the necessary callback URLs
-                callbacks = self.create_callbacks(issuer)
-                logout_callback = self.base_url
-
-                client.client_info.redirect_uris = list(callbacks.values())
-                client.client_info.post_logout_redirect_uris = [logout_callback]
-                client.client_info.callbacks = callbacks
-            else:
-                self.hash2issuer[orig_issuer] = issuer
-
-            if not client.client_info.client_id:
-                self.load_registration_response(client)
-
-            self.issuer2rp[issuer] = client
-
-        return client
+                return client
 
     def create_callbacks(self, issuer):
         _hash = hashlib.sha256()

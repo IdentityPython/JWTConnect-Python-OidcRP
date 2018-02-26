@@ -11,9 +11,10 @@ from oicmsg.oauth2 import AccessTokenRequest
 from oicmsg.oauth2 import AccessTokenResponse
 from oicmsg.oauth2 import AuthorizationRequest
 from oicmsg.oauth2 import RefreshAccessTokenRequest
-from oiccli.oic import Client
-from oicmsg.oic import IdToken, UserInfoRequest
+from oicmsg.oic import IdToken
 from oicmsg.time_util import utc_time_sans_frac
+
+from oicrp.oic import Client
 
 sys.path.insert(0, '.')
 
@@ -88,6 +89,7 @@ class TestClient(object):
         _srv.endpoint = "https://example.com/userinfo"
         _info = _srv.do_request_init(self.client.client_info, state='ABCDE')
         assert _info
-        assert _info['cis'].to_dict() == {}
+        assert _info['request'] == {}
         assert _info['http_args'] == {
             'headers': {'Authorization': 'Bearer access'}}
+        assert _info['uri'] == 'https://example.com/userinfo'
