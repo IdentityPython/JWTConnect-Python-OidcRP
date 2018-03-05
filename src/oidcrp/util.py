@@ -3,14 +3,15 @@ from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 
-from oiccli.util import match_to_
-from future.backports.http.cookiejar import Cookie
-from future.backports.http.cookiejar import http2time
+from http.cookiejar import Cookie
+from http.cookiejar import http2time
 
-from oiccli import sanitize
-from oiccli.exception import TimeFormatError
-from oiccli.exception import WrongContentType
-from oicmsg.exception import UnSupported
+from oidcservice import sanitize
+from oidcservice.exception import TimeFormatError
+from oidcservice.exception import WrongContentType
+from oidcservice.util import match_to_
+
+from oidcmsg.exception import UnSupported
 
 logger = logging.getLogger(__name__)
 

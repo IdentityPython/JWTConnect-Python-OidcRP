@@ -1,19 +1,19 @@
 import cherrypy
 import logging
 
-from oiccli.client_auth import CLIENT_AUTHN_METHOD
-from oiccli.client_info import ClientInfo
-from oiccli.exception import OicCliError
-from oiccli.exception import ParseError
-from oiccli.oauth2 import service
-from oiccli.service import build_services
-from oiccli.service import REQUEST_INFO
-from oiccli.service import SUCCESSFUL
+from oidcservice.client_auth import CLIENT_AUTHN_METHOD
+from oidcservice.client_info import ClientInfo
+from oidcservice.exception import OidcServiceError
+from oidcservice.exception import ParseError
+from oidcservice.oauth2 import service
+from oidcservice.service import build_services
+from oidcservice.service import REQUEST_INFO
+from oidcservice.service import SUCCESSFUL
 
-from oicmsg.key_jar import KeyJar
+from oidcmsg.key_jar import KeyJar
 
-from oicrp.http import HTTPLib
-from oicrp.util import get_deserialization_method
+from oidcrp.http import HTTPLib
+from oidcrp.util import get_deserialization_method
 
 __author__ = 'Roland Hedberg'
 
@@ -46,15 +46,15 @@ class Client(object):
         :param client_authn_method: Methods that this client can use to
             authenticate itself. It's a dictionary with method names as
             keys and method classes as values.
-        :param keyjar: A py:class:`oicmsg.key_jar.KeyJar` instance
+        :param keyjar: A py:class:`oidcmsg.key_jar.KeyJar` instance
         :param verify_ssl: Whether the SSL certificate should be verified.
         :param config: Configuration information passed on to the
-            :py:class:`oiccli.client_info.ClientInfo` initialization
+            :py:class:`oidcservice.client_info.ClientInfo` initialization
         :param client_cert: Certificate used by the HTTP client
         :param httplib: A HTTP client to use
         :param services: A list of service definitions
         :param service_factory: A factory to use when building the
-            :py:class:`oiccli.service.Service` instances
+            :py:class:`oidcservice.service.Service` instances
         :param jwks_uri: A jwks_uri
         :return: Client instance
         """
@@ -77,8 +77,7 @@ class Client(object):
         self.service_factory = service_factory or service.factory
         _srvs = services or DEFAULT_SERVICES
 
-        self.service = build_services(_srvs, self.service_factory, self.http,
-                                      keyjar, _cam)
+        self.service = build_services(_srvs, self.service_factory, keyjar, _cam)
 
         self.client_info.service = self.service
 
@@ -141,7 +140,7 @@ class Client(object):
         :param response_body_type: The expected format of the body of the
             return message
         :param http_args: Arguments for the HTTP client
-        :param client_info: A py:class:`oiccli.client_info.ClientInfo` instance
+        :param client_info: A py:class:`oidcservice.client_info.ClientInfo` instance
         :return: A cls or ErrorResponse instance or the HTTP response
             instance if no response body was expected.
         """
@@ -176,7 +175,7 @@ class Client(object):
             - text (The text version of the response)
             - url (The calling URL)
 
-        :param service: A :py:class:`oiccli.service.Service` instance
+        :param service: A :py:class:`oidcservice.service.Service` instance
         :param reqresp: The HTTP request response
         :param client_info: Information about the client/server session
         :param response_body_type: If response in body one of 'json', 'jwt' or
@@ -223,12 +222,12 @@ class Client(object):
 
             try:
                 err_resp = service.parse_error_mesg(reqresp.text, _deser_method)
-            except OicCliError:
+            except OidcServiceError:
                 if _deser_method != response_body_type:
                     try:
                         err_resp = service.parse_error_mesg(reqresp.text,
                                                             response_body_type)
-                    except OicCliError:
+                    except OidcServiceError:
                         raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
                             reqresp.text, reqresp.status_code, reqresp.url))
                 else:

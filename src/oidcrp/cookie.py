@@ -9,14 +9,15 @@ from http.cookies import SimpleCookie
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from cryptojwt import as_unicode, as_bytes
+from cryptojwt import as_bytes
+from cryptojwt import as_unicode
 from cryptojwt import safe_str_cmp
 from cryptojwt.jwe import JWEException
 from cryptojwt.jwe import split_ctx_and_tag
 
-from oiccli import rndstr
-from oiccli.exception import ImproperlyConfigured
-from oicmsg import time_util
+from oidcservice import rndstr
+from oidcservice.exception import ImproperlyConfigured
+from oidcmsg import time_util
 
 __author__ = 'Roland Hedberg'
 

@@ -7,8 +7,8 @@ except ImportError:  # Only works for >= 3.5
 else:
     _decode_err = JSONDecodeError
 
-from oiccli.oic import service
-from oicrp import oauth2
+from oidcservice.oidc import service
+from oidcrp import oauth2
 
 __author__ = 'Roland Hedberg'
 

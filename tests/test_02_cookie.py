@@ -3,13 +3,13 @@ from http.cookies import SimpleCookie
 
 import pytest
 
-from oiccli.exception import ImproperlyConfigured
-from oicrp.cookie import CookieDealer
-from oicrp.cookie import InvalidCookieSign
-from oicrp.cookie import cookie_parts
-from oicrp.cookie import cookie_signature
-from oicrp.cookie import parse_cookie
-from oicrp.cookie import verify_cookie_signature
+from oidcservice.exception import ImproperlyConfigured
+from oidcrp.cookie import CookieDealer
+from oidcrp.cookie import InvalidCookieSign
+from oidcrp.cookie import cookie_parts
+from oidcrp.cookie import cookie_signature
+from oidcrp.cookie import parse_cookie
+from oidcrp.cookie import verify_cookie_signature
 
 __author__ = 'roland'
 

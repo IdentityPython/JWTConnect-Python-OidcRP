@@ -1,11 +1,11 @@
-from oiccli import oic as oicc
-from oicmsg import oauth2
-from oicmsg.oauth2 import ErrorResponse
-from oiccli.oauth2 import service
+from oidcmsg import oauth2
+from oidcmsg.message import Message
+from oidcmsg.message import SINGLE_OPTIONAL_STRING
+from oidcmsg.message import SINGLE_REQUIRED_STRING
+from oidcmsg.oauth2 import ErrorResponse
 
-from oicmsg.message import Message
-from oicmsg.message import SINGLE_OPTIONAL_STRING
-from oicmsg.message import SINGLE_REQUIRED_STRING
+from oidcservice.oidc import service as oidc_service
+from oidcservice.oauth2 import service
 
 
 class AccessTokenResponse(Message):
@@ -26,7 +26,7 @@ class AccessToken(service.AccessToken):
     response_body_type = 'urlencoded'
 
 
-class UserInfo(oicc.service.UserInfo):
+class UserInfo(oidc_service.UserInfo):
     response_cls = Message
     error_msg = ErrorResponse
     default_authn_method = ''

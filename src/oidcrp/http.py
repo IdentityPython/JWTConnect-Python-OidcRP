@@ -6,11 +6,12 @@ from http.cookies import SimpleCookie
 
 import requests
 
-from oiccli import sanitize
-from oiccli.exception import NonFatalException
-from oicmsg.key_jar import KeyJar
+from oidcmsg.key_jar import KeyJar
 
-from oicrp.util import set_cookie
+from oidcservice import sanitize
+from oidcservice.exception import NonFatalException
+
+from oidcrp.util import set_cookie
 
 __author__ = 'roland'
 

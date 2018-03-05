@@ -6,22 +6,20 @@ from importlib import import_module
 
 from cryptojwt import as_bytes
 
-from oiccli import rndstr
-from oiccli.client_auth import CLIENT_AUTHN_METHOD
-from oiccli.exception import OicCliError
-from oiccli.util import add_path
+from oidcservice import rndstr
+from oidcservice.client_auth import CLIENT_AUTHN_METHOD
+from oidcservice.exception import OidcServiceError
+from oidcservice.util import add_path
 
-from oicmsg.oauth2 import ErrorResponse
-from oicmsg.oic import OpenIDSchema
+from oidcmsg.oauth2 import ErrorResponse
+from oidcmsg.oidc import OpenIDSchema
 
-from oicrp import provider
-from oicrp import oauth2
-from oicrp import oic
-from oicrp.util import get_response_body_type
-from oicrp.util import get_value_type
+from oidcrp import provider
+from oidcrp import oauth2
+from oidcrp import oidc
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.0.1'
+__version__ = '0.2.0'
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +34,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class HttpError(OicCliError):
+class HttpError(OidcServiceError):
     pass
 
 
@@ -65,7 +63,7 @@ class RPHandler(object):
 
         self.extra = kwargs
 
-        self.client_cls = client_cls or oic.Client
+        self.client_cls = client_cls or oidc.Client
         self.services = services
         self.service_factory = service_factory or factory
         self.client_authn_method = client_authn_method
@@ -92,7 +90,7 @@ class RPHandler(object):
         If it's expected to be gotten dynamically Provider Info discovery has
         to be performed.
 
-        :param client: A :py:class:`oiccli.oic.Client` instance
+        :param client: A :py:class:`oidcservice.oidc.Client` instance
         """
         try:
             _provider_info = client.client_info.config['provider_info']
@@ -121,7 +119,7 @@ class RPHandler(object):
         must be provided during the configuration. If expected to be
         done dynamically. This method will do dynamic client registration.
 
-        :param client: A :py:class:`oiccli.oic.Client` instance
+        :param client: A :py:class:`oidcservice.oidc.Client` instance
         """
         try:
             _client_reg = client.client_info.config['registration_response']
@@ -208,7 +206,7 @@ class RPHandler(object):
         the necessary information for them to be able to communicate.
 
         :param issuer: The issuer ID
-        :return: A :py:class:`oiccli.oic.Client` instance
+        :return: A :py:class:`oidcservice.oidc.Client` instance
         """
 
         if not issuer:
@@ -450,17 +448,17 @@ class RPHandler(object):
 
 def get_service_unique_request(service, request, **kwargs):
     """
-    Get a class instance of a :py:class:`oiccli.request.Request` subclass
+    Get a class instance of a :py:class:`oidcservice.request.Request` subclass
     specific to a specified service
 
     :param service: The name of the service
     :param request: The name of the request
     :param kwargs: Arguments provided when initiating the class
-    :return: An initiated subclass of oiccli.request.Request or None if
+    :return: An initiated subclass of oidcservice.request.Request or None if
         the service or the request could not be found.
     """
     if service in provider.__all__:
-        mod = import_module('oicrp.provider.' + service)
+        mod = import_module('oidcrp.provider.' + service)
         cls = getattr(mod, request)
         return cls(**kwargs)
 
@@ -473,8 +471,8 @@ def factory(req_name, **kwargs):
         if group == 'oauth2':
             oauth2.service.factory(req_name[1], **kwargs)
         elif group == 'oidc':
-            oic.service.factory(req_name[1], **kwargs)
+            oidc.service.factory(req_name[1], **kwargs)
         else:
             return get_service_unique_request(group, name, **kwargs)
     else:
-        return oic.service.factory(req_name, **kwargs)
+        return oidc.service.factory(req_name, **kwargs)

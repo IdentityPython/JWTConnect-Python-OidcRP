@@ -44,19 +44,19 @@ else:
     extra_install_requires = []
 
 version = ''
-with open('src/oicrp/__init__.py', 'r') as fd:
+with open('src/oidcrp/__init__.py', 'r') as fd:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
                         fd.read(), re.MULTILINE).group(1)
 
 setup(
-    name="oicrp",
+    name="oidcrp",
     version=version,
     description="Python implementation of OAuth2 and OpenID Connect RP",
     author="Roland Hedberg",
     author_email="roland@catalogix.se",
     license="Apache 2.0",
     url='https://github.com/IdentityPython/oicmsg/',
-    packages=["oicrp", "oicrp/provider", "oicrp/oic", "oicrp/oauth2"],
+    packages=["oidcrp", "oidcrp/provider", "oidcrp/oidc", "oidcrp/oauth2"],
     package_dir={"": "src"},
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -66,7 +66,8 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries :: Python Modules"],
     install_requires=[
-        'oiccli',
+        'cryptojwt',
+        'oidcservice',
     ],
     zip_safe=False,
     cmdclass={'test': PyTest},

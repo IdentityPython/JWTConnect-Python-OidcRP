@@ -1,31 +1,33 @@
 import os
 import pytest
+import sys
 import time
 
-import sys
 from cryptojwt.jwk import rsa_load
-from oiccli.client_auth import CLIENT_AUTHN_METHOD
-from oiccli.client_info import ClientInfo
-from oicmsg.key_bundle import KeyBundle
-from oicmsg.oauth2 import AccessTokenRequest
-from oicmsg.oauth2 import AccessTokenResponse
-from oicmsg.oauth2 import AuthorizationRequest
-from oicmsg.oauth2 import RefreshAccessTokenRequest
-from oicmsg.oic import IdToken
-from oicmsg.time_util import utc_time_sans_frac
 
-from oicrp.oic import Client
+from oidcmsg.key_bundle import KeyBundle
+from oidcmsg.oauth2 import AccessTokenRequest
+from oidcmsg.oauth2 import AccessTokenResponse
+from oidcmsg.oauth2 import AuthorizationRequest
+from oidcmsg.oauth2 import RefreshAccessTokenRequest
+from oidcmsg.oidc import IdToken
+from oidcmsg.time_util import utc_time_sans_frac
+
+from oidcservice.client_auth import CLIENT_AUTHN_METHOD
+from oidcservice.client_info import ClientInfo
+
+from oidcrp.oidc import Client
 
 sys.path.insert(0, '.')
 
-BASE_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "data/keys"))
+_dirname = os.path.dirname(os.path.abspath(__file__))
+BASE_PATH = os.path.join(_dirname, "data", "keys")
 
 _key = rsa_load(os.path.join(BASE_PATH, "rsa.key"))
 KC_RSA = KeyBundle({"key": _key, "kty": "RSA", "use": "sig"})
 
 CLIENT_ID = "client_1"
-IDTOKEN = IdToken(iss="http://oic.example.org/", sub="sub",
+IDTOKEN = IdToken(iss="http://oidc.example.org/", sub="sub",
                   aud=CLIENT_ID, exp=utc_time_sans_frac() + 86400,
                   nonce="N0nce",
                   iat=time.time())
@@ -87,9 +89,8 @@ class TestClient(object):
 
         _srv = self.client.service['userinfo']
         _srv.endpoint = "https://example.com/userinfo"
-        _info = _srv.do_request_init(self.client.client_info, state='ABCDE')
+        _info = _srv.get_request_parameters(self.client.client_info,
+                                           state='ABCDE')
         assert _info
-        assert _info['request'] == {}
-        assert _info['http_args'] == {
-            'headers': {'Authorization': 'Bearer access'}}
-        assert _info['uri'] == 'https://example.com/userinfo'
+        assert _info['headers'] == {'Authorization': 'Bearer access'}
+        assert _info['url'] == 'https://example.com/userinfo'

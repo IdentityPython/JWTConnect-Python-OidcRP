@@ -8,13 +8,14 @@ from http.cookies import SimpleCookie
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-from oiccli.exception import WrongContentType
-from oicmsg.exception import UnSupported
-from oicmsg.oic import AuthorizationRequest
-from oicmsg.oic import AccessTokenRequest
+from oidcmsg.exception import UnSupported
+from oidcmsg.oidc import AuthorizationRequest
+from oidcmsg.oidc import AccessTokenRequest
 
-from oicrp import util
-from oicrp.util import JSON_ENCODED
+from oidcservice.exception import WrongContentType
+
+from oidcrp import util
+from oidcrp.util import JSON_ENCODED
 
 __author__ = 'DIRG'
 
