@@ -49,7 +49,7 @@ class TestClient(object):
                     'redirect_uri': 'https://example.com/auth_cb',
                     'response_type': ['code']}
         msg = self.client.service['authorization'].construct(
-            self.client.client_info, request_args=req_args)
+            self.client.service_context, request_args=req_args)
         assert isinstance(msg, AuthorizationRequest)
         assert msg['client_id'] == 'client_1'
         assert msg['redirect_uri'] == 'https://example.com/auth_cb'
@@ -57,9 +57,9 @@ class TestClient(object):
     def test_construct_accesstoken_request(self):
         # Bind access code to state
         req_args = {}
-        self.client.client_info.state_db['ABCDE'] = {'code': 'access_code'}
+        self.client.service_context.state_db['ABCDE'] = {'code': 'access_code'}
         msg = self.client.service['accesstoken'].construct(
-            self.client.client_info, request_args=req_args, state='ABCDE')
+            self.client.service_context, request_args=req_args, state='ABCDE')
         assert isinstance(msg, AccessTokenRequest)
         assert msg.to_dict() == {'client_id': 'client_1',
                                  'code': 'access_code',
@@ -68,15 +68,15 @@ class TestClient(object):
 
     def test_construct_refresh_token_request(self):
         # Bind access code to state
-        self.client.client_info.state_db['ABCDE'] = {'code': 'access_code'}
+        self.client.service_context.state_db['ABCDE'] = {'code': 'access_code'}
         # Bind token to state
         resp = AccessTokenResponse(refresh_token="refresh_with_me",
                                    access_token="access")
-        self.client.client_info.state_db.add_response(resp, "ABCDE")
+        self.client.service_context.state_db.add_response(resp, "ABCDE")
 
         req_args = {}
         msg = self.client.service['refresh_token'].construct(
-            self.client.client_info, request_args=req_args, state='ABCDE')
+            self.client.service_context, request_args=req_args, state='ABCDE')
         assert isinstance(msg, RefreshAccessTokenRequest)
         assert msg.to_dict() == {'client_id': 'client_1',
                                  'client_secret': 'abcdefghijklmnop',

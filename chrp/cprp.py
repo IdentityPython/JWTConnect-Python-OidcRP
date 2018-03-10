@@ -164,7 +164,7 @@ class Consumer(Root):
 
         rp = self.get_rp(op_hash)
 
-        x = rp.client_info.state_db[kwargs['state']]
+        x = rp.service_context.state_db[kwargs['state']]
         logger.debug('State info: {}'.format(x))
         res = self.rph.phaseN(x['as'], kwargs)
 
@@ -206,7 +206,7 @@ class Consumer(Root):
 
         rp = self.get_rp(op_hash)
 
-        x = rp.client_info.state_db[args['state']]
+        x = rp.service_context.state_db[args['state']]
         logger.debug('State info: {}'.format(x))
         res = self.rph.phaseN(x['as'], args)
 

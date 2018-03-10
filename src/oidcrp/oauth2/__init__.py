@@ -2,7 +2,7 @@ import cherrypy
 import logging
 
 from oidcservice.client_auth import CLIENT_AUTHN_METHOD
-from oidcservice.client_info import ClientInfo
+from oidcservice.service_context import ServiceContext
 from oidcservice.exception import OidcServiceError
 from oidcservice.exception import ParseError
 from oidcservice.oauth2 import service
@@ -49,7 +49,8 @@ class Client(object):
         :param keyjar: A py:class:`oidcmsg.key_jar.KeyJar` instance
         :param verify_ssl: Whether the SSL certificate should be verified.
         :param config: Configuration information passed on to the
-            :py:class:`oidcservice.client_info.ClientInfo` initialization
+            :py:class:`oidcservice.service_context.ServiceContext` 
+            initialization
         :param client_cert: Certificate used by the HTTP client
         :param httplib: A HTTP client to use
         :param services: A list of service definitions
@@ -70,16 +71,17 @@ class Client(object):
         keyjar.verify_ssl = verify_ssl
 
         self.events = None
-        self.client_info = ClientInfo(keyjar, config=config, jwks_uri=jwks_uri)
-        if self.client_info.client_id:
-            self.client_id = self.client_info.client_id
+        self.service_context = ServiceContext(keyjar, config=config,
+                                              jwks_uri=jwks_uri)
+        if self.service_context.client_id:
+            self.client_id = self.service_context.client_id
         _cam = client_authn_method or CLIENT_AUTHN_METHOD
         self.service_factory = service_factory or service.factory
         _srvs = services or DEFAULT_SERVICES
 
         self.service = build_services(_srvs, self.service_factory, keyjar, _cam)
 
-        self.client_info.service = self.service
+        self.service_context.service = self.service
 
         self.verify_ssl = verify_ssl
 
@@ -91,7 +93,7 @@ class Client(object):
             raise NotImplemented(request_type)
 
         met = getattr(self, 'construct_{}_request'.format(request_type))
-        return met(self.client_info, request_args, extra_args, **kwargs)
+        return met(self.service_context, request_args, extra_args, **kwargs)
 
     def do_request(self, request_type, scope="", response_body_type="",
                    method="", request_args=None, extra_args=None,
@@ -101,8 +103,8 @@ class Client(object):
         if not method:
             method = _srv.http_method
 
-        _info = _srv.do_request_init(
-            self.client_info, method=method, scope=scope,
+        _info = _srv.get_request_parameters(
+            self.service_context, method=method, scope=scope,
             request_args=request_args, extra_args=extra_args,
             authn_method=authn_method, http_args=http_args, **kwargs)
 
@@ -120,16 +122,16 @@ class Client(object):
                                     _info['uri'], method, _body,
                                     response_body_type,
                                     http_args=_info['http_args'],
-                                    client_info=self.client_info,
+                                    service_context=self.service_context,
                                     **kwargs)
 
     def set_client_id(self, client_id):
         self.client_id = client_id
-        self.client_info.client_id = client_id
+        self.service_context.client_id = client_id
 
     def service_request(self, service, url, method="GET", body=None,
-                        response_body_type="", http_args=None, client_info=None,
-                        **kwargs):
+                        response_body_type="", http_args=None,
+                        service_context=None, **kwargs):
         """
         The method that sends the request and handles the response returned.
         This assumes a synchronous request-response exchange.
@@ -140,7 +142,9 @@ class Client(object):
         :param response_body_type: The expected format of the body of the
             return message
         :param http_args: Arguments for the HTTP client
-        :param client_info: A py:class:`oidcservice.client_info.ClientInfo` instance
+        :param service_context: A 
+        py:class:`oidcservice.service_context.ServiceContext`
+        instance
         :return: A cls or ErrorResponse instance or the HTTP response
             instance if no response body was expected.
         """
@@ -161,10 +165,12 @@ class Client(object):
         if not response_body_type:
             response_body_type = service.response_body_type
 
-        return self.parse_request_response(service, resp, client_info,
-                                           response_body_type, **kwargs)
+        response = self.parse_request_response(service, resp, service_context,
+                                               response_body_type, **kwargs)
+        service.update_service_context(service_context, response)
+        return response
 
-    def parse_request_response(self, service, reqresp, client_info,
+    def parse_request_response(self, service, reqresp, service_context,
                                response_body_type='', state="", **kwargs):
         """
         Deal with a self.http response. The response are expected to
@@ -177,7 +183,7 @@ class Client(object):
 
         :param service: A :py:class:`oidcservice.service.Service` instance
         :param reqresp: The HTTP request response
-        :param client_info: Information about the client/server session
+        :param service_context: Information about the client/server session
         :param response_body_type: If response in body one of 'json', 'jwt' or
             'urlencoded'
         :param state: Session identifier
@@ -204,7 +210,7 @@ class Client(object):
             logger.debug('Successful response: {}'.format(reqresp.text))
 
             try:
-                return service.parse_response(reqresp.text, client_info,
+                return service.parse_response(reqresp.text, service_context,
                                               value_type, state, **kwargs)
             except Exception as err:
                 logger.error(err)

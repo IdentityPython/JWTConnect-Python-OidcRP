@@ -14,7 +14,7 @@ from oidcmsg.oidc import IdToken
 from oidcmsg.time_util import utc_time_sans_frac
 
 from oidcservice.client_auth import CLIENT_AUTHN_METHOD
-from oidcservice.client_info import ClientInfo
+from oidcservice.service_context import ServiceContext
 
 from oidcrp.oidc import Client
 
@@ -43,15 +43,15 @@ class TestClient(object):
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
         }
-        self.client.client_info = ClientInfo(config=conf)
-        self.client.client_info.state_db['ABCDE'] = {'code': 'access_code'}
+        self.client.service_context = ServiceContext(config=conf)
+        self.client.service_context.state_db['ABCDE'] = {'code': 'access_code'}
 
     def test_construct_authorization_request(self):
         req_args = {'state': 'ABCDE',
                     'redirect_uri': 'https://example.com/auth_cb',
                     'response_type': ['code']}
         msg = self.client.service['authorization'].construct(
-            self.client.client_info, request_args=req_args)
+            self.client.service_context, request_args=req_args)
         assert isinstance(msg, AuthorizationRequest)
         assert msg['client_id'] == 'client_1'
         assert msg['redirect_uri'] == 'https://example.com/auth_cb'
@@ -60,7 +60,7 @@ class TestClient(object):
         # Bind access code to state
         req_args = {}
         msg = self.client.service['accesstoken'].construct(
-            self.client.client_info, request_args=req_args, state='ABCDE')
+            self.client.service_context, request_args=req_args, state='ABCDE')
         assert isinstance(msg, AccessTokenRequest)
         assert msg.to_dict() == {'client_id': 'client_1', 'code': 'access_code',
                                  'client_secret': 'abcdefghijklmnop',
@@ -71,11 +71,11 @@ class TestClient(object):
         # Bind token to state
         resp = AccessTokenResponse(refresh_token="refresh_with_me",
                                    access_token="access")
-        self.client.client_info.state_db.add_response(resp, "ABCDE")
+        self.client.service_context.state_db.add_response(resp, "ABCDE")
 
         req_args = {}
         msg = self.client.service['refresh_token'].construct(
-            self.client.client_info, request_args=req_args, state='ABCDE')
+            self.client.service_context, request_args=req_args, state='ABCDE')
         assert isinstance(msg, RefreshAccessTokenRequest)
         assert msg.to_dict() == {'client_id': 'client_1',
                                  'client_secret': 'abcdefghijklmnop',
@@ -85,12 +85,12 @@ class TestClient(object):
     def test_do_userinfo_request_init(self):
         resp = AccessTokenResponse(refresh_token="refresh_with_me",
                                    access_token="access")
-        self.client.client_info.state_db.add_response(resp, "ABCDE")
+        self.client.service_context.state_db.add_response(resp, "ABCDE")
 
         _srv = self.client.service['userinfo']
         _srv.endpoint = "https://example.com/userinfo"
-        _info = _srv.get_request_parameters(self.client.client_info,
-                                           state='ABCDE')
+        _info = _srv.get_request_parameters(self.client.service_context,
+                                            state='ABCDE')
         assert _info
         assert _info['headers'] == {'Authorization': 'Bearer access'}
         assert _info['url'] == 'https://example.com/userinfo'

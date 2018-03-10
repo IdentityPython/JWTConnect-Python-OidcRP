@@ -75,7 +75,7 @@ class RPHandler(object):
 
     def state2issuer(self, state):
         for iss, rp in self.issuer2rp.items():
-            if state in rp.client_info.state_db:
+            if state in rp.service_context.state_db:
                 return iss
 
     def pick_config(self, issuer):
@@ -93,7 +93,7 @@ class RPHandler(object):
         :param client: A :py:class:`oidcservice.oidc.Client` instance
         """
         try:
-            _provider_info = client.client_info.config['provider_info']
+            _provider_info = client.service_context.config['provider_info']
         except KeyError:
             try:
                 _srv = client.service['provider_info']
@@ -102,16 +102,16 @@ class RPHandler(object):
                     'Can not do dynamic provider info discovery')
             else:
                 try:
-                    _iss = client.client_info.config['srv_discovery_url']
+                    _iss = client.service_context.config['srv_discovery_url']
                 except KeyError:
                     _iss = issuer
 
-                client.client_info.issuer = _iss
+                client.service_context.issuer = _iss
                 # info = client.service['provider_info'].do_request_init(
-                #     client.client_info)
+                #     client.service_context)
                 client.do_request('provider_info')
         else:
-            client.client_info.provider_info = _provider_info
+            client.service_context.provider_info = _provider_info
 
     def load_registration_response(self, client):
         """
@@ -122,7 +122,7 @@ class RPHandler(object):
         :param client: A :py:class:`oidcservice.oidc.Client` instance
         """
         try:
-            _client_reg = client.client_info.config['registration_response']
+            _client_reg = client.service_context.config['registration_response']
         except KeyError:
             try:
                 return client.do_request('registration')
@@ -132,7 +132,7 @@ class RPHandler(object):
                 logger.error(err)
                 raise
         else:
-            client.client_info.registration_info = _client_reg
+            client.service_context.registration_info = _client_reg
 
     def init_client(self, issuer):
         _cnf = self.pick_config(issuer)
@@ -153,7 +153,7 @@ class RPHandler(object):
             logger.error(message)
             raise
 
-        client.client_info.base_url = self.base_url
+        client.service_context.base_url = self.base_url
         return client
 
     def do_provider_info(self, client, issuer):
@@ -165,11 +165,11 @@ class RPHandler(object):
         :param issuer:
         :return:
         """
-        if not client.client_info.provider_info:
+        if not client.service_context.provider_info:
             self.load_provider_info(client, issuer)
-            issuer = client.client_info.provider_info['issuer']
+            issuer = client.service_context.provider_info['issuer']
         else:
-            _pi = client.client_info.provider_info
+            _pi = client.service_context.provider_info
             for endp in ['authorization_endpoint', 'token_endpoint',
                          'userinfo_endpoint']:
                 if endp in _pi:
@@ -178,7 +178,7 @@ class RPHandler(object):
                             srv.endpoint = _pi[endp]
         return issuer
 
-    def do_client_info(self, client, issuer):
+    def do_service_context(self, client, issuer):
         """
         Prepare for and do client registration if configured to do so
 
@@ -186,18 +186,18 @@ class RPHandler(object):
         :param issuer:
         :return:
         """
-        if not client.client_info.redirect_uris:
+        if not client.service_context.redirect_uris:
             # Create the necessary callback URLs
             callbacks = self.create_callbacks(issuer)
             logout_callback = self.base_url
 
-            client.client_info.redirect_uris = list(callbacks.values())
-            client.client_info.post_logout_redirect_uris = [logout_callback]
-            client.client_info.callbacks = callbacks
+            client.service_context.redirect_uris = list(callbacks.values())
+            client.service_context.post_logout_redirect_uris = [logout_callback]
+            client.service_context.callbacks = callbacks
         else:
             self.hash2issuer[issuer] = issuer
 
-        if not client.client_info.client_id:
+        if not client.service_context.client_id:
             self.load_registration_response(client)
 
     def setup(self, issuer, **kwargs):
@@ -212,14 +212,14 @@ class RPHandler(object):
         if not issuer:
             client = self.init_client('')
             client.do_request('webfinger', **kwargs)
-            issuer = client.client_info.issuer
+            issuer = client.service_context.issuer
         else:
             try:
                 client = self.issuer2rp[issuer]
             except KeyError:
                 client = self.init_client(issuer)
                 issuer = self.do_provider_info(client, issuer)
-                self.do_client_info(client, issuer)
+                self.do_service_context(client, issuer)
                 self.issuer2rp[issuer] = client
                 return client
             else:
@@ -236,13 +236,13 @@ class RPHandler(object):
 
     @staticmethod
     def get_response_type(client, issuer):
-        return client.client_info.behaviour['response_types'][0]
+        return client.service_context.behaviour['response_types'][0]
 
     @staticmethod
     def get_client_authn_method(client, endpoint):
         if endpoint == 'token_endpoint':
             try:
-                am = client.client_info.behaviour['token_endpoint_auth_method']
+                am = client.service_context.behaviour['token_endpoint_auth_method']
             except KeyError:
                 am = ''
             else:
@@ -266,7 +266,7 @@ class RPHandler(object):
         client = self.setup(issuer, **kwargs)
 
         try:
-            _cinfo = client.client_info
+            _cinfo = client.service_context
 
             _nonce = rndstr(24)
             request_args = {
@@ -275,15 +275,15 @@ class RPHandler(object):
                 'response_type': _cinfo.behaviour['response_types'][0],
                 'nonce': _nonce
             }
-            _state = client.client_info.state_db.create_state(_cinfo.issuer,
-                                                              request_args)
+            _state = client.service_context.state_db.create_state(_cinfo.issuer,
+                                                                  request_args)
             request_args['state'] = _state
-            client.client_info.state_db.bind_nonce_to_state(_nonce, _state)
+            client.service_context.state_db.bind_nonce_to_state(_nonce, _state)
 
             logger.debug('Authorization request args: {}'.format(request_args))
 
             _srv = client.service['authorization']
-            _info = _srv.do_request_init(client.client_info,
+            _info = _srv.do_request_init(client.service_context,
                                          request_args=request_args)
             logger.debug('Authorization info: {}'.format(_info))
         except Exception as err:
@@ -297,10 +297,10 @@ class RPHandler(object):
         logger.debug('get_accesstoken')
         req_args = {
             'code': authresp['code'], 'state': authresp['state'],
-            'redirect_uri': client.client_info.redirect_uris[0],
+            'redirect_uri': client.service_context.redirect_uris[0],
             'grant_type': 'authorization_code',
-            'client_id': client.client_info.client_id,
-            'client_secret': client.client_info.client_secret
+            'client_id': client.service_context.client_id,
+            'client_secret': client.service_context.client_secret
         }
         logger.debug('request_args: {}'.format(req_args))
         try:
@@ -350,7 +350,7 @@ class RPHandler(object):
 
         _srv = client.service['authorization']
         try:
-            authresp = _srv.parse_response(response, client.client_info,
+            authresp = _srv.parse_response(response, client.service_context,
                                            sformat='dict')
         except Exception as err:
             logger.error('Parsing authresp: {}'.format(err))
@@ -361,13 +361,13 @@ class RPHandler(object):
         if isinstance(authresp, ErrorResponse):
             return False, authresp
 
-        if client.client_info.state_db[authresp['state']]['as'] != issuer:
+        if client.service_context.state_db[authresp['state']]['as'] != issuer:
             logger.error('Issuer problem: {} != {}'.format(
-                client.client_info.state_db[authresp['state']]['as'], issuer))
+                client.service_context.state_db[authresp['state']]['as'], issuer))
             # got it from the wrong bloke
             return False, 'Impersonator'
 
-        client.client_info.state_db.add_response(authresp)
+        client.service_context.state_db.add_response(authresp)
 
         _resp_type = set(self.get_response_type(client, issuer).split(' '))
 
@@ -386,7 +386,7 @@ class RPHandler(object):
             if isinstance(token_resp, ErrorResponse):
                 return False, "Invalid response %s." % token_resp["error"]
 
-            client.client_info.state_db.add_response(
+            client.service_context.state_db.add_response(
                 token_resp, state=authresp['state'])
             access_token = token_resp["access_token"]
 

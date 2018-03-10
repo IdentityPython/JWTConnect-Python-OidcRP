@@ -28,7 +28,6 @@ DEFAULT_SERVICES = [
 # This should probably be part of the configuration
 MAX_AUTHENTICATION_AGE = 86400
 
-
 PREFERENCE2PROVIDER = {
     # "require_signed_request_object": "request_object_algs_supported",
     "request_object_signing_alg": "request_object_signing_alg_values_supported",
@@ -65,7 +64,7 @@ PROVIDER_DEFAULT = {
 
 class Client(oauth2.Client):
     def __init__(self, ca_certs=None, client_authn_method=None, keyjar=None,
-                 verify_ssl=True, config=None, client_cert=None, httplib=None, 
+                 verify_ssl=True, config=None, client_cert=None, httplib=None,
                  services=None, service_factory=None):
 
         _srvs = services or DEFAULT_SERVICES
@@ -80,12 +79,13 @@ class Client(oauth2.Client):
         # self.wf = WebFinger(OIC_ISSUER)
         # self.wf.httpd = self.http
 
-    def fetch_distributed_claims(self, userinfo, cli_info, service,
+    def fetch_distributed_claims(self, userinfo, service_context, service,
                                  callback=None):
         """
 
         :param userinfo: A :py:class:`oicmsg.message.Message` sub class instance
-        :param cli_info: A :py:class:`oicclu.client_info.ClientInfo` instance
+        :param service_context: A 
+        :py:class:`oicclu.service_context.ServiceContext` instance
         :param service: Possibly an instance of the
             :py:class:`oiccli.oic.serviceUserInfo` class
         :param callback: A function that can be used to fetch things
@@ -99,21 +99,20 @@ class Client(oauth2.Client):
             for csrc, spec in _csrc.items():
                 if "endpoint" in spec:
                     if "access_token" in spec:
-                        _uinfo = self.service_request(service,
-                            spec["endpoint"], method='GET',
-                            token=spec["access_token"], client_info=cli_info)
+                        _uinfo = self.service_request(
+                            service, spec["endpoint"], method='GET',
+                            token=spec["access_token"],
+                            service_context=service_context)
                     else:
                         if callback:
-                            _uinfo = self.service_request(service,
-                                spec["endpoint"],
-                                method='GET',
+                            _uinfo = self.service_request(
+                                service, spec["endpoint"], method='GET',
                                 token=callback(spec['endpoint']),
-                                client_info=cli_info)
+                                service_context=service_context)
                         else:
-                            _uinfo = self.service_request(service,
-                                spec["endpoint"],
-                                method='GET',
-                                client_info=cli_info)
+                            _uinfo = self.service_request(
+                                service, spec["endpoint"], method='GET',
+                                service_context=service_context)
 
                     claims = [value for value, src in
                               userinfo["_claim_names"].items() if src == csrc]

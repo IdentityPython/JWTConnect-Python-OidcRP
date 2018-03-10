@@ -6,10 +6,11 @@ import os
 import sys
 
 import cherrypy
-from oicmsg.key_jar import build_keyjar
-from oicmsg.key_jar import KeyJar
 
-from oicrp import RPHandler
+from oidcmsg.key_jar import build_keyjar
+from oidcmsg.key_jar import KeyJar
+
+from oidcrp import RPHandler
 
 logger = logging.getLogger("")
 LOGFILE_NAME = 'farp.log'
