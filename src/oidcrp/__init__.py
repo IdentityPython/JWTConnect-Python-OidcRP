@@ -218,12 +218,13 @@ class RPHandler(object):
                 client = self.issuer2rp[issuer]
             except KeyError:
                 client = self.init_client(issuer)
-                issuer = self.do_provider_info(client, issuer)
-                self.do_service_context(client, issuer)
-                self.issuer2rp[issuer] = client
-                return client
             else:
                 return client
+
+        issuer = self.do_provider_info(client, issuer)
+        self.do_service_context(client, issuer)
+        self.issuer2rp[issuer] = client
+        return client
 
     def create_callbacks(self, issuer):
         _hash = hashlib.sha256()
@@ -242,7 +243,8 @@ class RPHandler(object):
     def get_client_authn_method(client, endpoint):
         if endpoint == 'token_endpoint':
             try:
-                am = client.service_context.behaviour['token_endpoint_auth_method']
+                am = client.service_context.behaviour[
+                    'token_endpoint_auth_method']
             except KeyError:
                 am = ''
             else:
@@ -283,15 +285,15 @@ class RPHandler(object):
             logger.debug('Authorization request args: {}'.format(request_args))
 
             _srv = client.service['authorization']
-            _info = _srv.do_request_init(client.service_context,
-                                         request_args=request_args)
+            _info = _srv.get_request_parameters(client.service_context,
+                                                request_args=request_args)
             logger.debug('Authorization info: {}'.format(_info))
         except Exception as err:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
             raise
         else:
-            return _info['uri']
+            return _info['url']
 
     def get_accesstoken(self, client, authresp):
         logger.debug('get_accesstoken')
@@ -363,7 +365,8 @@ class RPHandler(object):
 
         if client.service_context.state_db[authresp['state']]['as'] != issuer:
             logger.error('Issuer problem: {} != {}'.format(
-                client.service_context.state_db[authresp['state']]['as'], issuer))
+                client.service_context.state_db[authresp['state']]['as'],
+                issuer))
             # got it from the wrong bloke
             return False, 'Impersonator'
 

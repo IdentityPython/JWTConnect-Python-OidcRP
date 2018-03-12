@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 Version = "2.0"
 
-DEFAULT_SERVICES = [
-    ('Authorization', {}),
-    ['AccessToken', {}],
-    ('RefreshAccessToken', {}),
-    ('ProviderInfoDiscovery', {})
-]
+DEFAULT_SERVICES = {
+    'Authorization': {},
+    'AccessToken': {},
+    'RefreshAccessToken': {},
+    'ProviderInfoDiscovery': {}
+}
 
 
 class ExpiredToken(Exception):
@@ -75,11 +75,13 @@ class Client(object):
                                               jwks_uri=jwks_uri)
         if self.service_context.client_id:
             self.client_id = self.service_context.client_id
+
         _cam = client_authn_method or CLIENT_AUTHN_METHOD
         self.service_factory = service_factory or service.factory
         _srvs = services or DEFAULT_SERVICES
 
-        self.service = build_services(_srvs, self.service_factory, keyjar, _cam)
+        self.service = build_services(_srvs, self.service_factory,
+                                      self.service_context, _cam)
 
         self.service_context.service = self.service
 
@@ -92,8 +94,8 @@ class Client(object):
         except KeyError:
             raise NotImplemented(request_type)
 
-        met = getattr(self, 'construct_{}_request'.format(request_type))
-        return met(self.service_context, request_args, extra_args, **kwargs)
+        method = getattr(self, 'construct_{}_request'.format(request_type))
+        return method(self.service_context, request_args, extra_args, **kwargs)
 
     def do_request(self, request_type, scope="", response_body_type="",
                    method="", request_args=None, extra_args=None,
@@ -113,25 +115,15 @@ class Client(object):
 
         logger.debug('do_request info: {}'.format(_info))
 
-        try:
-            _body = _info['body']
-        except KeyError:
-            _body = None
-
-        return self.service_request(_srv,
-                                    _info['uri'], method, _body,
-                                    response_body_type,
-                                    http_args=_info['http_args'],
-                                    service_context=self.service_context,
-                                    **kwargs)
+        return self.service_request(_srv, response_body_type=response_body_type,
+                                    **_info)
 
     def set_client_id(self, client_id):
         self.client_id = client_id
         self.service_context.client_id = client_id
 
     def service_request(self, service, url, method="GET", body=None,
-                        response_body_type="", http_args=None,
-                        service_context=None, **kwargs):
+                        response_body_type="", http_args=None, **kwargs):
         """
         The method that sends the request and handles the response returned.
         This assumes a synchronous request-response exchange.
@@ -142,9 +134,6 @@ class Client(object):
         :param response_body_type: The expected format of the body of the
             return message
         :param http_args: Arguments for the HTTP client
-        :param service_context: A 
-        py:class:`oidcservice.service_context.ServiceContext`
-        instance
         :return: A cls or ErrorResponse instance or the HTTP response
             instance if no response body was expected.
         """
@@ -165,13 +154,13 @@ class Client(object):
         if not response_body_type:
             response_body_type = service.response_body_type
 
-        response = self.parse_request_response(service, resp, service_context,
+        response = self.parse_request_response(service, resp,
                                                response_body_type, **kwargs)
-        service.update_service_context(service_context, response)
+        service.update_service_context(response)
         return response
 
-    def parse_request_response(self, service, reqresp, service_context,
-                               response_body_type='', state="", **kwargs):
+    def parse_request_response(self, service, reqresp, response_body_type='',
+                               state="", **kwargs):
         """
         Deal with a self.http response. The response are expected to
         follow a special pattern, having the attributes:
@@ -183,7 +172,6 @@ class Client(object):
 
         :param service: A :py:class:`oidcservice.service.Service` instance
         :param reqresp: The HTTP request response
-        :param service_context: Information about the client/server session
         :param response_body_type: If response in body one of 'json', 'jwt' or
             'urlencoded'
         :param state: Session identifier
@@ -210,8 +198,8 @@ class Client(object):
             logger.debug('Successful response: {}'.format(reqresp.text))
 
             try:
-                return service.parse_response(reqresp.text, service_context,
-                                              value_type, state, **kwargs)
+                return service.parse_response(reqresp.text, value_type, state,
+                                              **kwargs)
             except Exception as err:
                 logger.error(err)
                 raise
@@ -225,6 +213,8 @@ class Client(object):
                                                           reqresp.text))
             # expecting an error response
             _deser_method = get_deserialization_method(reqresp)
+            if not _deser_method:
+                _deser_method = 'json'
 
             try:
                 err_resp = service.parse_error_mesg(reqresp.text, _deser_method)

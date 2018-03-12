@@ -37,13 +37,13 @@ class TestClient(object):
     @pytest.fixture(autouse=True)
     def create_client(self):
         self.redirect_uri = "http://example.com/redirect"
-        self.client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
         conf = {
             'redirect_uris': ['https://example.com/cli/authz_cb'],
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
         }
-        self.client.service_context = ServiceContext(config=conf)
+        self.client = Client(client_authn_method=CLIENT_AUTHN_METHOD,
+                             config=conf)
         self.client.service_context.state_db['ABCDE'] = {'code': 'access_code'}
 
     def test_construct_authorization_request(self):
@@ -51,16 +51,15 @@ class TestClient(object):
                     'redirect_uri': 'https://example.com/auth_cb',
                     'response_type': ['code']}
         msg = self.client.service['authorization'].construct(
-            self.client.service_context, request_args=req_args)
+            request_args=req_args)
         assert isinstance(msg, AuthorizationRequest)
-        assert msg['client_id'] == 'client_1'
         assert msg['redirect_uri'] == 'https://example.com/auth_cb'
 
     def test_construct_accesstoken_request(self):
         # Bind access code to state
         req_args = {}
         msg = self.client.service['accesstoken'].construct(
-            self.client.service_context, request_args=req_args, state='ABCDE')
+            request_args=req_args, state='ABCDE')
         assert isinstance(msg, AccessTokenRequest)
         assert msg.to_dict() == {'client_id': 'client_1', 'code': 'access_code',
                                  'client_secret': 'abcdefghijklmnop',
@@ -75,7 +74,7 @@ class TestClient(object):
 
         req_args = {}
         msg = self.client.service['refresh_token'].construct(
-            self.client.service_context, request_args=req_args, state='ABCDE')
+            request_args=req_args, state='ABCDE')
         assert isinstance(msg, RefreshAccessTokenRequest)
         assert msg.to_dict() == {'client_id': 'client_1',
                                  'client_secret': 'abcdefghijklmnop',
@@ -89,8 +88,7 @@ class TestClient(object):
 
         _srv = self.client.service['userinfo']
         _srv.endpoint = "https://example.com/userinfo"
-        _info = _srv.get_request_parameters(self.client.service_context,
-                                            state='ABCDE')
+        _info = _srv.get_request_parameters(state='ABCDE')
         assert _info
         assert _info['headers'] == {'Authorization': 'Bearer access'}
         assert _info['url'] == 'https://example.com/userinfo'

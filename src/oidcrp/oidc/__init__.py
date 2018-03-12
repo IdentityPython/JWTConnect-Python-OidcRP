@@ -14,14 +14,14 @@ __author__ = 'Roland Hedberg'
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SERVICES = [
-    ('ProviderInfoDiscovery', {}),
-    ('Registration', {}),
-    ('Authorization', {}),
-    ('AccessToken', {}),
-    ('RefreshAccessToken', {}),
-    ('UserInfo', {})
-]
+DEFAULT_SERVICES = {
+    'ProviderInfoDiscovery': {},
+    'Registration': {},
+    'Authorization': {},
+    'AccessToken': {},
+    'RefreshAccessToken': {},
+    'UserInfo': {}
+}
 
 # -----------------------------------------------------------------------------
 
@@ -79,13 +79,10 @@ class Client(oauth2.Client):
         # self.wf = WebFinger(OIC_ISSUER)
         # self.wf.httpd = self.http
 
-    def fetch_distributed_claims(self, userinfo, service_context, service,
-                                 callback=None):
+    def fetch_distributed_claims(self, userinfo, service, callback=None):
         """
 
         :param userinfo: A :py:class:`oicmsg.message.Message` sub class instance
-        :param service_context: A 
-        :py:class:`oicclu.service_context.ServiceContext` instance
         :param service: Possibly an instance of the
             :py:class:`oiccli.oic.serviceUserInfo` class
         :param callback: A function that can be used to fetch things
@@ -101,18 +98,15 @@ class Client(oauth2.Client):
                     if "access_token" in spec:
                         _uinfo = self.service_request(
                             service, spec["endpoint"], method='GET',
-                            token=spec["access_token"],
-                            service_context=service_context)
+                            token=spec["access_token"])
                     else:
                         if callback:
                             _uinfo = self.service_request(
                                 service, spec["endpoint"], method='GET',
-                                token=callback(spec['endpoint']),
-                                service_context=service_context)
+                                token=callback(spec['endpoint']))
                         else:
                             _uinfo = self.service_request(
-                                service, spec["endpoint"], method='GET',
-                                service_context=service_context)
+                                service, spec["endpoint"], method='GET')
 
                     claims = [value for value, src in
                               userinfo["_claim_names"].items() if src == csrc]
