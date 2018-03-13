@@ -150,7 +150,7 @@ class Client(object):
             raise
 
         if "keyjar" not in kwargs:
-            kwargs["keyjar"] = service.keyjar
+            kwargs["keyjar"] = service.service_context.keyjar
         if not response_body_type:
             response_body_type = service.response_body_type
 
