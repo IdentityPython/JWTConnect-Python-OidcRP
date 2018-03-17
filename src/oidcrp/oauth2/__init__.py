@@ -1,6 +1,7 @@
 import cherrypy
 import logging
 
+from oidcmsg.oauth2 import ErrorResponse
 from oidcservice.client_auth import CLIENT_AUTHN_METHOD
 from oidcservice.service_context import ServiceContext
 from oidcservice.exception import OidcServiceError
@@ -123,7 +124,7 @@ class Client(object):
         self.service_context.client_id = client_id
 
     def service_request(self, service, url, method="GET", body=None,
-                        response_body_type="", http_args=None, **kwargs):
+                        response_body_type="", headers=None, **kwargs):
         """
         The method that sends the request and handles the response returned.
         This assumes a synchronous request-response exchange.
@@ -138,13 +139,13 @@ class Client(object):
             instance if no response body was expected.
         """
 
-        if http_args is None:
-            http_args = {}
+        if headers is None:
+            headers = {}
 
-        logger.debug(REQUEST_INFO.format(url, method, body, http_args))
+        logger.debug(REQUEST_INFO.format(url, method, body, headers))
 
         try:
-            resp = self.http(url, method, data=body, **http_args)
+            resp = self.http(url, method, data=body, headers=headers)
         except Exception as err:
             logger.error('Exception on request: {}'.format(err))
             raise
@@ -156,7 +157,8 @@ class Client(object):
 
         response = self.parse_request_response(service, resp,
                                                response_body_type, **kwargs)
-        service.update_service_context(response)
+        if not isinstance(response, ErrorResponse):
+            service.update_service_context(response, **kwargs)
         return response
 
     def parse_request_response(self, service, reqresp, response_body_type='',

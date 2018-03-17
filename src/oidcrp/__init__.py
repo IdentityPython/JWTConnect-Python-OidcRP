@@ -233,7 +233,8 @@ class RPHandler(object):
         _hex = _hash.hexdigest()
         self.hash2issuer[_hex] = issuer
         return {'code': "{}/authz_cb/{}".format(self.base_url, _hex),
-                'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex)}
+                'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
+                'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex)}
 
     @staticmethod
     def get_response_type(client, issuer):
