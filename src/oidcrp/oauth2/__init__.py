@@ -38,9 +38,10 @@ class ExpiredToken(Exception):
 
 
 class Client(object):
-    def __init__(self, ca_certs=None, client_authn_method=None, keyjar=None,
-                 verify_ssl=True, config=None, client_cert=None, httplib=None,
-                 services=None, service_factory=None, jwks_uri=''):
+    def __init__(self, state_db, ca_certs=None, client_authn_method=None,
+                 keyjar=None, verify_ssl=True, config=None, client_cert=None,
+                 httplib=None, services=None, service_factory=None,
+                 jwks_uri=''):
         """
 
         :param ca_certs: Certificates used to verify HTTPS certificates
@@ -61,6 +62,7 @@ class Client(object):
         :return: Client instance
         """
 
+        self.state_db = state_db
         self.http = httplib or HTTPLib(ca_certs=ca_certs,
                                        verify_ssl=verify_ssl,
                                        client_cert=client_cert,
@@ -82,7 +84,7 @@ class Client(object):
         _srvs = services or DEFAULT_SERVICES
 
         self.service = build_services(_srvs, self.service_factory,
-                                      self.service_context, _cam)
+                                      self.service_context, state_db, _cam)
 
         self.service_context.service = self.service
 

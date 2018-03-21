@@ -9,7 +9,6 @@ from http.cookiejar import http2time
 from oidcservice import sanitize
 from oidcservice.exception import TimeFormatError
 from oidcservice.exception import WrongContentType
-from oidcservice.util import match_to_
 
 from oidcmsg.exception import UnSupported
 
@@ -48,57 +47,15 @@ ATTRS = {"version": None,
          "rfc2109": True}
 
 
-def get_or_post(uri, method, req, content_type=DEFAULT_POST_CONTENT_TYPE,
-        accept=None, **kwargs):
-    """
-    Create the information pieces necessary for sending a request.
-    Depending on whether the request is done using GET or POST the request
-    is placed in different places and serialized into different formats.
-
-    :param uri: The URL pointing to where the request should be sent
-    :param method: Which method that should be used to send the request
-    :param req: The request as a :py:class:`oicmsg.message.Message` instance
-    :param content_type: Which content type to use for the body
-    :param accept: Whether an Accept header should be added to the HTTP request
-    :param kwargs: Extra keyword arguments.
-    :return:
-    """
-    resp = {}
-    if method in ["GET", "DELETE"]:
-        if req.keys():
-            _req = req.copy()
-            comp = urlsplit(str(uri))
-            if comp.query:
-                _req.update(parse_qs(comp.query))
-
-            _query = str(_req.to_urlencoded())
-            resp['uri'] = urlunsplit((comp.scheme, comp.netloc, comp.path,
-                                      _query, comp.fragment))
-        else:
-            resp['uri'] = uri
-    elif method in ["POST", "PUT"]:
-        resp['uri'] = uri
-        if content_type == URL_ENCODED:
-            resp['body'] = req.to_urlencoded()
-        elif content_type == JSON_ENCODED:
-            resp['body'] = req.to_json()
-        else:
-            raise UnSupported(
-                "Unsupported content type: '%s'" % content_type)
-
-        header_ext = {"Content-Type": content_type}
-        if accept:
-            header_ext = {"Accept": accept}
-
-        if "headers" in kwargs.keys():
-            kwargs["headers"].update(header_ext)
-        else:
-            kwargs["headers"] = header_ext
-        resp['kwargs'] = kwargs
+def match_to_(val, vlist):
+    if isinstance(vlist, str):
+        if vlist.startswith(val):
+            return True
     else:
-        raise UnSupported("Unsupported HTTP method: '%s'" % method)
-
-    return resp
+        for v in vlist:
+            if v.startswith(val):
+                return True
+    return False
 
 
 def set_cookie(cookiejar, kaka):

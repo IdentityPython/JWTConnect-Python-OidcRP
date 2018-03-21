@@ -63,13 +63,13 @@ PROVIDER_DEFAULT = {
 
 
 class Client(oauth2.Client):
-    def __init__(self, ca_certs=None, client_authn_method=None, keyjar=None,
-                 verify_ssl=True, config=None, client_cert=None, httplib=None,
-                 services=None, service_factory=None):
+    def __init__(self, state_db, ca_certs=None, client_authn_method=None,
+                 keyjar=None, verify_ssl=True, config=None, client_cert=None,
+                 httplib=None, services=None, service_factory=None):
 
         _srvs = services or DEFAULT_SERVICES
         service_factory = service_factory or service.factory
-        oauth2.Client.__init__(self, ca_certs,
+        oauth2.Client.__init__(self, state_db, ca_certs,
                                client_authn_method=client_authn_method,
                                keyjar=keyjar, verify_ssl=verify_ssl,
                                config=config, client_cert=client_cert,
