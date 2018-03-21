@@ -1,7 +1,4 @@
 import logging
-from urllib.parse import parse_qs
-from urllib.parse import urlsplit
-from urllib.parse import urlunsplit
 
 from http.cookiejar import Cookie
 from http.cookiejar import http2time
@@ -9,8 +6,6 @@ from http.cookiejar import http2time
 from oidcservice import sanitize
 from oidcservice.exception import TimeFormatError
 from oidcservice.exception import WrongContentType
-
-from oidcmsg.exception import UnSupported
 
 logger = logging.getLogger(__name__)
 
@@ -267,3 +262,5 @@ def get_value_type(http_response, body_type):
         return verify_header(http_response, body_type)
     else:
         return 'urlencoded'
+
+

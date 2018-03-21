@@ -166,7 +166,7 @@ class Consumer(Root):
 
         x = rp.service_context.state_db[kwargs['state']]
         logger.debug('State info: {}'.format(x))
-        res = self.rph.phaseN(x['as'], kwargs)
+        res = self.rph.finalize(x['as'], kwargs)
 
         if res[0] is True:
             fname = os.path.join(self.html_home, 'opresult.html')
@@ -208,7 +208,7 @@ class Consumer(Root):
 
         x = rp.service_context.state_db[args['state']]
         logger.debug('State info: {}'.format(x))
-        res = self.rph.phaseN(x['as'], args)
+        res = self.rph.finalize(x['as'], args)
 
         if res[0] is True:
             fname = os.path.join(self.html_home, 'opresult.html')

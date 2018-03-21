@@ -14,8 +14,7 @@ from oidcmsg.oidc import IdToken
 from oidcmsg.time_util import utc_time_sans_frac
 
 from oidcservice.client_auth import CLIENT_AUTHN_METHOD
-from oidcservice.service import State
-from oidcservice.service_context import ServiceContext
+from oidcservice.state_interface import State
 
 from oidcrp.oidc import Client
 
