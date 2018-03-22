@@ -137,11 +137,11 @@ class Consumer(Root):
             else:
                 args = {}
             try:
-                _url = self.rph.begin(link, **args)
+                result = self.rph.begin(link, **args)
             except Exception as err:
                 raise cherrypy.HTTPError(err)
             else:
-                raise cherrypy.HTTPRedirect(_url)
+                raise cherrypy.HTTPRedirect(result['url'])
 
     def get_rp(self, op_hash):
         try:
@@ -164,9 +164,16 @@ class Consumer(Root):
 
         rp = self.get_rp(op_hash)
 
-        x = rp.service_context.state_db[kwargs['state']]
-        logger.debug('State info: {}'.format(x))
-        res = self.rph.finalize(x['as'], kwargs)
+        try:
+            session_info = self.rph.state_db_interface.get_state(
+                kwargs['state'])
+        except KeyError:
+            raise cherrypy.HTTPError(400, 'Unknown state')
+
+        logger.debug('Session info: {}'.format(session_info))
+        # rp.service_context.provider_info['issuer'] != state_info['iss']:
+        #   raise cherrypy.HTTPError(400, 'Wrong Issuer')
+        res = self.rph.finalize(session_info['iss'], kwargs)
 
         if res[0] is True:
             fname = os.path.join(self.html_home, 'opresult.html')

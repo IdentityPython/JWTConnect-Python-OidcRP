@@ -6,7 +6,7 @@ from importlib import import_module
 
 from cryptojwt import as_bytes
 
-from oidcmsg.oauth2 import ErrorResponse
+from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import OpenIDSchema
 
 from oidcservice import rndstr
@@ -73,12 +73,15 @@ def load_registration_response(client):
         _client_reg = client.service_context.config['registration_response']
     except KeyError:
         try:
-            return client.do_request('registration')
+            response = client.do_request('registration')
         except KeyError:
             raise ConfigurationError('No registration info')
         except Exception as err:
             logger.error(err)
             raise
+        else:
+            if response.is_error_message():
+                raise OidcServiceError(response['error'])
     else:
         client.service_context.registration_info = _client_reg
 
@@ -95,7 +98,7 @@ def load_provider_info(client, issuer):
         _provider_info = client.service_context.config['provider_info']
     except KeyError:
         try:
-            _srv = client.service['provider_info']
+            client.service['provider_info']
         except KeyError:
             raise ConfigurationError(
                 'Can not do dynamic provider info discovery')
@@ -108,7 +111,9 @@ def load_provider_info(client, issuer):
             client.service_context.issuer = _iss
             # info = client.service['provider_info'].do_request_init(
             #     client.service_context)
-            client.do_request('provider_info')
+            response = client.do_request('provider_info')
+            if response.is_error_message():
+                raise OidcServiceError(response['error'])
     else:
         client.service_context.provider_info = _provider_info
 
@@ -124,9 +129,9 @@ class RPHandler(object):
         self.keyjar = keyjar
 
         if state_db:
-            self.state_db = state_db
-        else:
             self.state_db = InMemoryStateDataBase()
+        else:
+            self.state_db = state_db
 
         self.state_db_interface = StateInterface(self.state_db)
 
@@ -173,9 +178,11 @@ class RPHandler(object):
 
         try:
             client = self.client_cls(state_db=self.state_db,
-                client_authn_method=self.client_authn_method,
-                verify_ssl=self.verify_ssl, services=_services,
-                service_factory=self.service_factory, config=_cnf)
+                                     client_authn_method=self.client_authn_method,
+                                     verify_ssl=self.verify_ssl,
+                                     services=_services,
+                                     service_factory=self.service_factory,
+                                     config=_cnf)
         except Exception as err:
             logger.error('Failed initiating client: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())
@@ -310,7 +317,7 @@ class RPHandler(object):
             logger.error(message)
             raise
         else:
-            return _info['url']
+            return {'url': _info['url'], 'state': _state}
 
     # ----------------------------------------------------------------------
 
@@ -352,6 +359,9 @@ class RPHandler(object):
         except Exception as err:
             logger.error("%s", err)
             raise
+        else:
+            if tokenresp.is_error_message():
+                raise OidcServiceError(tokenresp['error'])
 
         return tokenresp
 
@@ -359,8 +369,10 @@ class RPHandler(object):
         # use the access token to get some userinfo
         request_args = {'access_token': access_token}
 
-        return client.do_request('userinfo', state=authresp["state"],
+        resp = client.do_request('userinfo', state=authresp["state"],
                                  request_args=request_args, **kwargs)
+        if resp.is_error_message():
+            raise OidcServiceError(resp['error'])
 
     def userinfo_in_id_token(self, id_token):
         """
@@ -382,7 +394,7 @@ class RPHandler(object):
         else:
             logger.debug('Authz response: {}'.format(authresp.to_dict()))
 
-        if isinstance(authresp, ErrorResponse):
+        if isinstance(authresp, ResponseMessage):
             return authresp
 
         try:
@@ -411,7 +423,7 @@ class RPHandler(object):
         elif _resp_type in [{'code'}, {'code', 'id_token'}]:
             # get the access token
             token_resp = self.get_accesstoken(client, authresp)
-            if isinstance(token_resp, ErrorResponse):
+            if isinstance(token_resp, ResponseMessage):
                 return False, "Invalid response %s." % token_resp["error"]
 
             access_token = token_resp["access_token"]
@@ -421,7 +433,7 @@ class RPHandler(object):
             except KeyError:
                 pass
 
-        return {'access_token':access_token, 'id_token': id_token}
+        return {'access_token': access_token, 'id_token': id_token}
 
     # noinspection PyUnusedLocal
     def finalize(self, issuer, response):
@@ -446,7 +458,7 @@ class RPHandler(object):
             inforesp = self.get_userinfo(client, authresp,
                                          token['access_token'])
 
-            if isinstance(inforesp, ErrorResponse):
+            if isinstance(inforesp, ResponseMessage):
                 return False, "Invalid response %s." % inforesp["error"]
 
         elif token['id_token']:  # look for it in the ID Token
@@ -456,7 +468,7 @@ class RPHandler(object):
 
         logger.debug("UserInfo: %s", inforesp)
 
-        return {'userinfo':inforesp, 'state': authresp['state']}
+        return {'userinfo': inforesp, 'state': authresp['state']}
 
 
 def get_service_unique_request(service, request, **kwargs):
