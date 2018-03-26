@@ -180,3 +180,51 @@ class TestRPHandler(object):
 
         assert self.rph.hash2issuer[issuer] == issuer
         assert client.service_context.post_logout_redirect_uris == [BASEURL]
+
+    def test_do_client_setup(self):
+        client = self.rph.client_setup('github')
+
+        _context = client.service_context
+
+        assert _context.client_id == 'eeeeeeeee'
+        assert _context.client_secret == 'aaaaaaaaaaaaa'
+        assert _context.issuer == "https://github.com/login/oauth/authorize"
+
+        assert list(_context.keyjar.owners()) == ['']
+        keys = _context.keyjar.get_issuer_keys('')
+        assert len(keys) == 2
+        for key in keys:
+            assert key.kty == 'oct'
+            assert key.key == b'aaaaaaaaaaaaa'
+
+        for service_type in ['authorization', 'accesstoken', 'userinfo']:
+            _srv = client.service[service_type]
+            _endp = client.service_context.provider_info[_srv.endpoint_name]
+            assert _srv.endpoint == _endp
+
+        assert self.rph.hash2issuer[_context.issuer] == _context.issuer
+
+    def test_create_callbacks(self):
+        cb = self.rph.create_callbacks('https://op.example.com/')
+
+        assert set(cb.keys()) == {'code', 'implicit', 'form_post'}
+        assert cb == {
+            'code': 'https://example.com/rp/authz_cb'
+                    '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
+            'implicit':
+                'https://example.com/rp/authz_im_cb'
+                '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
+            'form_post':
+                'https://example.com/rp/authz_fp_cb'
+                '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'}
+
+        assert list(self.rph.hash2issuer.keys()) == [
+            '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d']
+
+        assert self.rph.hash2issuer[
+            '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
+        ] == 'https://op.example.com/'
+
+    def test_begin(self):
+        res = self.rph.begin(issuer_id='github')
+        assert set(res.keys()) == {'url', 'state'}

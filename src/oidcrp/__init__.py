@@ -120,9 +120,10 @@ class RPHandler(object):
         self.keyjar = keyjar
 
         if state_db:
-            self.state_db = InMemoryStateDataBase()
-        else:
             self.state_db = state_db
+        else:
+            self.state_db = InMemoryStateDataBase()
+
 
         self.state_db_interface = StateInterface(self.state_db)
 
@@ -230,6 +231,7 @@ class RPHandler(object):
         else:
             self.hash2issuer[_iss] = _iss
 
+        # This should only be interesting if the client supports Single Log Out
         try:
             client.service_context.post_logout_redirect_uris
         except AttributeError:
@@ -238,7 +240,7 @@ class RPHandler(object):
         if not client.service_context.client_id:
             load_registration_response(client)
 
-    def client_setup(self, issuer, user):
+    def client_setup(self, issuer='', user=''):
         """
         If no client exists for this issuer one is created and initiated with
         the necessary information for the client to be able to communicate
@@ -250,6 +252,9 @@ class RPHandler(object):
         """
 
         if not issuer:
+            if not user:
+                raise ValueError('Need issuer or user')
+
             temporary_client = self.init_client('')
             temporary_client.do_request('webfinger', resource=user)
             issuer = temporary_client.service_context.issuer
