@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit, parse_qs
+
 import pytest
 
 from oidcrp import RPHandler
@@ -222,9 +224,31 @@ class TestRPHandler(object):
             '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d']
 
         assert self.rph.hash2issuer[
-            '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
-        ] == 'https://op.example.com/'
+                '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
+            ] == 'https://op.example.com/'
 
     def test_begin(self):
         res = self.rph.begin(issuer_id='github')
-        assert set(res.keys()) == {'url', 'state'}
+        assert set(res.keys()) == {'url', 'session_key'}
+
+        _session = self.rph.session_interface.get_state(res['session_key'])
+        client = self.rph.issuer2rp[_session['iss']]
+
+        assert client.service_context.issuer == \
+               "https://github.com/login/oauth/authorize"
+
+        part = urlsplit(res['url'])
+        assert part.scheme == 'https'
+        assert part.netloc == 'github.com'
+        assert part.path == '/login/oauth/authorize'
+        query = parse_qs(part.query)
+
+        assert set(query.keys()) == {'nonce', 'state', 'client_id',
+                                     'redirect_uri', 'response_type', 'scope'}
+
+        # nonce and state are created on the fly so can't check for those
+        assert query['client_id'] == ['eeeeeeeee']
+        assert query['redirect_uri'] == [
+            'https://example.com/rp/authz_cb/github']
+        assert query['response_type'] == ['code']
+        assert query['scope'] == ['user public_repo openid']

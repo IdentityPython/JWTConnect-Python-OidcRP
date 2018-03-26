@@ -124,8 +124,7 @@ class RPHandler(object):
         else:
             self.state_db = InMemoryStateDataBase()
 
-
-        self.state_db_interface = StateInterface(self.state_db)
+        self.session_interface = StateInterface(self.state_db)
 
         try:
             self.jwks_uri = add_path(base_url, kwargs['jwks_path'])
@@ -158,7 +157,7 @@ class RPHandler(object):
             return False
 
     def state2issuer(self, state):
-        return self.state_db_interface.get_iss(state)
+        return self.session_interface.get_iss(state)
 
     def pick_config(self, issuer):
         return self.client_configs[issuer]
@@ -312,9 +311,9 @@ class RPHandler(object):
                 'nonce': _nonce
             }
 
-            _state = self.state_db_interface.create_state(_cinfo.issuer)
+            _state = self.session_interface.create_state(_cinfo.issuer)
             request_args['state'] = _state
-            self.state_db_interface.store_nonce2state(_nonce, _state)
+            self.session_interface.store_nonce2state(_nonce, _state)
 
             logger.debug('Authorization request args: {}'.format(request_args))
 
@@ -327,7 +326,7 @@ class RPHandler(object):
             logger.error(message)
             raise
         else:
-            return {'url': _info['url'], 'state': _state}
+            return {'url': _info['url'], 'session_key': _state}
 
     # ----------------------------------------------------------------------
 
@@ -408,7 +407,7 @@ class RPHandler(object):
             return authresp
 
         try:
-            _iss = self.state_db_interface.get_iss(authresp['state'])
+            _iss = self.session_interface.get_iss(authresp['state'])
         except KeyError:
             raise KeyError('Unknown state value')
 
