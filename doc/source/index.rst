@@ -7,7 +7,7 @@ Welcome to oidcrp's documentation!
 .. toctree::
    :maxdepth: 2
 
-   rp.rst
+   rp_handler.rst
    oidcrp.rst
 
 
