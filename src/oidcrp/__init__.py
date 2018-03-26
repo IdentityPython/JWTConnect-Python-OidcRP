@@ -86,36 +86,27 @@ def load_registration_response(client):
         client.service_context.registration_info = _client_reg
 
 
-def load_provider_info(client, issuer):
+def dynamic_provider_info_discovery(client):
     """
-    If the provider info is statically provided not much has to be done.
-    If it's expected to be gotten dynamically Provider Info discovery has
-    to be performed.
+    This is about performing dynamic Provider Info discovery
 
     :param client: A :py:class:`oidcservice.oidc.Client` instance
     """
     try:
-        _provider_info = client.service_context.config['provider_info']
+        client.service['provider_info']
     except KeyError:
-        try:
-            client.service['provider_info']
-        except KeyError:
-            raise ConfigurationError(
-                'Can not do dynamic provider info discovery')
-        else:
-            try:
-                _iss = client.service_context.config['srv_discovery_url']
-            except KeyError:
-                _iss = issuer
-
-            client.service_context.issuer = _iss
-            # info = client.service['provider_info'].do_request_init(
-            #     client.service_context)
-            response = client.do_request('provider_info')
-            if response.is_error_message():
-                raise OidcServiceError(response['error'])
+        raise ConfigurationError(
+            'Can not do dynamic provider info discovery')
     else:
-        client.service_context.provider_info = _provider_info
+        try:
+            client.service_context.issuer = client.service_context.config[
+                'srv_discovery_url']
+        except KeyError:
+            pass
+        
+        response = client.do_request('provider_info')
+        if response.is_error_message():
+            raise OidcServiceError(response['error'])
 
 
 class RPHandler(object):
@@ -153,6 +144,12 @@ class RPHandler(object):
         self.hash2issuer = {}
 
     def supports_webfinger(self):
+        """
+        WebFinger is only used when you don't know which OP/AS to talk to until
+        a user gives you some information you can base a search on.
+
+        :return: True if WebFinger is among the services supported.
+        """
         _cnf = self.pick_config('')
         if 'WebFinger' in _cnf['services']:
             return True
@@ -163,10 +160,7 @@ class RPHandler(object):
         return self.state_db_interface.get_iss(state)
 
     def pick_config(self, issuer):
-        try:
-            return self.client_configs[issuer]
-        except KeyError:
-            return self.client_configs['']
+        return self.client_configs[issuer]
 
     def init_client(self, issuer):
         _cnf = self.pick_config(issuer)
@@ -177,12 +171,11 @@ class RPHandler(object):
             _services = self.services
 
         try:
-            client = self.client_cls(state_db=self.state_db,
-                                     client_authn_method=self.client_authn_method,
-                                     verify_ssl=self.verify_ssl,
-                                     services=_services,
-                                     service_factory=self.service_factory,
-                                     config=_cnf)
+            client = self.client_cls(
+                state_db=self.state_db,
+                client_authn_method=self.client_authn_method,
+                verify_ssl=self.verify_ssl, services=_services,
+                service_factory=self.service_factory, config=_cnf)
         except Exception as err:
             logger.error('Failed initiating client: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())
@@ -192,18 +185,18 @@ class RPHandler(object):
         client.service_context.base_url = self.base_url
         return client
 
-    def do_provider_info(self, client, issuer):
+    @staticmethod
+    def do_provider_info(client):
         """
         Either get the provider info from configuration or from dynamic
         discovery
 
         :param client:
-        :param issuer:
-        :return:
+        :return: issuer ID
         """
         if not client.service_context.provider_info:
-            load_provider_info(client, issuer)
-            issuer = client.service_context.provider_info['issuer']
+            dynamic_provider_info_discovery(client)
+            return client.service_context.provider_info['issuer']
         else:
             _pi = client.service_context.provider_info
             for endp in ['authorization_endpoint', 'token_endpoint',
@@ -212,9 +205,12 @@ class RPHandler(object):
                     for srv in client.service.values():
                         if srv.endpoint_name == endp:
                             srv.endpoint = _pi[endp]
-        return issuer
+            try:
+                return client.service_context.provider_info['issuer']
+            except KeyError:
+                return client.service_context.issuer
 
-    def do_service_context(self, client, issuer):
+    def do_client_registration(self, client):
         """
         Prepare for and do client registration if configured to do so
 
@@ -222,32 +218,40 @@ class RPHandler(object):
         :param issuer:
         :return:
         """
+
+        _iss = client.service_context.issuer
         if not client.service_context.redirect_uris:
             # Create the necessary callback URLs
-            callbacks = self.create_callbacks(issuer)
-            logout_callback = self.base_url
+            # as a side effect self.hash2issuer is set
+            callbacks = self.create_callbacks(_iss)
 
             client.service_context.redirect_uris = list(callbacks.values())
-            client.service_context.post_logout_redirect_uris = [logout_callback]
             client.service_context.callbacks = callbacks
         else:
-            self.hash2issuer[issuer] = issuer
+            self.hash2issuer[_iss] = _iss
+
+        try:
+            client.service_context.post_logout_redirect_uris
+        except AttributeError:
+            client.service_context.post_logout_redirect_uris = [self.base_url]
 
         if not client.service_context.client_id:
             load_registration_response(client)
 
-    def client_setup(self, issuer, **kwargs):
+    def client_setup(self, issuer, user):
         """
         If no client exists for this issuer one is created and initiated with
-        the necessary information for them to be able to communicate.
+        the necessary information for the client to be able to communicate
+        with the OP/AS.
 
         :param issuer: The issuer ID
+        :param user: A user identifier
         :return: A :py:class:`oidcservice.oidc.Client` instance
         """
 
         if not issuer:
             temporary_client = self.init_client('')
-            temporary_client.do_request('webfinger', **kwargs)
+            temporary_client.do_request('webfinger', resource=user)
             issuer = temporary_client.service_context.issuer
         else:
             temporary_client = None
@@ -262,8 +266,8 @@ class RPHandler(object):
         else:
             return client
 
-        issuer = self.do_provider_info(client, issuer)
-        self.do_service_context(client, issuer)
+        issuer = self.do_provider_info(client)
+        self.do_client_registration(client)
         self.issuer2rp[issuer] = client
         return client
 
@@ -278,18 +282,19 @@ class RPHandler(object):
                 'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex)}
 
     # noinspection PyUnusedLocal
-    def begin(self, issuer, **kwargs):
+    def begin(self, issuer_id='', user_id=''):
         """
         First make sure we have a client and that the client has
         the necessary information. Then construct and send an Authorization
         request. The response to that request will be sent to the callback
         URL.
 
-        :param issuer: Issuer ID
+        :param issuer_id: Issuer ID
+        :param user_id: A user identifier
         """
 
         # Get the client instance that has been assigned to this issuer
-        client = self.client_setup(issuer, **kwargs)
+        client = self.client_setup(issuer_id, user_id)
 
         try:
             _cinfo = client.service_context
