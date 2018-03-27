@@ -1,6 +1,9 @@
 from urllib.parse import urlsplit, parse_qs
 
 import pytest
+from oidcmsg.oidc import AccessTokenResponse
+from oidcmsg.oidc import AuthorizationResponse
+from oidcmsg.oidc import IdToken
 
 from oidcrp import RPHandler
 
@@ -224,8 +227,8 @@ class TestRPHandler(object):
             '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d']
 
         assert self.rph.hash2issuer[
-                '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
-            ] == 'https://op.example.com/'
+                   '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
+               ] == 'https://op.example.com/'
 
     def test_begin(self):
         res = self.rph.begin(issuer_id='github')
@@ -252,3 +255,76 @@ class TestRPHandler(object):
             'https://example.com/rp/authz_cb/github']
         assert query['response_type'] == ['code']
         assert query['scope'] == ['user public_repo openid']
+
+    def test_get_session_information(self):
+        res = self.rph.begin(issuer_id='github')
+        _session = self.rph.get_session_information(res['session_key'])
+        assert self.rph.client_configs['github']['issuer'] == _session['iss']
+
+    def test_finalize_auth(self):
+        res = self.rph.begin(issuer_id='linkedin')
+        _session = self.rph.get_session_information(res['session_key'])
+        client = self.rph.issuer2rp[_session['iss']]
+
+        auth_response = AuthorizationResponse(code='access_code',
+                                              state=res['session_key'])
+        resp = self.rph.finalize_auth(client, _session['iss'],
+                                      auth_response.to_dict())
+        assert set(resp.keys()) == {'state', 'code'}
+        aresp = client.service['any'].get_item(AuthorizationResponse,
+                                               'auth_response',
+                                               res['session_key'])
+        assert set(aresp.keys()) == {'state', 'code'}
+
+    def test_get_client_authn_method(self):
+        res = self.rph.begin(issuer_id='github')
+        _session = self.rph.get_session_information(res['session_key'])
+        client = self.rph.issuer2rp[_session['iss']]
+        authn_method = self.rph.get_client_authn_method(client,
+                                                        'token_endpoint')
+        assert authn_method == ''
+
+        res = self.rph.begin(issuer_id='linkedin')
+        _session = self.rph.get_session_information(res['session_key'])
+        client = self.rph.issuer2rp[_session['iss']]
+        authn_method = self.rph.get_client_authn_method(client,
+                                                        'token_endpoint')
+        assert authn_method == 'client_secret_post'
+
+    def test_get_accesstoken(self, httpserver):
+        res = self.rph.begin(issuer_id='github')
+        _session = self.rph.get_session_information(res['session_key'])
+        client = self.rph.issuer2rp[_session['iss']]
+        _nonce = _session['auth_request']['nonce']
+        _iss = _session['iss']
+        _aud = client.client_id
+        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+                 'aud': _aud}
+
+        idts = IdToken(**idval)
+        _signed_jwt = idts.to_jwt(
+            key=client.service_context.keyjar.get_signing_key('oct'),
+            algorithm="HS256", lifetime=300)
+
+        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
+                 "token_type": "Bearer", "expires_in": 3600}
+
+        at = AccessTokenResponse(**_info)
+        httpserver.serve_content(at.to_json())
+        client.service['accesstoken'].endpoint = httpserver.url
+
+        auth_response = AuthorizationResponse(code='access_code',
+                                              state=res['session_key'])
+        resp = self.rph.finalize_auth(client, _session['iss'],
+                                      auth_response.to_dict())
+
+        resp = self.rph.get_accesstoken(client, resp)
+        assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
+                                    'token_type', 'verified_id_token'}
+
+        atresp = client.service['any'].get_item(AccessTokenResponse,
+                                               'token_response',
+                                               res['session_key'])
+        assert set(atresp.keys()) == {'access_token', 'expires_in', 'id_token',
+                                    'token_type', 'verified_id_token'}
+

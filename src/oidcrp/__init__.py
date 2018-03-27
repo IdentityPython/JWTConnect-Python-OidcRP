@@ -162,8 +162,8 @@ class RPHandler(object):
     def pick_config(self, issuer):
         return self.client_configs[issuer]
 
-    def get_session_information(self, state):
-        return self.session_interface.get_state(state)
+    def get_session_information(self, key):
+        return self.session_interface.get_state(key)
 
     def init_client(self, issuer):
         _cnf = self.pick_config(issuer)
@@ -334,7 +334,7 @@ class RPHandler(object):
     # ----------------------------------------------------------------------
 
     @staticmethod
-    def get_response_type(client, issuer):
+    def get_response_type(client):
         return client.service_context.behaviour['response_types'][0]
 
     @staticmethod
@@ -344,11 +344,11 @@ class RPHandler(object):
                 am = client.service_context.behaviour[
                     'token_endpoint_auth_method']
             except KeyError:
-                am = ''
+                return ''
             else:
                 if isinstance(am, str):
                     return am
-                else:
+                else:  # a list
                     return am[0]
 
     def get_accesstoken(self, client, authresp):
@@ -386,6 +386,8 @@ class RPHandler(object):
         if resp.is_error_message():
             raise OidcServiceError(resp['error'])
 
+        return resp
+
     def userinfo_in_id_token(self, id_token):
         """
         Weed out all claims that belong to the JWT
@@ -398,15 +400,14 @@ class RPHandler(object):
     def finalize_auth(self, client, issuer, response):
         _srv = client.service['authorization']
         try:
-            authresp = _srv.parse_response(response, client.service_context,
-                                           sformat='dict')
+            authresp = _srv.parse_response(response, sformat='dict')
         except Exception as err:
             logger.error('Parsing authresp: {}'.format(err))
             raise
         else:
             logger.debug('Authz response: {}'.format(authresp.to_dict()))
 
-        if isinstance(authresp, ResponseMessage):
+        if authresp.is_error_message():
             return authresp
 
         try:
@@ -418,10 +419,12 @@ class RPHandler(object):
             logger.error('Issuer problem: {} != {}'.format(_iss, issuer))
             # got it from the wrong bloke
             raise ValueError('Impersonator {}'.format(issuer))
+
+        _srv.update_service_context(authresp, state=authresp['state'])
         return authresp
 
     def get_access_and_id_token(self, client, issuer, authresp):
-        _resp_type = set(self.get_response_type(client, issuer).split(' '))
+        _resp_type = set(self.get_response_type(client).split(' '))
 
         access_token = None
         id_token = None

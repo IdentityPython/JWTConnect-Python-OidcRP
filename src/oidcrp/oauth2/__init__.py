@@ -118,8 +118,12 @@ class Client(object):
 
         logger.debug('do_request info: {}'.format(_info))
 
+        try:
+            _state = kwargs['state']
+        except:
+            _state = ''
         return self.service_request(_srv, response_body_type=response_body_type,
-                                    **_info)
+                                    state=_state, **_info)
 
     def set_client_id(self, client_id):
         self.client_id = client_id

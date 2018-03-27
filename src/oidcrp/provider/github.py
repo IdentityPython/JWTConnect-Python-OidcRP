@@ -2,7 +2,7 @@ from oidcmsg import oauth2
 from oidcmsg.message import Message
 from oidcmsg.message import SINGLE_OPTIONAL_STRING
 from oidcmsg.message import SINGLE_REQUIRED_STRING
-from oidcmsg.oauth2 import ErrorResponse
+from oidcmsg.oauth2 import ResponseMessage
 
 from oidcservice.oidc import service as oidc_service
 from oidcservice.oauth2 import service
@@ -28,6 +28,6 @@ class AccessToken(service.AccessToken):
 
 class UserInfo(oidc_service.UserInfo):
     response_cls = Message
-    error_msg = ErrorResponse
+    error_msg = ResponseMessage
     default_authn_method = ''
     http_method = 'GET'

@@ -5,7 +5,7 @@
 SPHINXOPTS    =
 #SPHINXBUILD   = sphinx-build
 SPHINXBUILD   = /Library/Frameworks/Python.framework/Versions/3.6/bin/sphinx-build
-SPHINXPROJ    = oicrp
+SPHINXPROJ    = oidcrp
 SOURCEDIR     = source
 BUILDDIR      = build
 
