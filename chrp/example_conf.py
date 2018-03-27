@@ -81,6 +81,25 @@ CLIENTS = {
             'UserInfo': {}
         }
     },
+    'microsoft': {
+        'issuer': 'https://login.microsoftonline.com/9188040d-6c67-4c5b-b112'
+                  '-36a304b66dad/v2.0',
+        'client_id': '242424242424',
+        'client_secret': 'ipipipippipipippi',
+        "redirect_uris": ["{}/authz_cb/microsoft".format(BASEURL)],
+        "client_prefs": {
+            "response_types": ["id_token"],
+            "scope": ["openid"],
+            "token_endpoint_auth_method": ["private_key_jwt",
+                                           'client_secret_post'],
+            "response_mode": 'form_post'
+        },
+        "allow": {
+            "issuer_mismatch": True
+        },
+        # "userinfo_request_method": "GET",
+        "services": ['ProviderInfoDiscovery', 'Authorization']
+    },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
         "client_id": "xxxxxxx",

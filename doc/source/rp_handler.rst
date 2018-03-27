@@ -40,10 +40,6 @@ This is the list and the normal sequence in which they occur:
 5. Access token
 6. User info
 
---------------------
-The course of action
---------------------
-
 When a user accessing the web service for some reason needs to be authenticate
 or the service needs a access token that allows it to access some resources
 at a resource service on behalf of the user a number of things will happen:
@@ -86,4 +82,44 @@ Obtain user info
     Using the access token received above a userinfo request will be sent to the
     OP.
 
+Which of the above listed services that your RP will use when talking to an OP
+are usually decided by the OP. Just to show you how it can differ between
+different OPs I'll give you a couple of examples below:
 
+Google
+    If you want to use the Google OP as authentication service you should know
+    that it is a true OIDC OP `certified`_ by the OpenID Foundation. You will
+    have to manually register you RP at Google but getting Provider info can be
+    done dynamically using the OIDC service. With Google you will use the
+    response_type *code*. This means that you will need services 2,4,5 and 6
+    from the list above. More about how you will accomplish this below
+
+Microsoft
+    Microsoft have chosen to only support response_type *id_token* and to
+    return all the user information in the **id_token**. Microsoft's OP
+    supports dynamic Provider info discovery but client registration is
+    done manual. What it comes down to is that you will only need services
+    2 and 4.
+
+Github
+    Now, to begin with Github is not running an OP they basically have an
+    Oauth2 AS with some additions. It doesn't support dynamic provider info
+    discovery or client registration. If expects response_type to be *code*
+    so services 4,5 and 6 are needed.
+
+.. _certified : http://openid.net/certification/
+
+After this background you should now be prepared to dive into how the RP handler
+should be used.
+
+--------------
+RP handler API
+--------------
+
+The high level methods you have access to are:
+
+begin
+    This method will initiate a RP/Client instance if none exists for the
+    OP/AS in question. It will then run service 1 if needed, services 2 and 3
+    according to configuration and finally will construct the authorization
+    request
