@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# oicrp documentation build configuration file, created by
+# oidcrp documentation build configuration file, created by
 # sphinx-quickstart on Fri Feb 23 13:32:06 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -50,7 +50,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'oicrp'
+project = 'oidcrp'
 copyright = '2018, Roland Hedberg'
 author = 'Roland Hedberg'
 
@@ -116,7 +116,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'oicrpdoc'
+htmlhelp_basename = 'oidcrpdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -143,7 +143,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'oicrp.tex', 'oicrp Documentation',
+    (master_doc, 'oidcrp.tex', 'oidcrp Documentation',
      'Roland Hedberg', 'manual'),
 ]
 
@@ -153,7 +153,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'oicrp', 'oicrp Documentation',
+    (master_doc, 'oidcrp', 'oidcrp Documentation',
      [author], 1)
 ]
 
@@ -164,8 +164,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'oicrp', 'oicrp Documentation',
-     author, 'oicrp', 'One line description of project.',
+    (master_doc, 'oidcrp', 'oidcrp Documentation',
+     author, 'oidcrp', 'One line description of project.',
      'Miscellaneous'),
 ]
 

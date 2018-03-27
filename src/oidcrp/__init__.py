@@ -162,6 +162,9 @@ class RPHandler(object):
     def pick_config(self, issuer):
         return self.client_configs[issuer]
 
+    def get_session_information(self, state):
+        return self.session_interface.get_state(state)
+
     def init_client(self, issuer):
         _cnf = self.pick_config(issuer)
 

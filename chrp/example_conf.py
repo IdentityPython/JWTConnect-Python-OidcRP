@@ -82,8 +82,7 @@ CLIENTS = {
         }
     },
     'microsoft': {
-        'issuer': 'https://login.microsoftonline.com/9188040d-6c67-4c5b-b112'
-                  '-36a304b66dad/v2.0',
+        'issuer': 'https://login.microsoftonline.com/<tenant_id>/v2.0',
         'client_id': '242424242424',
         'client_secret': 'ipipipippipipippi',
         "redirect_uris": ["{}/authz_cb/microsoft".format(BASEURL)],

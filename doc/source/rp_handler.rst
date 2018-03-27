@@ -116,10 +116,106 @@ should be used.
 RP handler API
 --------------
 
-The high level methods you have access to are:
+A session is defined as the services used to cope with authorization/authentication
+for one user starting with the authorization request.
 
-begin
+The high level methods you have access to (in the order they are to be
+used) are:
+
+:py:meth:`oidcrp.RPHandler.begin`
     This method will initiate a RP/Client instance if none exists for the
     OP/AS in question. It will then run service 1 if needed, services 2 and 3
     according to configuration and finally will construct the authorization
-    request
+    request.
+
+:py:meth:`oidcrp.RPHandler.get_session_information`
+    In the authorization response there MUST be a state parameter. The value
+    of that parameter is the key into a data store that will provide you
+    with information about the session so far.
+
+:py:meth:`oidcrp.RPHandler.finalize`
+    Will parse the authorization response and depending on the configuration
+    run the services 5 and 6.
+
+
+------------------------
+RP handler configuration
+------------------------
+
+As you may have guessed by now a lot of the work you have to do to use this
+packages lies in the RP configuration.
+
+The configuration parameters fall into 2 groups, one about the RP/client and
+the other about the OP/AS
+
+RP configuration parameters
+---------------------------
+
+Disregarding if doing everything dynamically or statically you **MUST**
+define which services the RP/Client should be able to use.
+
+services
+    A specification of the usable services which possible changes to the
+    default configuration of those service.
+
+If you have done manual client registration you will have to fill in these:
+
+client_id
+    The client identifier.
+
+client_secret
+    The client secret
+
+redirect_uris
+    A set of URLs from which the RP can chose one to be added to the
+    authorization request. The expectation is that the OP/AS will redirect
+    the use back to this URL after the authorization/authentication has
+    completed.
+
+behavior
+    Information about how the RP should behave towards the OP/AS
+
+If the provider info discovery is done dynamically you need this
+
+client_prefs
+    How the RP should prefer to behave against the OP/AS
+
+OP configuration parameters
+---------------------------
+
+issuer
+    The Issuer ID of the OP.
+
+allow
+    If there is a deviation from the standard as to how the OP/AS behaves this
+    gives you the possibility to say you are OK with the deviation.
+    Presently there is only one thing you can allow and that is the *issuer*
+    in the provider info is not the same as the URL you used to fetch the
+    information.
+
+RP configuration - Google
+-------------------------
+
+A working configuration where the client_id and client_secret is replaced
+with dummy values::
+
+    {
+        "issuer": "https://accounts.google.com/",
+        "client_id": "xxxxxxxxx.apps.googleusercontent.com",
+        "client_secret": "2222222222",
+        "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
+        "client_prefs": {
+            "response_types": ["code"],
+            "scope": ["openid", "profile", "email"],
+            "token_endpoint_auth_method": ["client_secret_basic",
+                                           'client_secret_post']
+        },
+        "services": {
+            'ProviderInfoDiscovery': {},
+            'Authorization': {},
+            'AccessToken': {},
+            'RefreshAccessToken': {},
+            'UserInfo': {}
+        }
+    }
+
