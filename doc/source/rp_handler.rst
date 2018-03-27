@@ -138,9 +138,9 @@ used) are:
     run the services 5 and 6.
 
 
-------------------------
-RP handler configuration
-------------------------
+----------------
+RP configuration
+----------------
 
 As you may have guessed by now a lot of the work you have to do to use this
 packages lies in the RP configuration.
@@ -193,6 +193,7 @@ allow
     in the provider info is not the same as the URL you used to fetch the
     information.
 
+-------------------------
 RP configuration - Google
 -------------------------
 
