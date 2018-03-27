@@ -97,7 +97,7 @@ CLIENTS = {
             "issuer_mismatch": True
         },
         # "userinfo_request_method": "GET",
-        "services": ['ProviderInfoDiscovery', 'Authorization']
+        "services": {'ProviderInfoDiscovery': {}, 'Authorization': {}}
     },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
@@ -142,7 +142,7 @@ CLIENTS = {
         'services': {
             'Authorization': {},
             'AccessToken': {'default_authn_method': ''},
-            'UserInfo': {'default_authn_method':''}
+            'UserInfo': {'default_authn_method': ''}
         }
     },
     'github': {

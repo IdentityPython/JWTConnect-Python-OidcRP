@@ -220,3 +220,63 @@ with dummy values::
         }
     }
 
+
+----------------------------
+RP configuration - Microsoft
+----------------------------
+
+Configuration that allows you to use a Microsoft OP as identity provider::
+
+    {
+        'issuer': 'https://login.microsoftonline.com/<tenant_id>/v2.0',
+        'client_id': '242424242424',
+        'client_secret': 'ipipipippipipippi',
+        "redirect_uris": ["{}/authz_cb/microsoft".format(BASEURL)],
+        "client_prefs": {
+            "response_types": ["id_token"],
+            "scope": ["openid"],
+            "token_endpoint_auth_method": ["private_key_jwt",
+                                           'client_secret_post'],
+            "response_mode": 'form_post'
+        },
+        "allow": {
+            "issuer_mismatch": True
+        },
+        "services": {
+            'ProviderInfoDiscovery':{},
+            'Authorization': {}
+        }
+    }
+
+
+-------------------------
+RP configuration - Github
+-------------------------
+
+As mentioned before Github runs an OAuth2 AS not an OP.
+Still we can talk to it using this configuration::
+
+    {
+        "issuer": "https://github.com/login/oauth/authorize",
+        'client_id': 'eeeeeeeee',
+        'client_secret': 'aaaaaaaaaaaaa',
+        "redirect_uris": ["{}/authz_cb/github".format(BASEURL)],
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["user", "public_repo"],
+            "token_endpoint_auth_method": ['']
+        },
+        "provider_info": {
+            "authorization_endpoint":
+                "https://github.com/login/oauth/authorize",
+            "token_endpoint":
+                "https://github.com/login/oauth/access_token",
+            "userinfo_endpoint":
+                "https://api.github.com/user"
+        },
+        'services': {
+            'Authorization': {},
+            'AccessToken': {},
+            'UserInfo': {'default_authn_method': ''}
+        }
+    }
