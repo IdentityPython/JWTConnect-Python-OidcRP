@@ -1,8 +1,8 @@
 .. _oidcrp_rp:
 
-*****************************
-The Relying Party Handler API
-*****************************
+*************************
+The Relying Party Handler
+*************************
 
 ------------
 Introduction
@@ -215,10 +215,51 @@ with dummy values::
             'ProviderInfoDiscovery': {},
             'Authorization': {},
             'AccessToken': {},
-            'RefreshAccessToken': {},
             'UserInfo': {}
         }
     }
+
+
+Now piece by piece
+
+Information provided by Google::
+
+        "issuer": "https://accounts.google.com/",
+
+Information about the client. When you register your RP with Google you will
+in return get a client_id and client_secret::
+
+        "client_id": "xxxxxxxxx.apps.googleusercontent.com",
+        "client_secret": "2222222222",
+        "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
+
+Now to the behaviour of the client. Google specifies response_type *code* which
+is reflected here. The scopes are picked form the set of possible scopes that
+Google provides. And lastly the *token_endpoint_auth_method*, where Google
+right now supports 2 variants both listed here. The RP will by default pick
+the first if a list of possible values. Which in this case means the RP will
+authenticate using the *client_secret_basic* if allowed by Google::
+
+        "client_prefs": {
+            "response_types": ["code"],
+            "scope": ["openid", "profile", "email"],
+            "token_endpoint_auth_method": ["client_secret_basic",
+                                           'client_secret_post']
+        },
+
+And lastly, which service the RP has access to. *ProviderInfoDiscovery* since
+Google supports dynamic provider info discovery. *Authorization* always must be
+there. *AccessToken* and *UserInfo* since response_type is *code* and Google
+return the user info at the userinfo endpoint::
+
+
+        "services": {
+            'ProviderInfoDiscovery': {},
+            'Authorization': {},
+            'AccessToken': {},
+            'UserInfo': {}
+        }
+
 
 
 ----------------------------
@@ -235,8 +276,7 @@ Configuration that allows you to use a Microsoft OP as identity provider::
         "client_prefs": {
             "response_types": ["id_token"],
             "scope": ["openid"],
-            "token_endpoint_auth_method": ["private_key_jwt",
-                                           'client_secret_post'],
+            "token_endpoint_auth_method": ['client_secret_post'],
             "response_mode": 'form_post'
         },
         "allow": {
@@ -247,6 +287,47 @@ Configuration that allows you to use a Microsoft OP as identity provider::
             'Authorization': {}
         }
     }
+
+One piece at the time. Microsoft has something called a tenant. Either you
+specify your RP to only one tenant in which case the issuer returned
+as *iss* in the id_token will be the same as the *issuer*. If our RP
+is expected to work in a multi-tenant environment then the *iss* will never
+match issuer. Let's assume our RP works in a single-tenant context::
+
+        'issuer': 'https://login.microsoftonline.com/<tenant_id>/v2.0',
+        "allow": {
+            "issuer_mismatch": True
+        },
+
+Information about the client. When you register your RP with Microsoft you will
+in return get a client_id and client_secret::
+
+        'client_id': '242424242424',
+        'client_secret': 'ipipipippipipippi',
+        "redirect_uris": ["{}/authz_cb/microsoft".format(BASEURL)],
+
+Regarding the behaviour of the RP, Microsoft have chosen to only support the
+response_type *id_token*. Microsoft have also chosen to return the authorization
+response not in the fragment of the redirect URL which is the default but
+instead using the response_mode *form_post*. *client_secret_post* is a
+client authentication that Microsoft supports at the token enpoint::
+
+        "client_prefs": {
+            "response_types": ["id_token"],
+            "scope": ["openid"],
+            "token_endpoint_auth_method": ['client_secret_post'],
+            "response_mode": 'form_post'
+        },
+
+And lastly, which service the RP has access to. *ProviderInfoDiscovery* since
+Microsoft supports dynamic provider info discovery. *Authorization* always must be
+there. And in this case this is it. All the user info will be included in the
+*id_token* that is returned in the authorization response::
+
+        "services": {
+            'ProviderInfoDiscovery':{},
+            'Authorization': {}
+        }
 
 
 -------------------------
@@ -276,7 +357,56 @@ Still we can talk to it using this configuration::
         },
         'services': {
             'Authorization': {},
-            'AccessToken': {},
+            'AccessToken': {'response_body_type': 'urlencoded'},
             'UserInfo': {'default_authn_method': ''}
         }
     }
+
+Part by part.
+Like with Google and Microsoft, Github expects you to register your client in
+advance. You register teh redirect_uris and in return will get *client_id* and
+*client_secret*::
+
+        'client_id': 'eeeeeeeee',
+        'client_secret': 'aaaaaaaaaaaaa',
+        "redirect_uris": ["{}/authz_cb/github".format(BASEURL)],
+
+Since Github doesn't support dynamic provder info discovery you have to enter
+that information in the configuration::
+
+        "issuer": "https://github.com/login/oauth/authorize",
+        "provider_info": {
+            "authorization_endpoint":
+                "https://github.com/login/oauth/authorize",
+            "token_endpoint":
+                "https://github.com/login/oauth/access_token",
+            "userinfo_endpoint":
+                "https://api.github.com/user"
+        },
+
+Regarding the client behaviour the Github AS expects response_type *code*.
+The number of scope values is rather large I've just chose 2 here.
+No client authentication at the token endpoint is expected::
+
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["user", "public_repo"],
+            "token_endpoint_auth_method": ['']
+        },
+
+And about services, *Authorization* as always, *AccessToken* to convert the
+received *code* in the authorization response into an access token which later
+can be used to access user info at the userinfo endpoint.
+Github deviates from the standard in a number of way. First the Oauth2
+standard doesn't mention anything like an userinfo endpoint, that is OIDC.
+So Github has implemented something that is inbetween OAuth2 and OIDC.
+What's more disturbing is that the accesstoken response by default is not
+encoded as a JSON document which the standard say but instead it's
+urlencoded. Lucky for us, we can deal with both these things by configuration
+rather then writing code.::
+
+        'services': {
+            'Authorization': {},
+            'AccessToken': {'response_body_type': 'urlencoded'},
+            'UserInfo': {'default_authn_method': ''}
+        }
