@@ -16,7 +16,7 @@ from oidcmsg.time_util import utc_time_sans_frac
 from oidcservice.client_auth import CLIENT_AUTHN_METHOD
 from oidcservice.state_interface import State
 
-from oidcrp.oidc import Client
+from oidcrp.oidc import RP
 
 sys.path.insert(0, '.')
 
@@ -53,8 +53,8 @@ class TestClient(object):
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
         }
-        self.client = Client(DB(), client_authn_method=CLIENT_AUTHN_METHOD,
-                             config=conf)
+        self.client = RP(DB(), client_authn_method=CLIENT_AUTHN_METHOD,
+                         config=conf)
         self.client.state_db.set('ABCDE', State(iss='issuer').to_json())
 
     def test_construct_authorization_request(self):

@@ -62,7 +62,7 @@ PROVIDER_DEFAULT = {
 }
 
 
-class Client(oauth2.Client):
+class RP(oauth2.Client):
     def __init__(self, state_db, ca_certs=None, client_authn_method=None,
                  keyjar=None, verify_ssl=True, config=None, client_cert=None,
                  httplib=None, services=None, service_factory=None):
@@ -75,9 +75,6 @@ class Client(oauth2.Client):
                                config=config, client_cert=client_cert,
                                httplib=httplib, services=_srvs,
                                service_factory=service_factory)
-
-        # self.wf = WebFinger(OIC_ISSUER)
-        # self.wf.httpd = self.http
 
     def fetch_distributed_claims(self, userinfo, service, callback=None):
         """

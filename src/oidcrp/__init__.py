@@ -133,7 +133,7 @@ class RPHandler(object):
 
         self.extra = kwargs
 
-        self.client_cls = client_cls or oidc.Client
+        self.client_cls = client_cls or oidc.RP
         self.services = services
         self.service_factory = service_factory or factory
         self.client_authn_method = client_authn_method
