@@ -377,11 +377,11 @@ class RPHandler(object):
 
         return tokenresp
 
-    def get_userinfo(self, client, authresp, access_token, **kwargs):
+    def get_userinfo(self, client, state, access_token, **kwargs):
         # use the access token to get some userinfo
         request_args = {'access_token': access_token}
 
-        resp = client.do_request('userinfo', state=authresp["state"],
+        resp = client.do_request('userinfo', state=state,
                                  request_args=request_args, **kwargs)
         if resp.is_error_message():
             raise OidcServiceError(resp['error'])
@@ -423,7 +423,7 @@ class RPHandler(object):
         _srv.update_service_context(authresp, state=authresp['state'])
         return authresp
 
-    def get_access_and_id_token(self, client, issuer, authresp):
+    def get_access_and_id_token(self, client, authresp):
         _resp_type = set(self.get_response_type(client).split(' '))
 
         access_token = None
@@ -438,7 +438,7 @@ class RPHandler(object):
         elif _resp_type in [{'code'}, {'code', 'id_token'}]:
             # get the access token
             token_resp = self.get_accesstoken(client, authresp)
-            if isinstance(token_resp, ResponseMessage):
+            if token_resp.is_error_message():
                 return False, "Invalid response %s." % token_resp["error"]
 
             access_token = token_resp["access_token"]
@@ -466,11 +466,12 @@ class RPHandler(object):
         if 'error' in authresp:
             return {'state': authresp['state'], 'error': authresp}
 
-        token = self.get_access_and_id_token(client, issuer, authresp)
+        _state = authresp['state']
+        token = self.get_access_and_id_token(client, authresp)
 
         if 'userinfo' in client.service and token['access_token']:
 
-            inforesp = self.get_userinfo(client, authresp,
+            inforesp = self.get_userinfo(client, authresp['state'],
                                          token['access_token'])
 
             if isinstance(inforesp, ResponseMessage):
@@ -486,20 +487,20 @@ class RPHandler(object):
         return {'userinfo': inforesp, 'state': authresp['state']}
 
 
-def get_service_unique_request(service, request, **kwargs):
+def get_provider_specific_service(service_provider, service, **kwargs):
     """
-    Get a class instance of a :py:class:`oidcservice.request.Request` subclass
+    Get a class instance of a :py:class:`oidcservice.service.Service` subclass
     specific to a specified service
 
+    :param service_provider: The name of the service provider
     :param service: The name of the service
-    :param request: The name of the request
     :param kwargs: Arguments provided when initiating the class
     :return: An initiated subclass of oidcservice.request.Request or None if
         the service or the request could not be found.
     """
-    if service in provider.__all__:
-        mod = import_module('oidcrp.provider.' + service)
-        cls = getattr(mod, request)
+    if service_provider in provider.__all__:
+        mod = import_module('oidcrp.provider.' + service_provider)
+        cls = getattr(mod, service)
         return cls(**kwargs)
 
     return None
@@ -513,6 +514,6 @@ def factory(req_name, **kwargs):
         elif group == 'oidc':
             oidc.service.factory(req_name[1], **kwargs)
         else:
-            return get_service_unique_request(group, name, **kwargs)
+            return get_provider_specific_service(group, name, **kwargs)
     else:
         return oidc.service.factory(req_name, **kwargs)
