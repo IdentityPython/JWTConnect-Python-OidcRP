@@ -128,15 +128,29 @@ used) are:
     according to configuration and finally will construct the authorization
     request.
 
+    Usage example::
+
+        from oidcrp import RPHandler
+        rph = RPHandler()
+        rph.begin(issuer_id)
+
+
 :py:meth:`oidcrp.RPHandler.get_session_information`
     In the authorization response there MUST be a state parameter. The value
     of that parameter is the key into a data store that will provide you
     with information about the session so far.
 
+    Usage example (kwargs are the set of claims in the authorization response)::
+
+        session_info = rph.state_db_interface.get_state(kwargs['state'])
+
 :py:meth:`oidcrp.RPHandler.finalize`
     Will parse the authorization response and depending on the configuration
     run the services 5 and 6.
 
+    Usage example::
+
+        res = rph.finalize(session_info['iss'], kwargs)
 
 ----------------
 RP configuration

@@ -359,6 +359,37 @@ class TestRPHandler(object):
         assert resp['access_token'] == 'accessTok'
         assert isinstance(resp['id_token'], IdToken)
 
+    def test_access_and_id_token_by_reference(self, httpserver):
+        res = self.rph.begin(issuer_id='github')
+        _session = self.rph.get_session_information(res['session_key'])
+        client = self.rph.issuer2rp[_session['iss']]
+        _nonce = _session['auth_request']['nonce']
+        _iss = _session['iss']
+        _aud = client.client_id
+        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+                 'aud': _aud}
+
+        idts = IdToken(**idval)
+        _signed_jwt = idts.to_jwt(
+            key=client.service_context.keyjar.get_signing_key('oct'),
+            algorithm="HS256", lifetime=300)
+
+        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
+                 "token_type": "Bearer", "expires_in": 3600}
+
+        at = AccessTokenResponse(**_info)
+        httpserver.serve_content(at.to_json())
+        client.service['accesstoken'].endpoint = httpserver.url
+
+        _response = AuthorizationResponse(code='access_code',
+                                          state=res['session_key'])
+        auth_response = self.rph.finalize_auth(client, _session['iss'],
+                                               _response.to_dict())
+        resp = self.rph.get_access_and_id_token(client,
+                                                state=res['session_key'])
+        assert resp['access_token'] == 'accessTok'
+        assert isinstance(resp['id_token'], IdToken)
+
     def test_get_userinfo(self, httpserver):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['session_key'])

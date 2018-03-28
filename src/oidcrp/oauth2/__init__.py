@@ -100,18 +100,18 @@ class Client(object):
         method = getattr(self, 'construct_{}_request'.format(request_type))
         return method(self.service_context, request_args, extra_args, **kwargs)
 
-    def do_request(self, request_type, scope="", response_body_type="",
-                   method="", request_args=None, extra_args=None,
-                   http_args=None, authn_method="", **kwargs):
+    def do_request(self, request_type, response_body_type="",
+                   method="", request_args=None, **kwargs):
 
         _srv = self.service[request_type]
         if not method:
             method = _srv.http_method
 
-        _info = _srv.get_request_parameters(
-            method=method, scope=scope, request_args=request_args,
-            extra_args=extra_args, authn_method=authn_method,
-            http_args=http_args, **kwargs)
+        _info = _srv.get_request_parameters(request_args=request_args, **kwargs)
+
+        # _info = _srv.get_request_parameters(
+        #     method=method, scope=scope, request_args=request_args,
+        #     extra_args=extra_args, authn_method=authn_method, **kwargs)
 
         if not response_body_type:
             response_body_type = _srv.response_body_type
