@@ -527,3 +527,15 @@ class TestRPHandlerTier2(object):
         res = self.rph.refresh_access_token(client, self.session_key,
                                             'openid email')
         assert res['access_token'] == '2nd_accessTok'
+
+    def test_get_user_info(self, httpserver):
+        _session = self.rph.get_session_information(self.session_key)
+        client = self.rph.issuer2rp[_session['iss']]
+
+        httpserver.serve_content(
+            '{"sub":"EndUserSubject", "mail":"foo@example.com"}')
+        client.service['userinfo'].endpoint = httpserver.url
+
+        resp = self.rph.get_user_info(client, self.session_key)
+        assert set(resp.keys()) == {'sub', 'mail'}
+        assert resp['mail'] == 'foo@example.com'

@@ -499,20 +499,25 @@ class RPHandler(object):
 
         return tokenresp
 
-    def get_user_info(self, client, state, access_token, **kwargs):
+    def get_user_info(self, client, session_key, access_token='', **kwargs):
         """
         use the access token previously acquired to get some userinfo
 
         :param client: A Client instance
-        :param state: The state value, this is the key into the session data
-            store
+        :param session_key: The state value, this is the key into the session
+            data store
         :param access_token: An access token
         :param kwargs: Extra keyword arguments
         :return: A :py:class:`oidcmsg.oidc.OpenIDSchema` instance
         """
+        if not access_token:
+            self.session_interface.multiple_extend_request_args(
+                {}, session_key, ['access_token'],
+                ['auth_response', 'token_response', 'refresh_token_response'])
+
         request_args = {'access_token': access_token}
 
-        resp = client.do_request('userinfo', state=state,
+        resp = client.do_request('userinfo', state=session_key,
                                  request_args=request_args, **kwargs)
         if resp.is_error_message():
             raise OidcServiceError(resp['error'])
