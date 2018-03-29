@@ -7,8 +7,9 @@ from importlib import import_module
 from cryptojwt import as_bytes
 
 from oidcmsg.oauth2 import ResponseMessage
-from oidcmsg.oidc import OpenIDSchema, AuthorizationResponse, \
-    AuthorizationRequest
+from oidcmsg.oidc import AuthorizationRequest
+from oidcmsg.oidc import AuthorizationResponse
+from oidcmsg.oidc import OpenIDSchema
 
 from oidcservice import rndstr
 from oidcservice.client_auth import CLIENT_AUTHN_METHOD
@@ -222,8 +223,8 @@ class RPHandler(object):
     @staticmethod
     def do_provider_info(client):
         """
-        Either get the provider info from configuration or from dynamic
-        discovery
+        Either get the provider info from configuration or through dynamic
+        discovery.
 
         :param client: A Client instance
         :return: issuer ID
@@ -328,7 +329,41 @@ class RPHandler(object):
                 'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
                 'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex)}
 
-    # noinspection PyUnusedLocal
+    def init_authorization(self, client, req_args=None):
+        """
+        Constructs the URL that will redirect the user to the authorization
+        endpoint of the OP/AS.
+
+        :param client: A Client instance
+        :param req_args: Non-default Request arguments
+        :return: A dictionary with 2 keys: **url** The authorization redirect
+            URL and **session_key** the key to the session information in the
+            state data store.
+        """
+        service_context = client.service_context
+
+        _nonce = rndstr(24)
+        request_args = {
+            'redirect_uri': service_context.redirect_uris[0],
+            'scope': service_context.behaviour['scope'],
+            'response_type': service_context.behaviour['response_types'][0],
+            'nonce': _nonce
+        }
+
+        if req_args is not None:
+            request_args.update(req_args)
+
+        _state = self.session_interface.create_state(service_context.issuer)
+        request_args['state'] = _state
+        self.session_interface.store_nonce2state(_nonce, _state)
+
+        logger.debug('Authorization request args: {}'.format(request_args))
+
+        _srv = client.service['authorization']
+        _info = _srv.get_request_parameters(request_args=request_args)
+        logger.debug('Authorization info: {}'.format(_info))
+        return {'url': _info['url'], 'session_key': _state}
+
     def begin(self, issuer_id='', user_id=''):
         """
         This is the first of the 3 high level methods that most users of this
@@ -349,31 +384,13 @@ class RPHandler(object):
         client = self.client_setup(issuer_id, user_id)
 
         try:
-            _cinfo = client.service_context
-
-            _nonce = rndstr(24)
-            request_args = {
-                'redirect_uri': _cinfo.redirect_uris[0],
-                'scope': _cinfo.behaviour['scope'],
-                'response_type': _cinfo.behaviour['response_types'][0],
-                'nonce': _nonce
-            }
-
-            _state = self.session_interface.create_state(_cinfo.issuer)
-            request_args['state'] = _state
-            self.session_interface.store_nonce2state(_nonce, _state)
-
-            logger.debug('Authorization request args: {}'.format(request_args))
-
-            _srv = client.service['authorization']
-            _info = _srv.get_request_parameters(request_args=request_args)
-            logger.debug('Authorization info: {}'.format(_info))
+            res = self.init_authorization(client)
         except Exception as err:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
             raise
         else:
-            return {'url': _info['url'], 'session_key': _state}
+            return res
 
     # ----------------------------------------------------------------------
 
@@ -409,35 +426,27 @@ class RPHandler(object):
                 else:  # a list
                     return am[0]
 
-    def get_access_token(self, client, authorization_response=None, state=''):
+    def get_access_token(self, client, session_key):
         """
         Use the 'accesstoken' service to get an access token from the OP/AS.
 
-        :param state: The session key (the state parameter in the authorization 
-            request)
+        :param session_key: The session key (the state parameter in the
+            authorization request)
         :param client: A Client instance
-        :param authorization_response: A
-            :py:class:`oidcmsg.oidc.AuthorizationResponse` or
-            :py:class:`oidcmsg.oauth2.AuthorizationResponse` instance
         :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` or
             :py:class:`oidcmsg.oauth2.AuthorizationResponse`
         """
         logger.debug('get_accesstoken')
 
-        if authorization_response is None:
-            if state:
-                authorization_response = self.session_interface.get_item(
-                    AuthorizationResponse, 'auth_response', state)
-            else:
-                raise ValueError(
-                    'One of authorization_response or state must be provided')
-
-        if not state:
-            state = authorization_response['state']
+        authorization_response = self.session_interface.get_item(
+            AuthorizationResponse, 'auth_response', session_key)
+        authorization_request = self.session_interface.get_item(
+            AuthorizationRequest, 'auth_request', session_key)
 
         req_args = {
-            'code': authorization_response['code'], 'state': state,
-            'redirect_uri': client.service_context.redirect_uris[0],
+            'code': authorization_response['code'],
+            'state': session_key,
+            'redirect_uri': authorization_request['redirect_uri'],
             'grant_type': 'authorization_code',
             'client_id': client.service_context.client_id,
             'client_secret': client.service_context.client_secret
@@ -448,7 +457,7 @@ class RPHandler(object):
                 'accesstoken', request_args=req_args,
                 authn_method=self.get_client_authn_method(client,
                                                           "token_endpoint"),
-                state=state
+                state=session_key
             )
         except Exception as err:
             logger.error("%s", err)
@@ -459,7 +468,38 @@ class RPHandler(object):
 
         return tokenresp
 
-    def get_userinfo(self, client, state, access_token, **kwargs):
+    def refresh_access_token(self, client, session_key, scope=''):
+        """
+        Refresh an access token using a refresh_token. When asking for a new
+        access token the RP can ask for another scope for the new token.
+
+        :param client: A Client instance
+        :param session_key: The session key
+        :param scope: What the returned token should be valid for.
+        :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` instance
+        """
+        if scope:
+            req_args = {'scope':scope}
+        else:
+            req_args = {}
+
+        try:
+            tokenresp = client.do_request(
+                'refresh_token',
+                authn_method=self.get_client_authn_method(client,
+                                                          "token_endpoint"),
+                state=session_key, request_args=req_args
+            )
+        except Exception as err:
+            logger.error("%s", err)
+            raise
+        else:
+            if tokenresp.is_error_message():
+                raise OidcServiceError(tokenresp['error'])
+
+        return tokenresp
+
+    def get_user_info(self, client, state, access_token, **kwargs):
         """
         use the access token previously acquired to get some userinfo
 
@@ -572,7 +612,7 @@ class RPHandler(object):
             access_token = authorization_response["access_token"]
         elif _resp_type in [{'code'}, {'code', 'id_token'}]:
             # get the access token
-            token_resp = self.get_access_token(client, authorization_response)
+            token_resp = self.get_access_token(client, state)
             if token_resp.is_error_message():
                 return False, "Invalid response %s." % token_resp["error"]
 
@@ -613,9 +653,9 @@ class RPHandler(object):
 
         if 'userinfo' in client.service and token['access_token']:
 
-            inforesp = self.get_userinfo(client,
-                                         authorization_response['state'],
-                                         token['access_token'])
+            inforesp = self.get_user_info(client,
+                                          authorization_response['state'],
+                                          token['access_token'])
 
             if isinstance(inforesp, ResponseMessage):
                 return False, "Invalid response %s." % inforesp["error"]

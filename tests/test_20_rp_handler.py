@@ -103,6 +103,7 @@ CLIENT_CONFIG = {
         'services': {
             'Authorization': {},
             'AccessToken': {},
+            'RefreshAccessToken': {},
             'UserInfo': {'default_authn_method': ''}
         }
     }
@@ -133,7 +134,8 @@ class TestRPHandler(object):
     def test_init_client(self):
         client = self.rph.init_client('github')
         assert set(client.service.keys()) == {'authorization', 'accesstoken',
-                                              'userinfo', 'any'}
+                                              'userinfo', 'any',
+                                              'refresh_token'}
 
         _context = client.service_context
 
@@ -292,7 +294,7 @@ class TestRPHandler(object):
                                                         'token_endpoint')
         assert authn_method == 'client_secret_post'
 
-    def test_get_accesstoken(self, httpserver):
+    def test_get_access_token(self, httpserver):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['session_key'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -319,7 +321,7 @@ class TestRPHandler(object):
         resp = self.rph.finalize_auth(client, _session['iss'],
                                       auth_response.to_dict())
 
-        resp = self.rph.get_accesstoken(client, resp)
+        resp = self.rph.get_access_token(client, res['session_key'])
         assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
                                     'token_type', 'verified_id_token'}
 
@@ -390,7 +392,7 @@ class TestRPHandler(object):
         assert resp['access_token'] == 'accessTok'
         assert isinstance(resp['id_token'], IdToken)
 
-    def test_get_userinfo(self, httpserver):
+    def test_get_user_info(self, httpserver):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['session_key'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -422,8 +424,8 @@ class TestRPHandler(object):
         httpserver.serve_content('{"sub":"EndUserSubject"}')
         client.service['userinfo'].endpoint = httpserver.url
 
-        userinfo_resp = self.rph.get_userinfo(client, res['session_key'],
-                                              token_resp['access_token'])
+        userinfo_resp = self.rph.get_user_info(client, res['session_key'],
+                                               token_resp['access_token'])
         assert userinfo_resp
 
     def test_userinfo_in_id_token(self):
@@ -462,3 +464,66 @@ def test_get_provider_specific_service():
                                          state_db=DB())
     assert _srv.response_body_type == 'urlencoded'
 
+
+class TestRPHandlerTier2(object):
+    @pytest.fixture(autouse=True)
+    def rphandler_setup(self, httpserver):
+        self.rph = RPHandler(base_url=BASEURL, client_configs=CLIENT_CONFIG)
+        res = self.rph.begin(issuer_id='github')
+        _session = self.rph.get_session_information(res['session_key'])
+        client = self.rph.issuer2rp[_session['iss']]
+        _nonce = _session['auth_request']['nonce']
+        _iss = _session['iss']
+        _aud = client.client_id
+        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+                 'aud': _aud}
+
+        idts = IdToken(**idval)
+        _signed_jwt = idts.to_jwt(
+            key=client.service_context.keyjar.get_signing_key('oct'),
+            algorithm="HS256", lifetime=300)
+
+        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
+                 "token_type": "Bearer", "expires_in": 3600,
+                 'refresh_token': 'refreshing'}
+
+        at = AccessTokenResponse(**_info)
+        httpserver.serve_content(at.to_json())
+        client.service['accesstoken'].endpoint = httpserver.url
+
+        _response = AuthorizationResponse(code='access_code',
+                                          state=res['session_key'])
+        auth_response = self.rph.finalize_auth(client, _session['iss'],
+                                               _response.to_dict())
+
+        token_resp = self.rph.get_access_and_id_token(client, auth_response)
+
+        httpserver.serve_content('{"sub":"EndUserSubject"}')
+        client.service['userinfo'].endpoint = httpserver.url
+
+        self.rph.get_user_info(client, res['session_key'],
+                               token_resp['access_token'])
+        self.session_key = res['session_key']
+
+    def test_init_authorization(self):
+        _session = self.rph.get_session_information(self.session_key)
+        client = self.rph.issuer2rp[_session['iss']]
+        res = self.rph.init_authorization(client,
+                                          {'scope': ['openid', 'email']})
+        part = urlsplit(res['url'])
+        _qp = parse_qs(part.query)
+        assert _qp['scope'] == ['openid email']
+
+    def test_refresh_access_token(self, httpserver):
+        _session = self.rph.get_session_information(self.session_key)
+        client = self.rph.issuer2rp[_session['iss']]
+
+        _info = {"access_token": "2nd_accessTok",
+                 "token_type": "Bearer", "expires_in": 3600}
+        at = AccessTokenResponse(**_info)
+        httpserver.serve_content(at.to_json())
+        client.service['refresh_token'].endpoint = httpserver.url
+
+        res = self.rph.refresh_access_token(client, self.session_key,
+                                            'openid email')
+        assert res['access_token'] == '2nd_accessTok'

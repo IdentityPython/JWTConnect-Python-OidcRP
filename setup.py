@@ -51,7 +51,7 @@ with open('src/oidcrp/__init__.py', 'r') as fd:
 setup(
     name="oidcrp",
     version=version,
-    description="Python implementation of OAuth2 and OpenID Connect RP",
+    description="Python implementation of OAuth2 Client and OpenID Connect RP",
     author="Roland Hedberg",
     author_email="roland@catalogix.se",
     license="Apache 2.0",
@@ -68,6 +68,10 @@ setup(
     install_requires=[
         'cryptojwt',
         'oidcservice',
+    ],
+    tests_require = [
+        'pytest',
+        'pytest-localserver',
     ],
     zip_safe=False,
     cmdclass={'test': PyTest},

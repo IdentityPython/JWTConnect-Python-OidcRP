@@ -119,6 +119,9 @@ RP handler API
 A session is defined as the services used to cope with authorization/authentication
 for one user starting with the authorization request.
 
+Tier 1 API
+----------
+
 The high level methods you have access to (in the order they are to be
 used) are:
 
@@ -151,6 +154,46 @@ used) are:
     Usage example::
 
         res = rph.finalize(session_info['iss'], kwargs)
+
+
+Tier 2 API
+----------
+
+The tier 1 API is good for getting you started with authenticating a user and
+getting user information but if you're look at a long term engagement you need
+a finer grained set of methods. These I call the tier 2 API:
+
+:py:meth:`oidcrp.RPHandler.do_provider_info`
+    Either get the provider info from configuration or through dynamic
+    discovery. Will overwrite previously saved provider metadata.
+
+:py:meth:`oidcrp.RPHandler.do_client_registration`
+    Do dynamic client registration is configured to do so and the OP supports it.
+
+:py:meth:`oidcrp.RPHandler.init_authorization`
+    Initialize an authorization/authentication event. If the user has a
+    previous session stored this will not overwrite that but will create a new
+    one.
+
+    Usage example (note that you can modify what would be used by default)::
+
+        client = self.rph.issuer2rp[_session['iss']]
+        res = self.rph.init_authorization(client,
+                                          {'scope': ['openid', 'email']})
+
+:py:meth:`oidcrp.RPHandler.get_access_token`
+    Will use an access code received as the response to an
+    authentication/authorization to get an access token from the OP/AS.
+    Access codes can only be used once.
+
+:py:meth:`oidcrp.RPHandler.refresh_access_token`
+    If the client has received a refresh token this method can be used to get
+    a new access token.
+
+:py:meth:`oidcrp.RPHandler.get_user_info`
+    If the client is allowed to do so, it can refresh the user info by
+    requesting user information from the userinfo endpoint.
+
 
 ----------------
 RP configuration

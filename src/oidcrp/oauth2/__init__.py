@@ -100,12 +100,10 @@ class Client(object):
         method = getattr(self, 'construct_{}_request'.format(request_type))
         return method(self.service_context, request_args, extra_args, **kwargs)
 
-    def do_request(self, request_type, response_body_type="",
-                   method="", request_args=None, **kwargs):
+    def do_request(self, request_type, response_body_type="", request_args=None,
+                   **kwargs):
 
         _srv = self.service[request_type]
-        if not method:
-            method = _srv.http_method
 
         _info = _srv.get_request_parameters(request_args=request_args, **kwargs)
 
@@ -225,12 +223,12 @@ class Client(object):
                 _deser_method = 'json'
 
             try:
-                err_resp = service.parse_error_mesg(reqresp.text, _deser_method)
+                err_resp = service.parse_response(reqresp.text, _deser_method)
             except OidcServiceError:
                 if _deser_method != response_body_type:
                     try:
-                        err_resp = service.parse_error_mesg(reqresp.text,
-                                                            response_body_type)
+                        err_resp = service.parse_response(reqresp.text,
+                                                          response_body_type)
                     except OidcServiceError:
                         raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
                             reqresp.text, reqresp.status_code, reqresp.url))
