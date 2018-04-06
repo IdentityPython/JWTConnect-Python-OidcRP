@@ -1,17 +1,16 @@
 import cherrypy
 import logging
 
-from oidcmsg.oauth2 import ResponseMessage
-from oidcservice.client_auth import CLIENT_AUTHN_METHOD
-from oidcservice.service_context import ServiceContext
+from oidcmsg.key_jar import KeyJar
+
+from oidcservice.client_auth import factory as ca_factory
 from oidcservice.exception import OidcServiceError
 from oidcservice.exception import ParseError
 from oidcservice.oauth2 import service
 from oidcservice.service import build_services
 from oidcservice.service import REQUEST_INFO
 from oidcservice.service import SUCCESSFUL
-
-from oidcmsg.key_jar import KeyJar
+from oidcservice.service_context import ServiceContext
 
 from oidcrp.http import HTTPLib
 from oidcrp.util import get_deserialization_method
@@ -38,16 +37,15 @@ class ExpiredToken(Exception):
 
 
 class Client(object):
-    def __init__(self, state_db, ca_certs=None, client_authn_method=None,
+    def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
                  keyjar=None, verify_ssl=True, config=None, client_cert=None,
                  httplib=None, services=None, service_factory=None,
                  jwks_uri=''):
         """
 
         :param ca_certs: Certificates used to verify HTTPS certificates
-        :param client_authn_method: Methods that this client can use to
-            authenticate itself. It's a dictionary with method names as
-            keys and method classes as values.
+        :param client_authn_factory: Factory that this client can use to
+            initiate a client authentication class.
         :param keyjar: A py:class:`oidcmsg.key_jar.KeyJar` instance
         :param verify_ssl: Whether the SSL certificate should be verified.
         :param config: Configuration information passed on to the
@@ -79,7 +77,7 @@ class Client(object):
         if self.service_context.client_id:
             self.client_id = self.service_context.client_id
 
-        _cam = client_authn_method or CLIENT_AUTHN_METHOD
+        _cam = client_authn_factory or ca_factory
         self.service_factory = service_factory or service.factory
         _srvs = services or DEFAULT_SERVICES
 
