@@ -177,9 +177,7 @@ a finer grained set of methods. These I call the tier 2 API:
 
     Usage example (note that you can modify what would be used by default)::
 
-        _session = self.rph.get_session_information(session_key)
-        client = self.rph.issuer2rp[_session['iss']]
-        res = self.rph.init_authorization(client,
+        res = self.rph.init_authorization(session_key,
                                           {'scope': ['openid', 'email']})
 
 :py:meth:`oidcrp.RPHandler.get_access_token`
@@ -193,10 +191,7 @@ a finer grained set of methods. These I call the tier 2 API:
 
     Usage example::
 
-        _session = self.rph.get_session_information(session_key)
-        client = self.rph.issuer2rp[_session['iss']]
-        res = self.rph.refresh_access_token(client, session_key,
-                                            'openid email')
+        res = self.rph.refresh_access_token(session_key, 'openid email')
 
 :py:meth:`oidcrp.RPHandler.get_user_info`
     If the client is allowed to do so, it can refresh the user info by
@@ -204,9 +199,7 @@ a finer grained set of methods. These I call the tier 2 API:
 
     Usage example::
 
-        _session = self.rph.get_session_information(session_key)
-        client = self.rph.issuer2rp[_session['iss']]
-        resp = self.rph.get_user_info(client, session_key)
+        resp = self.rph.get_user_info(session_key)
 
 ----------------
 RP configuration
