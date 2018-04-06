@@ -697,7 +697,7 @@ class RPHandler(object):
 
         _state = authorization_response['state']
         token = self.get_access_and_id_token(authorization_response,
-                                             state=_state, client=client)
+                                             state_key=_state, client=client)
 
         if 'userinfo' in client.service and token['access_token']:
 
