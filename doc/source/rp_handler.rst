@@ -8,30 +8,32 @@ The Relying Party Handler
 Introduction
 ------------
 
-Imaging that you have web service where some of the functions that service
+Imaging that you have a web service where some of the functions that service
 provides are protected and should only be accessible to authenticated users or
-some of the functions needs access to some user related resources on a
-resource server. That's when you need OpenID Connect (OIDC) or Oauth2.
+that some of the functions the service provides needs access to some user
+related resources on a resource server. That's when you need OpenID Connect
+(OIDC) or Oauth2.
 
 The RPHandler as implemented in :py:class:`oidcrp.RPHandler` is a service within
-the web service that handles the authentication/authorization for the web
-service.
+the web service that handles user authentication and access authorization on
+behalf of the web service.
 
 ---------------
 Some background
 ---------------
 
 In the following description I will talk about Relying Party (RP)
-and OpenID Connect Provider (OP) but I could have used Oauth2 Client
+and OpenID Connect Provider (OP) but I could have talked about Oauth2 Client
 and OAuth2 Authorization Server instead. There are some differences
 in the details between the two sets but overall the entities work much the same
 way.
 
-OpenID Connect (OIDC) are build on a request-response paradigm.
+OAuth2 and thereby OpenID Connect (OIDC) are build on a request-response paradigm.
 The RP issues a request and the OP returns a response.
 
 The OIDC core standard defines a set of such request-responses.
-This is the list and the normal sequence in which they occur:
+This is a basic list of request-responses and the normal sequence in which they
+occur:
 
 1. Provider discovery (WebFinger)
 2. Provider Info Discovery
@@ -60,7 +62,7 @@ Gather information about the OP
     provider info discovery service provided by OIDC.
 
 Register the client with the OP
-    Again this can be done before hand or it can be done on-the-fly when needed.
+    Again this can be done beforehand or it can be done on-the-fly when needed.
     If it's done before you will have to use a registration service provided by
     the organization responsible for the OP.
     If it's to be done on-the-fly you will have to use the dynamic client
@@ -90,7 +92,7 @@ Google
     If you want to use the Google OP as authentication service you should know
     that it is a true OIDC OP `certified`_ by the OpenID Foundation. You will
     have to manually register you RP at Google but getting Provider info can be
-    done dynamically using the OIDC service. With Google you will use the
+    done dynamically using an OIDC service. With Google you will use the
     response_type *code*. This means that you will need services 2,4,5 and 6
     from the list above. More about how you will accomplish this below
 
@@ -116,8 +118,8 @@ should be used.
 RP handler API
 --------------
 
-A session is defined as the services used to cope with authorization/authentication
-for one user starting with the authorization request.
+A session is defined as a sequence of services used to cope with
+authorization/authentication for one user starting with the authorization request.
 
 Tier 1 API
 ----------
@@ -133,10 +135,22 @@ used) are:
 
     Usage example::
 
-        from oidcrp import RPHandler
-        rph = RPHandler()
-        rph.begin(issuer_id)
+        $ from oidcrp import RPHandler
+        $ rph = RPHandler()
+        $ issuer_id = "https://example.org/"
+        $ info = rph.begin(issuer_id)
+        $ print(info['url'])
+        https://example.org/op/authorization?state=Oh3w3gKlvoM2ehFqlxI3HIK5&nonce=UvudLKz287YByZdsY3AJoPAlEXQkJ0dK&redirect_uri=https%3A%2F%2Fexample.com%2Frp%2Fauthz_cb&response_type=code&scope=openid&client_id=zls2qhN1jO6A
 
+What happens next is that the user is redirected to the URL shown above.
+After the user has authenticated, handled consent and access management
+the user will be redirect back to the URL provided as value to the
+redirect_uri parameter in the URL above. The query part may look something
+like this::
+
+    state=Oh3w3gKlvoM2ehFqlxI3HIK5&scope=openid&code=Z0FBQUFBQmFkdFFjUVpFWE81SHU5N1N4N01&iss=https%3A%2F%2Fexample.org%2Fop&client_id=zls2qhN1jO6A
+
+After the RP has recieved this response the processing continues with:
 
 :py:meth:`oidcrp.RPHandler.get_session_information`
     In the authorization response there MUST be a state parameter. The value
@@ -159,7 +173,7 @@ used) are:
 Tier 2 API
 ----------
 
-The tier 1 API is good for getting you started with authenticating a user and
+The tier 1 API is good for getting you started with authenticating an user and
 getting user information but if you're look at a long term engagement you need
 a finer grained set of methods. These I call the tier 2 API:
 
@@ -177,13 +191,20 @@ a finer grained set of methods. These I call the tier 2 API:
 
     Usage example (note that you can modify what would be used by default)::
 
-        res = self.rph.init_authorization(session_key,
+        res = self.rph.init_authorization(state_key,
                                           {'scope': ['openid', 'email']})
+
+The state_key you see mentioned here and below is the value of the state
+parameter in the authorization request.
 
 :py:meth:`oidcrp.RPHandler.get_access_token`
     Will use an access code received as the response to an
     authentication/authorization to get an access token from the OP/AS.
     Access codes can only be used once.
+
+    Usage example::
+
+        res = self.rph.get_access_token(state_key)
 
 :py:meth:`oidcrp.RPHandler.refresh_access_token`
     If the client has received a refresh token this method can be used to get
@@ -191,7 +212,11 @@ a finer grained set of methods. These I call the tier 2 API:
 
     Usage example::
 
-        res = self.rph.refresh_access_token(session_key, 'openid email')
+        res = self.rph.refresh_access_token(state_key, scope='openid email')
+
+You may change the set of scopes that are bound to the new access token but
+that change can only be a downgrade from what was specified in the
+authorization request and accepted by the user.
 
 :py:meth:`oidcrp.RPHandler.get_user_info`
     If the client is allowed to do so, it can refresh the user info by
@@ -199,7 +224,7 @@ a finer grained set of methods. These I call the tier 2 API:
 
     Usage example::
 
-        resp = self.rph.get_user_info(session_key)
+        resp = self.rph.get_user_info(state_key)
 
 ----------------
 RP configuration
