@@ -114,7 +114,7 @@ def dynamic_provider_info_discovery(client):
 class RPHandler(object):
     def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=True,
                  services=None, service_factory=None, client_configs=None,
-                 client_authn_method=CLIENT_AUTHN_METHOD, client_cls=None,
+                 client_authn_factory=None, client_cls=None,
                  state_db=None, **kwargs):
         self.base_url = base_url
         self.hash_seed = as_bytes(hash_seed)
@@ -138,7 +138,7 @@ class RPHandler(object):
         self.client_cls = client_cls or oidc.RP
         self.services = services
         self.service_factory = service_factory or factory
-        self.client_authn_method = client_authn_method
+        self.client_authn_factory = client_authn_factory
         self.client_configs = client_configs
 
         # keep track on which RP instance that serves with OP
@@ -208,7 +208,7 @@ class RPHandler(object):
         try:
             client = self.client_cls(
                 state_db=self.state_db,
-                client_authn_method=self.client_authn_method,
+                client_authn_factory=self.client_authn_factory,
                 verify_ssl=self.verify_ssl, services=_services,
                 service_factory=self.service_factory, config=_cnf)
         except Exception as err:

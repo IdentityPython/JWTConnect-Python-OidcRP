@@ -53,8 +53,7 @@ class TestClient(object):
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop'
         }
-        self.client = Client(DB(), client_authn_method=CLIENT_AUTHN_METHOD,
-                             config=conf)
+        self.client = Client(DB(), config=conf)
 
     def test_construct_authorization_request(self):
         req_args = {'state': 'ABCDE',
