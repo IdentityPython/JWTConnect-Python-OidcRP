@@ -22,7 +22,7 @@ from oidcrp import oauth2
 from oidcrp import oidc
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 logger = logging.getLogger(__name__)
 
