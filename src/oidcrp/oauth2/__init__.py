@@ -105,10 +105,6 @@ class Client(object):
 
         _info = _srv.get_request_parameters(request_args=request_args, **kwargs)
 
-        # _info = _srv.get_request_parameters(
-        #     method=method, scope=scope, request_args=request_args,
-        #     extra_args=extra_args, authn_method=authn_method, **kwargs)
-
         if not response_body_type:
             response_body_type = _srv.response_body_type
 
