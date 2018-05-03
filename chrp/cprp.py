@@ -175,13 +175,13 @@ class Consumer(Root):
         #   raise cherrypy.HTTPError(400, 'Wrong Issuer')
         res = self.rph.finalize(session_info['iss'], kwargs)
 
-        if res[0] is True:
+        if 'userinfo' in res:
             fname = os.path.join(self.html_home, 'opresult.html')
             _pre_html = open(fname, 'r').read()
             _html = _pre_html.format(result=create_result_page(*res[1:]))
             return as_bytes(_html)
         else:
-            raise cherrypy.HTTPError(400, res[1])
+            raise cherrypy.HTTPError(400, res['error'])
 
     def _cp_dispatch(self, vpath):
         # Only get here if vpath != None
