@@ -707,7 +707,7 @@ class RPHandler(object):
                 state=authorization_response['state'], client=client,
                 access_token=token['access_token'])
 
-            if isinstance(inforesp, ResponseMessage):
+            if isinstance(inforesp, ResponseMessage) and 'error' in inforesp:
                 return {
                     'error': "Invalid response %s." % inforesp["error"],
                     'state': _state}
