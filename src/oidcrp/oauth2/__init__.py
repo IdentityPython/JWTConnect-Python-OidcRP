@@ -1,15 +1,14 @@
-import cherrypy
 import logging
 
+import cherrypy
 from oidcmsg.key_jar import KeyJar
-
 from oidcservice.client_auth import factory as ca_factory
 from oidcservice.exception import OidcServiceError
 from oidcservice.exception import ParseError
 from oidcservice.oauth2 import service
-from oidcservice.service import build_services
 from oidcservice.service import REQUEST_INFO
 from oidcservice.service import SUCCESSFUL
+from oidcservice.service import build_services
 from oidcservice.service_context import ServiceContext
 
 from oidcrp.http import HTTPLib
@@ -198,8 +197,8 @@ class Client(object):
             logger.debug('Successful response: {}'.format(reqresp.text))
 
             try:
-                return service.parse_response(reqresp.text, value_type, state,
-                                              **kwargs)
+                return service.parse_response(reqresp.text, value_type,
+                                              state, **kwargs)
             except Exception as err:
                 logger.error(err)
                 raise

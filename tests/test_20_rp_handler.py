@@ -234,9 +234,9 @@ class TestRPHandler(object):
 
     def test_begin(self):
         res = self.rph.begin(issuer_id='github')
-        assert set(res.keys()) == {'url', 'state_key'}
+        assert set(res.keys()) == {'url', 'state'}
 
-        _session = self.rph.session_interface.get_state(res['state_key'])
+        _session = self.rph.session_interface.get_state(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
 
         assert client.service_context.issuer == \
@@ -260,34 +260,34 @@ class TestRPHandler(object):
 
     def test_get_session_information(self):
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         assert self.rph.client_configs['github']['issuer'] == _session['iss']
 
     def test_finalize_auth(self):
         res = self.rph.begin(issuer_id='linkedin')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
 
         auth_response = AuthorizationResponse(code='access_code',
-                                              state=res['state_key'])
+                                              state=res['state'])
         resp = self.rph.finalize_auth(client, _session['iss'],
                                       auth_response.to_dict())
         assert set(resp.keys()) == {'state', 'code'}
         aresp = client.service['authorization'].get_item(AuthorizationResponse,
                                                          'auth_response',
-                                                         res['state_key'])
+                                                         res['state'])
         assert set(aresp.keys()) == {'state', 'code'}
 
     def test_get_client_authn_method(self):
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         authn_method = self.rph.get_client_authn_method(client,
                                                         'token_endpoint')
         assert authn_method == ''
 
         res = self.rph.begin(issuer_id='linkedin')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         authn_method = self.rph.get_client_authn_method(client,
                                                         'token_endpoint')
@@ -295,7 +295,7 @@ class TestRPHandler(object):
 
     def test_get_access_token(self, httpserver):
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
@@ -316,23 +316,23 @@ class TestRPHandler(object):
         client.service['accesstoken'].endpoint = httpserver.url
 
         auth_response = AuthorizationResponse(code='access_code',
-                                              state=res['state_key'])
+                                              state=res['state'])
         resp = self.rph.finalize_auth(client, _session['iss'],
                                       auth_response.to_dict())
 
-        resp = self.rph.get_access_token(res['state_key'], client)
+        resp = self.rph.get_access_token(res['state'], client)
         assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
                                     'token_type', 'verified_id_token'}
 
         atresp = client.service['accesstoken'].get_item(AccessTokenResponse,
                                                         'token_response',
-                                                        res['state_key'])
+                                                        res['state'])
         assert set(atresp.keys()) == {'access_token', 'expires_in', 'id_token',
                                       'token_type', 'verified_id_token'}
 
     def test_access_and_id_token(self, httpserver):
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
@@ -353,7 +353,7 @@ class TestRPHandler(object):
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
-                                          state=res['state_key'])
+                                          state=res['state'])
         auth_response = self.rph.finalize_auth(client, _session['iss'],
                                                _response.to_dict())
         resp = self.rph.get_access_and_id_token(auth_response, client=client)
@@ -362,7 +362,7 @@ class TestRPHandler(object):
 
     def test_access_and_id_token_by_reference(self, httpserver):
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
@@ -383,16 +383,16 @@ class TestRPHandler(object):
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
-                                          state=res['state_key'])
+                                          state=res['state'])
         auth_response = self.rph.finalize_auth(client, _session['iss'],
                                                _response.to_dict())
-        resp = self.rph.get_access_and_id_token(state_key=res['state_key'])
+        resp = self.rph.get_access_and_id_token(state=res['state'])
         assert resp['access_token'] == 'accessTok'
         assert isinstance(resp['id_token'], IdToken)
 
     def test_get_user_info(self, httpserver):
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
@@ -413,7 +413,7 @@ class TestRPHandler(object):
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
-                                          state=res['state_key'])
+                                          state=res['state'])
         auth_response = self.rph.finalize_auth(client, _session['iss'],
                                                _response.to_dict())
 
@@ -423,13 +423,13 @@ class TestRPHandler(object):
         httpserver.serve_content('{"sub":"EndUserSubject"}')
         client.service['userinfo'].endpoint = httpserver.url
 
-        userinfo_resp = self.rph.get_user_info(res['state_key'], client,
+        userinfo_resp = self.rph.get_user_info(res['state'], client,
                                                token_resp['access_token'])
         assert userinfo_resp
 
     def test_userinfo_in_id_token(self):
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
@@ -469,7 +469,7 @@ class TestRPHandlerTier2(object):
     def rphandler_setup(self, httpserver):
         self.rph = RPHandler(base_url=BASEURL, client_configs=CLIENT_CONFIG)
         res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state_key'])
+        _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
@@ -491,7 +491,7 @@ class TestRPHandlerTier2(object):
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
-                                          state=res['state_key'])
+                                          state=res['state'])
         auth_response = self.rph.finalize_auth(client, _session['iss'],
                                                _response.to_dict())
 
@@ -501,12 +501,12 @@ class TestRPHandlerTier2(object):
         httpserver.serve_content('{"sub":"EndUserSubject"}')
         client.service['userinfo'].endpoint = httpserver.url
 
-        self.rph.get_user_info(res['state_key'], client,
+        self.rph.get_user_info(res['state'], client,
                                token_resp['access_token'])
-        self.state_key = res['state_key']
+        self.state = res['state']
 
     def test_init_authorization(self):
-        _session = self.rph.get_session_information(self.state_key)
+        _session = self.rph.get_session_information(self.state)
         client = self.rph.issuer2rp[_session['iss']]
         res = self.rph.init_authorization(
             client, req_args={'scope': ['openid', 'email']})
@@ -515,7 +515,7 @@ class TestRPHandlerTier2(object):
         assert _qp['scope'] == ['openid email']
 
     def test_refresh_access_token(self, httpserver):
-        _session = self.rph.get_session_information(self.state_key)
+        _session = self.rph.get_session_information(self.state)
         client = self.rph.issuer2rp[_session['iss']]
 
         _info = {"access_token": "2nd_accessTok",
@@ -524,18 +524,18 @@ class TestRPHandlerTier2(object):
         httpserver.serve_content(at.to_json())
         client.service['refresh_token'].endpoint = httpserver.url
 
-        res = self.rph.refresh_access_token(self.state_key, client,
+        res = self.rph.refresh_access_token(self.state, client,
                                             'openid email')
         assert res['access_token'] == '2nd_accessTok'
 
     def test_get_user_info(self, httpserver):
-        _session = self.rph.get_session_information(self.state_key)
+        _session = self.rph.get_session_information(self.state)
         client = self.rph.issuer2rp[_session['iss']]
 
         httpserver.serve_content(
             '{"sub":"EndUserSubject", "mail":"foo@example.com"}')
         client.service['userinfo'].endpoint = httpserver.url
 
-        resp = self.rph.get_user_info(self.state_key, client)
+        resp = self.rph.get_user_info(self.state, client)
         assert set(resp.keys()) == {'sub', 'mail'}
         assert resp['mail'] == 'foo@example.com'
