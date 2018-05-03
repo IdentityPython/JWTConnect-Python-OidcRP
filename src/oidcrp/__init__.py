@@ -252,7 +252,7 @@ class RPHandler(object):
             except KeyError:
                 return client.service_context.issuer
 
-    def do_client_registration(self, client=None, state=''):
+    def do_client_registration(self, client=None, iss_id='', state=''):
         """
         Prepare for and do client registration if configured to do so
 
@@ -276,7 +276,7 @@ class RPHandler(object):
             client.service_context.redirect_uris = list(callbacks.values())
             client.service_context.callbacks = callbacks
         else:
-            self.hash2issuer[_iss] = _iss
+            self.hash2issuer[iss_id] = _iss
 
         # This should only be interesting if the client supports Single Log Out
         try:
@@ -287,7 +287,7 @@ class RPHandler(object):
         if not client.service_context.client_id:
             load_registration_response(client)
 
-    def client_setup(self, issuer='', user=''):
+    def client_setup(self, iss_id='', user=''):
         """
         First if no issuer ID is given then the identifier for the user is
         used by the webfinger service to try to find the issuer ID.
@@ -296,12 +296,14 @@ class RPHandler(object):
         the necessary information for the client to be able to communicate
         with the OP/AS that has the provided issuer ID.
 
-        :param issuer: The issuer ID
+        :param iss_id: The issuer ID
         :param user: A user identifier
         :return: A :py:class:`oidcservice.oidc.Client` instance
         """
 
-        if not issuer:
+        logger.info('client_setup: iss_id={}, user={}'.format(iss_id, user))
+
+        if not iss_id:
             if not user:
                 raise ValueError('Need issuer or user')
 
@@ -312,17 +314,17 @@ class RPHandler(object):
             temporary_client = None
 
         try:
-            client = self.issuer2rp[issuer]
+            client = self.issuer2rp[iss_id]
         except KeyError:
             if temporary_client:
                 client = temporary_client
             else:
-                client = self.init_client(issuer)
+                client = self.init_client(iss_id)
         else:
             return client
 
         issuer = self.do_provider_info(client)
-        self.do_client_registration(client)
+        self.do_client_registration(client, iss_id)
         self.issuer2rp[issuer] = client
         return client
 
@@ -342,7 +344,8 @@ class RPHandler(object):
         self.hash2issuer[_hex] = issuer
         return {'code': "{}/authz_cb/{}".format(self.base_url, _hex),
                 'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
-                'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex)}
+                'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
+                'hex':_hex}
 
     def init_authorization(self, client=None, state='', req_args=None):
         """
