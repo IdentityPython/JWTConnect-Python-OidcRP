@@ -165,7 +165,7 @@ class Consumer(Root):
         rp = self.get_rp(op_hash)
 
         try:
-            session_info = self.rph.state_db_interface.get_state(
+            session_info = self.rph.session_interface.get_state(
                 kwargs['state'])
         except KeyError:
             raise cherrypy.HTTPError(400, 'Unknown state')
