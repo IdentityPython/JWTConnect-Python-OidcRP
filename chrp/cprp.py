@@ -178,7 +178,8 @@ class Consumer(Root):
         if 'userinfo' in res:
             fname = os.path.join(self.html_home, 'opresult.html')
             _pre_html = open(fname, 'r').read()
-            _html = _pre_html.format(result=create_result_page(*res[1:]))
+            _html = _pre_html.format(
+                result=create_result_page(res['userinfo'], 'access_token', rp))
             return as_bytes(_html)
         else:
             raise cherrypy.HTTPError(400, res['error'])
