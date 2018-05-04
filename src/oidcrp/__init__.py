@@ -21,7 +21,7 @@ from oidcrp import oauth2
 from oidcrp import oidc
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.4.1'
+__version__ = '0.4.2'
 
 logger = logging.getLogger(__name__)
 
@@ -683,7 +683,8 @@ class RPHandler(object):
         use. Which one those are are defined by the client configuration.
 
         :param issuer: Who sent the response
-        :param response: A dictionary with two claims:
+        :param response: The Authorization response as a dictionary
+        :returns: A dictionary with two claims:
             **state** The key under which the session information is
             stored in the data store and
             **error** and encountered error or
