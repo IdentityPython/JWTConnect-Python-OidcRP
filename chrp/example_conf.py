@@ -33,7 +33,7 @@ CLIENT_PREFS = {
     "response_types": ["code", "id_token", "id_token token", "code id_token",
                        "code id_token token", "code token"],
     "scope": ["openid", "profile", "email", "address", "phone"],
-    "token_endpoint_auth_method": ["client_secret_basic", 'client_secret_post'],
+    "token_endpoint_auth_method": "client_secret_basic",
     'services': SERVICES
 }
 
@@ -45,7 +45,7 @@ CLIENTS = {
     # This is the default, any client that is not listed here is expected to
     # support dynamic discovery and registration.
     "": {
-        "client_prefs": CLIENT_PREFS,
+        "client_preferences": CLIENT_PREFS,
         "redirect_uris": None,
         "services": {
             'WebFinger': {},
@@ -63,11 +63,10 @@ CLIENTS = {
         "client_id": "xxxxxxxxx.apps.googleusercontent.com",
         "client_secret": "2222222222",
         "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
-        "client_prefs": {
+        "client_preferences": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
-            "token_endpoint_auth_method": ["client_secret_basic",
-                                           'client_secret_post']
+            "token_endpoint_auth_method": "client_secret_basic"
         },
         "allow": {
             "issuer_mismatch": True
@@ -86,11 +85,10 @@ CLIENTS = {
         'client_id': '242424242424',
         'client_secret': 'ipipipippipipippi',
         "redirect_uris": ["{}/authz_cb/microsoft".format(BASEURL)],
-        "client_prefs": {
+        "client_preferences": {
             "response_types": ["id_token"],
             "scope": ["openid"],
-            "token_endpoint_auth_method": ["private_key_jwt",
-                                           'client_secret_post'],
+            "token_endpoint_auth_method": "private_key_jwt",
             "response_mode": 'form_post'
         },
         "allow": {
@@ -107,7 +105,7 @@ CLIENTS = {
         "behaviour": {
             "response_types": ["code"],
             "scope": ["r_basicprofile", "r_emailaddress"],
-            "token_endpoint_auth_method": ['client_secret_post']
+            "token_endpoint_auth_method": 'client_secret_post'
         },
         "provider_info": {
             "authorization_endpoint":
@@ -174,11 +172,10 @@ CLIENTS = {
         "client_id": "xxxxxxxxx.yyy",
         "client_secret": "2222222222",
         "redirect_uris": ["{}/authz_cb/salesforce".format(BASEURL)],
-        "client_prefs": {
+        "client_preferences": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
-            "token_endpoint_auth_method": ["client_secret_basic",
-                                           'client_secret_post']
+            "token_endpoint_auth_method": "client_secret_basic"
         },
         # "allow": {
         #     "issuer_mismatch": True
@@ -198,11 +195,10 @@ CLIENTS = {
         "client_id": "123456789",
         "client_secret": "abcdefgh",
         "redirect_uris": ["{}/authz_cb/okta".format(BASEURL)],
-        "client_prefs": {
+        "client_preferences": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
-            "token_endpoint_auth_method": ["client_secret_basic",
-                                           'client_secret_post']
+            "token_endpoint_auth_method": "client_secret_basic"
         },
         "provider_info": {
             "authorization_endpoint":
