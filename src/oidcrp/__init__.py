@@ -345,7 +345,7 @@ class RPHandler(object):
             'code': "{}/authz_cb/{}".format(self.base_url, _hex),
             'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
             'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
-            'hex': _hex
+            '__hex': _hex
         }
 
     def init_authorization(self, client=None, state='', req_args=None):
@@ -650,7 +650,7 @@ class RPHandler(object):
         id_token = None
         if _resp_type in [{'id_token'}, {'id_token', 'token'},
                           {'code', 'id_token', 'token'}]:
-            id_token = authorization_response['verified_id_token']
+            id_token = authorization_response['__verified_id_token']
 
         if _resp_type in [{'token'}, {'id_token', 'token'}, {'code', 'token'},
                           {'code', 'id_token', 'token'}]:
@@ -668,7 +668,7 @@ class RPHandler(object):
             access_token = token_resp["access_token"]
 
             try:
-                id_token = token_resp['verified_id_token']
+                id_token = token_resp['__verified_id_token']
             except KeyError:
                 pass
 
@@ -764,8 +764,8 @@ class RPHandler(object):
         now = time_sans_frac()
 
         for cls, typ in [(AccessTokenResponse, 'refresh_token_response'),
-                         (AccessTokenResponse, 'access_token_response'),
-                         (AuthorizationResponse, 'authn_response')]:
+                         (AccessTokenResponse, 'token_response'),
+                         (AuthorizationResponse, 'auth_response')]:
             try:
                 response = self.session_interface.get_item(cls, typ, state)
             except KeyError:

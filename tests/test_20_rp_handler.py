@@ -181,11 +181,11 @@ class TestRPHandler(object):
     def test_do_client_registration(self):
         client = self.rph.init_client('github')
         issuer = self.rph.do_provider_info(client)
-        self.rph.do_client_registration(client)
+        self.rph.do_client_registration(client, 'github')
 
         # only 2 things should have happened
 
-        assert self.rph.hash2issuer[issuer] == issuer
+        assert self.rph.hash2issuer['github'] == issuer
         assert client.service_context.post_logout_redirect_uris == [BASEURL]
 
     def test_do_client_setup(self):
@@ -209,12 +209,12 @@ class TestRPHandler(object):
             _endp = client.service_context.provider_info[_srv.endpoint_name]
             assert _srv.endpoint == _endp
 
-        assert self.rph.hash2issuer[_context.issuer] == _context.issuer
+        assert self.rph.hash2issuer['github'] == _context.issuer
 
     def test_create_callbacks(self):
         cb = self.rph.create_callbacks('https://op.example.com/')
 
-        assert set(cb.keys()) == {'code', 'implicit', 'form_post'}
+        assert set(cb.keys()) == {'code', 'implicit', 'form_post', '__hex'}
         assert cb == {
             'code': 'https://example.com/rp/authz_cb'
                     '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
@@ -223,7 +223,10 @@ class TestRPHandler(object):
                 '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
             'form_post':
                 'https://example.com/rp/authz_fp_cb'
-                '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'}
+                '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
+            '__hex':
+                '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
+        }
 
         assert list(self.rph.hash2issuer.keys()) == [
             '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d']
@@ -322,13 +325,15 @@ class TestRPHandler(object):
 
         resp = self.rph.get_access_token(res['state'], client)
         assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
-                                    'token_type', 'verified_id_token'}
+                                    'token_type', '__verified_id_token',
+                                    '__expires_at'}
 
         atresp = client.service['accesstoken'].get_item(AccessTokenResponse,
                                                         'token_response',
                                                         res['state'])
         assert set(atresp.keys()) == {'access_token', 'expires_in', 'id_token',
-                                      'token_type', 'verified_id_token'}
+                                      'token_type', '__verified_id_token',
+                                      '__expires_at'}
 
     def test_access_and_id_token(self, httpserver):
         res = self.rph.begin(issuer_id='github')
@@ -544,5 +549,4 @@ class TestRPHandlerTier2(object):
         assert self.rph.has_active_authentication(self.state)
 
     def test_get_valid_access_token(self):
-        token = self.rph.get_valid_access_token(self.state)
-        assert token
+        assert self.rph.get_valid_access_token(self.state)
