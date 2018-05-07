@@ -5,23 +5,22 @@ import traceback
 from importlib import import_module
 
 from cryptojwt import as_bytes
-
 from oidcmsg.oauth2 import ResponseMessage
-from oidcmsg.oidc import AuthorizationRequest
+from oidcmsg.oidc import AccessTokenResponse, AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import OpenIDSchema
-
+from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
 from oidcservice.state_interface import StateInterface
 from oidcservice.util import add_path
 
-from oidcrp import provider
 from oidcrp import oauth2
 from oidcrp import oidc
+from oidcrp import provider
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.4.2'
+__version__ = '0.4.3'
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +228,7 @@ class RPHandler(object):
             retrieved 
         :return: issuer ID
         """
-        
+
         if not client:
             if state:
                 client = self.get_client_from_session_key(state)
@@ -342,10 +341,12 @@ class RPHandler(object):
         _hash.update(as_bytes(issuer))
         _hex = _hash.hexdigest()
         self.hash2issuer[_hex] = issuer
-        return {'code': "{}/authz_cb/{}".format(self.base_url, _hex),
-                'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
-                'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
-                'hex':_hex}
+        return {
+            'code': "{}/authz_cb/{}".format(self.base_url, _hex),
+            'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
+            'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
+            'hex': _hex
+        }
 
     def init_authorization(self, client=None, state='', req_args=None):
         """
@@ -511,7 +512,7 @@ class RPHandler(object):
         :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` instance
         """
         if scope:
-            req_args = {'scope':scope}
+            req_args = {'scope': scope}
         else:
             req_args = {}
 
@@ -547,7 +548,7 @@ class RPHandler(object):
         :return: A :py:class:`oidcmsg.oidc.OpenIDSchema` instance
         """
         if not access_token:
-            self.session_interface.multiple_extend_request_args(
+            _arg = self.session_interface.multiple_extend_request_args(
                 {}, state, ['access_token'],
                 ['auth_response', 'token_response', 'refresh_token_response'])
 
@@ -695,8 +696,10 @@ class RPHandler(object):
 
         authorization_response = self.finalize_auth(client, issuer, response)
         if authorization_response.is_error_message():
-            return {'state': authorization_response['state'],
-                    'error': authorization_response['error']}
+            return {
+                'state': authorization_response['state'],
+                'error': authorization_response['error']
+            }
 
         _state = authorization_response['state']
         token = self.get_access_and_id_token(authorization_response,
@@ -711,7 +714,8 @@ class RPHandler(object):
             if isinstance(inforesp, ResponseMessage) and 'error' in inforesp:
                 return {
                     'error': "Invalid response %s." % inforesp["error"],
-                    'state': _state}
+                    'state': _state
+                }
 
         elif token['id_token']:  # look for it in the ID Token
             inforesp = self.userinfo_in_id_token(token['id_token'])
@@ -720,8 +724,75 @@ class RPHandler(object):
 
         logger.debug("UserInfo: %s", inforesp)
 
-        return {'userinfo': inforesp,
-                'state': authorization_response['state']}
+        return {
+            'userinfo': inforesp,
+            'state': authorization_response['state']
+        }
+
+    def has_active_authentication(self, state):
+        """
+        Find out if the user has an active authentication
+
+        :param state:
+        :return: True/False
+        """
+
+        # Look for Id Token in all the places where it can be
+        _arg = self.session_interface.multiple_extend_request_args(
+            {}, state, ['__verified_id_token'],
+            ['auth_response', 'token_response', 'refresh_token_response'])
+
+        if _arg:
+            _now = time_sans_frac()
+            exp = _arg['__verified_id_token']['exp']
+            return _now < exp
+        else:
+            return False
+
+    def get_valid_access_token(self, state):
+        """
+        Find me a valid access token
+
+        :param state:
+        :return: An access token if a valid one exists otherwise raise
+            exception.
+        """
+
+        exp = 0
+        token = None
+        indefinite = []
+        now = time_sans_frac()
+
+        for cls, typ in [(AccessTokenResponse, 'refresh_token_response'),
+                         (AccessTokenResponse, 'access_token_response'),
+                         (AuthorizationResponse, 'authn_response')]:
+            try:
+                response = self.session_interface.get_item(cls, typ, state)
+            except KeyError:
+                pass
+            else:
+                try:
+                    access_token = response['access_token']
+                except:
+                    continue
+                else:
+                    try:
+                        _exp = response['__expires_at']
+                    except KeyError: # No expiry date, lives for ever
+                        indefinite.append(access_token)
+                    else:
+                        if _exp > now: # expires sometime in the future
+                            if _exp > exp:
+                                exp = _exp
+                                token = access_token
+
+        if indefinite:
+            return indefinite[0]
+        else:
+            if token:
+                return token
+            else:
+                raise OidcServiceError('No valid access token')
 
 
 def get_provider_specific_service(service_provider, service, **kwargs):

@@ -539,3 +539,10 @@ class TestRPHandlerTier2(object):
         resp = self.rph.get_user_info(self.state, client)
         assert set(resp.keys()) == {'sub', 'mail'}
         assert resp['mail'] == 'foo@example.com'
+
+    def test_has_active_authentication(self):
+        assert self.rph.has_active_authentication(self.state)
+
+    def test_get_valid_access_token(self):
+        token = self.rph.get_valid_access_token(self.state)
+        assert token
