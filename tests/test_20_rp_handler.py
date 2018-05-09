@@ -549,4 +549,6 @@ class TestRPHandlerTier2(object):
         assert self.rph.has_active_authentication(self.state)
 
     def test_get_valid_access_token(self):
-        assert self.rph.get_valid_access_token(self.state)
+        (token, expires_at) = self.rph.get_valid_access_token(self.state)
+        assert token == 'accessTok'
+        assert expires_at > 0

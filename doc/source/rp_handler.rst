@@ -226,6 +226,39 @@ authorization request and accepted by the user.
 
         resp = self.rph.get_user_info(state_key)
 
+:py:meth:`oidcrp.RPHandler.has_active_authentication`
+    After a while when the user returns after having been away for a while
+    you may want to know if you should let her reauthenticate or not.
+    This method will tell you if the last done authentication is still
+    valid or of it has timed out.
+
+    Usage example::
+
+        resp = self.rph.has_active_authentication(state_key)
+
+    response will be True or False depending in the state of the authentication.
+
+:py:meth:`oidcrp.RPHandler.get_valid_access_token`
+    When you are issued a access token they normally comes with a life time.
+    After that time you are expected to use the refresh token to get a new
+    access token. There are 2 ways of finding out if the access token you have
+    passed their life time. You can use this method or you can just try using
+    the access token and see what happens.
+
+    Now, if you use this method and it tells you you have an access token
+    that should still be usable. That is no guarantee that that is the case.
+    things may have happened on the OPs side that makes the access token
+    invalid. So if this method only returns a hint as to the usability of the
+    access token.
+
+    Usage example::
+
+        resp = self.rph.get_valid_access_token(state_key)
+
+    Response will be a tuple containing with the access token and the
+    expiration time (in epoch) if there is a valid access token otherwise an
+    exception will be raised.
+
 ----------------
 RP configuration
 ----------------
@@ -262,6 +295,17 @@ redirect_uris
 
 behavior
     Information about how the RP should behave towards the OP/AS
+
+keys
+    If the OP doesn't support dynamic provider discovery it may still want to
+    have a way of distributing keys that allows it to rotate them at anytime.
+    To accomplish this some providers have choosen to publish a URL to where
+    you can find their OPs key material in the form of a JWKS.
+
+    Usage example::
+
+        'keys': {'url': {<issuer_id> : <jwks_url>}}
+
 
 If the provider info discovery is done dynamically you need this
 

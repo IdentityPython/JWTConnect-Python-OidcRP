@@ -754,8 +754,8 @@ class RPHandler(object):
         Find me a valid access token
 
         :param state:
-        :return: An access token if a valid one exists otherwise raise
-            exception.
+        :return: An access token if a valid one exists and when it
+            expires. Otherwise raise exception.
         """
 
         exp = 0
@@ -779,12 +779,12 @@ class RPHandler(object):
                     try:
                         _exp = response['__expires_at']
                     except KeyError: # No expiry date, lives for ever
-                        indefinite.append(access_token)
+                        indefinite.append((access_token, 0))
                     else:
                         if _exp > now: # expires sometime in the future
                             if _exp > exp:
                                 exp = _exp
-                                token = access_token
+                                token = (access_token, _exp)
 
         if indefinite:
             return indefinite[0]
