@@ -5,8 +5,10 @@ import traceback
 from importlib import import_module
 
 from cryptojwt import as_bytes
+from oidcmsg.oauth2 import is_error_message
 from oidcmsg.oauth2 import ResponseMessage
-from oidcmsg.oidc import AccessTokenResponse, AuthorizationRequest
+from oidcmsg.oidc import AccessTokenResponse
+from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.time_util import time_sans_frac
@@ -105,7 +107,7 @@ def dynamic_provider_info_discovery(client):
             pass
 
         response = client.do_request('provider_info')
-        if response.is_error_message():
+        if is_error_message(response):
             raise OidcServiceError(response['error'])
 
 
@@ -496,7 +498,7 @@ class RPHandler(object):
             logger.error("%s", err)
             raise
         else:
-            if tokenresp.is_error_message():
+            if is_error_message(tokenresp):
                 raise OidcServiceError(tokenresp['error'])
 
         return tokenresp
@@ -531,7 +533,7 @@ class RPHandler(object):
             logger.error("%s", err)
             raise
         else:
-            if tokenresp.is_error_message():
+            if is_error_message(tokenresp):
                 raise OidcServiceError(tokenresp['error'])
 
         return tokenresp
@@ -560,7 +562,7 @@ class RPHandler(object):
 
         resp = client.do_request('userinfo', state=state,
                                  request_args=request_args, **kwargs)
-        if resp.is_error_message():
+        if is_error_message(resp):
             raise OidcServiceError(resp['error'])
 
         return resp
@@ -600,7 +602,7 @@ class RPHandler(object):
             logger.debug(
                 'Authz response: {}'.format(authorization_response.to_dict()))
 
-        if authorization_response.is_error_message():
+        if is_error_message(authorization_response):
             return authorization_response
 
         try:
@@ -663,7 +665,7 @@ class RPHandler(object):
 
             # get the access token
             token_resp = self.get_access_token(state, client=client)
-            if token_resp.is_error_message():
+            if is_error_message(token_resp):
                 return False, "Invalid response %s." % token_resp["error"]
 
             access_token = token_resp["access_token"]
@@ -696,7 +698,7 @@ class RPHandler(object):
         client = self.issuer2rp[issuer]
 
         authorization_response = self.finalize_auth(client, issuer, response)
-        if authorization_response.is_error_message():
+        if is_error_message(authorization_response):
             return {
                 'state': authorization_response['state'],
                 'error': authorization_response['error']
