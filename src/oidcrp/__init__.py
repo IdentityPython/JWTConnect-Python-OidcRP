@@ -80,7 +80,7 @@ def load_registration_response(client):
             logger.error(err)
             raise
         else:
-            if response.is_error_message():
+            if 'error' in response:
                 raise OidcServiceError(response['error'])
     else:
         client.service_context.registration_info = _client_reg
@@ -272,7 +272,8 @@ class RPHandler(object):
             # as a side effect self.hash2issuer is set
             callbacks = self.create_callbacks(_iss)
 
-            client.service_context.redirect_uris = list(callbacks.values())
+            client.service_context.redirect_uris = [
+                v for k, v in callbacks.items() if not k.startswith('__')]
             client.service_context.callbacks = callbacks
         else:
             self.hash2issuer[iss_id] = _iss
@@ -726,7 +727,8 @@ class RPHandler(object):
 
         return {
             'userinfo': inforesp,
-            'state': authorization_response['state']
+            'state': authorization_response['state'],
+            'token': token['access_token']
         }
 
     def has_active_authentication(self, state):
@@ -778,10 +780,10 @@ class RPHandler(object):
                 else:
                     try:
                         _exp = response['__expires_at']
-                    except KeyError: # No expiry date, lives for ever
+                    except KeyError:  # No expiry date, lives for ever
                         indefinite.append((access_token, 0))
                     else:
-                        if _exp > now: # expires sometime in the future
+                        if _exp > now:  # expires sometime in the future
                             if _exp > exp:
                                 exp = _exp
                                 token = (access_token, _exp)
