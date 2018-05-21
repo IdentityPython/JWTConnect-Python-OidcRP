@@ -5,8 +5,10 @@ import traceback
 from importlib import import_module
 
 from cryptojwt import as_bytes
+from oidcmsg.oauth2 import is_error_message
 from oidcmsg.oauth2 import ResponseMessage
-from oidcmsg.oidc import AccessTokenResponse, AuthorizationRequest
+from oidcmsg.oidc import AccessTokenResponse
+from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.time_util import time_sans_frac
@@ -20,7 +22,7 @@ from oidcrp import oidc
 from oidcrp import provider
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.4.3'
+__version__ = '0.4.4'
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +82,7 @@ def load_registration_response(client):
             logger.error(err)
             raise
         else:
-            if response.is_error_message():
+            if 'error' in response:
                 raise OidcServiceError(response['error'])
     else:
         client.service_context.registration_info = _client_reg
@@ -105,7 +107,7 @@ def dynamic_provider_info_discovery(client):
             pass
 
         response = client.do_request('provider_info')
-        if response.is_error_message():
+        if is_error_message(response):
             raise OidcServiceError(response['error'])
 
 
@@ -272,7 +274,8 @@ class RPHandler(object):
             # as a side effect self.hash2issuer is set
             callbacks = self.create_callbacks(_iss)
 
-            client.service_context.redirect_uris = list(callbacks.values())
+            client.service_context.redirect_uris = [
+                v for k, v in callbacks.items() if not k.startswith('__')]
             client.service_context.callbacks = callbacks
         else:
             self.hash2issuer[iss_id] = _iss
@@ -495,7 +498,7 @@ class RPHandler(object):
             logger.error("%s", err)
             raise
         else:
-            if tokenresp.is_error_message():
+            if is_error_message(tokenresp):
                 raise OidcServiceError(tokenresp['error'])
 
         return tokenresp
@@ -530,7 +533,7 @@ class RPHandler(object):
             logger.error("%s", err)
             raise
         else:
-            if tokenresp.is_error_message():
+            if is_error_message(tokenresp):
                 raise OidcServiceError(tokenresp['error'])
 
         return tokenresp
@@ -559,7 +562,7 @@ class RPHandler(object):
 
         resp = client.do_request('userinfo', state=state,
                                  request_args=request_args, **kwargs)
-        if resp.is_error_message():
+        if is_error_message(resp):
             raise OidcServiceError(resp['error'])
 
         return resp
@@ -599,7 +602,7 @@ class RPHandler(object):
             logger.debug(
                 'Authz response: {}'.format(authorization_response.to_dict()))
 
-        if authorization_response.is_error_message():
+        if is_error_message(authorization_response):
             return authorization_response
 
         try:
@@ -662,7 +665,7 @@ class RPHandler(object):
 
             # get the access token
             token_resp = self.get_access_token(state, client=client)
-            if token_resp.is_error_message():
+            if is_error_message(token_resp):
                 return False, "Invalid response %s." % token_resp["error"]
 
             access_token = token_resp["access_token"]
@@ -695,7 +698,7 @@ class RPHandler(object):
         client = self.issuer2rp[issuer]
 
         authorization_response = self.finalize_auth(client, issuer, response)
-        if authorization_response.is_error_message():
+        if is_error_message(authorization_response):
             return {
                 'state': authorization_response['state'],
                 'error': authorization_response['error']
@@ -726,7 +729,8 @@ class RPHandler(object):
 
         return {
             'userinfo': inforesp,
-            'state': authorization_response['state']
+            'state': authorization_response['state'],
+            'token': token['access_token']
         }
 
     def has_active_authentication(self, state):
@@ -754,8 +758,8 @@ class RPHandler(object):
         Find me a valid access token
 
         :param state:
-        :return: An access token if a valid one exists otherwise raise
-            exception.
+        :return: An access token if a valid one exists and when it
+            expires. Otherwise raise exception.
         """
 
         exp = 0
@@ -778,13 +782,13 @@ class RPHandler(object):
                 else:
                     try:
                         _exp = response['__expires_at']
-                    except KeyError: # No expiry date, lives for ever
-                        indefinite.append(access_token)
+                    except KeyError:  # No expiry date, lives for ever
+                        indefinite.append((access_token, 0))
                     else:
-                        if _exp > now: # expires sometime in the future
+                        if _exp > now:  # expires sometime in the future
                             if _exp > exp:
                                 exp = _exp
-                                token = access_token
+                                token = (access_token, _exp)
 
         if indefinite:
             return indefinite[0]

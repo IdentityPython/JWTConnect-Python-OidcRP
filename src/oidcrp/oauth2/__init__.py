@@ -154,7 +154,9 @@ class Client(object):
 
         response = self.parse_request_response(service, resp,
                                                response_body_type, **kwargs)
-        if not response.is_error_message():
+        if 'error' in response:
+            pass
+        else:
             service.update_service_context(response, **kwargs)
         return response
 

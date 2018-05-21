@@ -215,6 +215,35 @@ CLIENTS = {
             'AccessToken': {},
             'UserInfo': {}
         },
+    },
+    'pingfed': {
+        "issuer": "https://pf.example.com/",
+        'client_id': 'pyrp_client',
+        'client_secret': 'someSecretxxx',
+        "redirect_uris": ["{}/authz_cb/pingfed".format(BASEURL)],
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["openid", "profile", "email"],
+            "token_endpoint_auth_method": "client_secret_basic"
+        },
+        "provider_info": {
+            "authorization_endpoint":
+                "https://pf.example.com/as/authorization.oauth2",
+            "token_endpoint":
+                "https://pf.example.com/as/token.oauth2",
+            "userinfo_endpoint":
+                "https://pf.example.com/idp/userinfo.openid"
+        },
+        'services': {
+            'Authorization': {},
+            'AccessToken': {},
+            'UserInfo': {}
+        },
+        "keys": {
+            "url": {
+                "https://pf.example.com/": "https://pf.example.com/jwks.json"
+            }
+        }
     }
 
 }
