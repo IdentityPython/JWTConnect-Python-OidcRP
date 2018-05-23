@@ -67,7 +67,7 @@ setup(
     install_requires=[
         'cryptojwt',
         'oidcservice>=0.5.6',
-        'oidcmsg==0.3.1'
+        'oidcmsg>=0.3.1'
     ],
     tests_require=[
         'pytest',
