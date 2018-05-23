@@ -21,7 +21,7 @@ from oidcrp import oidc
 from oidcrp import provider
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.4.6'
+__version__ = '0.4.8'
 
 logger = logging.getLogger(__name__)
 
