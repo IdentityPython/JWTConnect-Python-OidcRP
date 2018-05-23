@@ -15,7 +15,6 @@ from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
 from oidcservice.state_interface import StateInterface
-from oidcservice.util import add_path
 
 from oidcrp import oauth2
 from oidcrp import oidc
@@ -61,6 +60,19 @@ class InMemoryStateDataBase(object):
             return self.db[key]
         except KeyError:
             return None
+
+
+def add_path(url, path):
+    if url.endswith('/'):
+        if path.startswith('/'):
+            return '{}{}'.format(url, path[1:])
+        else:
+            return '{}{}'.format(url, path)
+    else:
+        if path.startswith('/'):
+            return '{}{}'.format(url, path)
+        else:
+            return '{}/{}'.format(url, path)
 
 
 def load_registration_response(client):

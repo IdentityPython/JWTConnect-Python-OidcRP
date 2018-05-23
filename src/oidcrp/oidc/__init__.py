@@ -79,9 +79,9 @@ class RP(oauth2.Client):
     def fetch_distributed_claims(self, userinfo, service, callback=None):
         """
 
-        :param userinfo: A :py:class:`oicmsg.message.Message` sub class instance
+        :param userinfo: A :py:class:`oidcmsg.message.Message` sub class instance
         :param service: Possibly an instance of the
-            :py:class:`oiccli.oic.serviceUserInfo` class
+            :py:class:`oidcservice.oidc.service.UserInfo` class
         :param callback: A function that can be used to fetch things
         :return: Updated userinfo instance
         """

@@ -18,14 +18,14 @@ import re
 import sys
 
 from setuptools import setup
-from setuptools.command.test import test as TestCommand
+from setuptools.command.test import test as test_command
 
 __author__ = 'Roland Hedberg'
 
 
-class PyTest(TestCommand):
+class PyTest(test_command):
     def finalize_options(self):
-        TestCommand.finalize_options(self)
+        test_command.finalize_options(self)
         self.test_args = []
         self.test_suite = True
 
@@ -43,7 +43,6 @@ if sys.version_info[0] == 2 and sys.version_info[1] == 6:
 else:
     extra_install_requires = []
 
-version = ''
 with open('src/oidcrp/__init__.py', 'r') as fd:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
                         fd.read(), re.MULTILINE).group(1)
@@ -70,7 +69,7 @@ setup(
         'oidcservice>=0.5.6',
         'oidcmsg==0.3.1'
     ],
-    tests_require = [
+    tests_require=[
         'pytest',
         'pytest-localserver',
     ],
