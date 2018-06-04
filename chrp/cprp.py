@@ -16,7 +16,7 @@ def handle_error():
     cherrypy.response.status = 500
     cherrypy.response.body = [
         b"<html><body>Sorry, an error occured</body></html>"
-    ]
+        ]
 
 
 def get_symkey(link):
@@ -108,7 +108,7 @@ class Root(object):
             '</head><body>'
             "<h1>Welcome to my OpenID Connect RP</h1>",
             '</body></html>'
-        ]
+            ]
         return '\n'.join(response)
 
 
@@ -133,7 +133,7 @@ class Consumer(Root):
 
         if link or uid:
             if uid:
-                args = {'resource':uid}
+                args = {'user_id': uid}
             else:
                 args = {}
             try:
@@ -233,7 +233,7 @@ class Consumer(Root):
                                               op_hash)
 
     def _load_HTML_page_from_file(self, path, value):
-        if not path.startswith("/"): # relative path
+        if not path.startswith("/"):  # relative path
             # prepend the root package dir
             path = os.path.join(os.path.dirname(__file__), path)
 
