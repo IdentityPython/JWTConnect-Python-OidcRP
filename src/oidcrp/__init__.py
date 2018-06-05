@@ -15,6 +15,7 @@ from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
 from oidcservice.state_interface import StateInterface
+from oidcservice.state_interface import InMemoryStateDataBase
 
 from oidcrp import oauth2
 from oidcrp import oidc
@@ -46,20 +47,6 @@ def token_secret_key(sid):
 
 SERVICE_NAME = "OIC"
 CLIENT_CONFIG = {}
-
-
-class InMemoryStateDataBase(object):
-    def __init__(self):
-        self.db = {}
-
-    def set(self, key, value):
-        self.db[key] = value
-
-    def get(self, key):
-        try:
-            return self.db[key]
-        except KeyError:
-            return None
 
 
 def add_path(url, path):
