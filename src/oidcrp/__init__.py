@@ -82,7 +82,7 @@ def load_registration_response(client):
             raise
         else:
             if 'error' in response:
-                raise OidcServiceError(response['error'])
+                raise OidcServiceError(response.to_json())
     else:
         client.service_context.registration_info = _client_reg
 

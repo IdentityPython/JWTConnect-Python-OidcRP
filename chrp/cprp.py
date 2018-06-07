@@ -139,7 +139,7 @@ class Consumer(Root):
             try:
                 result = self.rph.begin(link, **args)
             except Exception as err:
-                raise cherrypy.HTTPError(err)
+                raise cherrypy.HTTPError(message='{}'.format(err))
             else:
                 raise cherrypy.HTTPRedirect(result['url'])
 

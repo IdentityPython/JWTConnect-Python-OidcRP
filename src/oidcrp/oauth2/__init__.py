@@ -231,6 +231,7 @@ class Client(object):
                     raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
                         reqresp.text, reqresp.status_code, reqresp.url))
 
+            err_resp['status_code'] = reqresp.status_code
             return err_resp
         else:
             logger.error('Error response ({}): {}'.format(reqresp.status_code,
