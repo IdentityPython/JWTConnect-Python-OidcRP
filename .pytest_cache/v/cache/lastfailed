@@ -1,0 +1,4 @@
+{
+  "tests/test_20_rp_handler.py::TestRPHandler::()::test_get_accesstoken": true,
+  "tests/test_20_rp_handler.py::TestRPHandler::()::test_get_userinfo": true
+}
