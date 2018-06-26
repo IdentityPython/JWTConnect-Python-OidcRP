@@ -1,6 +1,6 @@
 # Contributing to JwtConnect
 
-All contributions to JwtConnect are welcome!
+All contributions to the Python JwtConnect packages are welcome!
 
 Note that as this library is planned to be used in high-profile production code,
 we insist on a very high standards for the code and design, but don't feel shy:
@@ -47,7 +47,7 @@ discussing your proposal, or email the
 
 ## Coding Standards
 
-The JWTCOnnect-Python-OidcMsg library follows the
+The JWTConnect-Python packages follows the
 [PEP8](https://www.python.org/dev/peps/pep-0008/) 
 coding style for Python implementations. Please review your own code 
 for adherence to the standard.
