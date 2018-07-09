@@ -10,6 +10,7 @@ from oidcservice.service import REQUEST_INFO
 from oidcservice.service import SUCCESSFUL
 from oidcservice.service import build_services
 from oidcservice.service_context import ServiceContext
+from oidcservice.state_interface import StateInterface
 
 from oidcrp.http import HTTPLib
 from oidcrp.util import get_deserialization_method
@@ -59,7 +60,7 @@ class Client(object):
         :return: Client instance
         """
 
-        self.state_db = state_db
+        self.session_interface = StateInterface(state_db)
         self.http = httplib or HTTPLib(ca_certs=ca_certs,
                                        verify_ssl=verify_ssl,
                                        client_cert=client_cert,

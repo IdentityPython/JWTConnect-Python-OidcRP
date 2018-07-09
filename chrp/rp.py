@@ -7,7 +7,7 @@ import sys
 
 import cherrypy
 
-from oidcmsg.key_jar import build_keyjar
+from oidcmsg.key_jar import build_keyjar, init_key_jar
 from oidcmsg.key_jar import KeyJar
 
 from oidcrp import RPHandler
@@ -23,29 +23,6 @@ logger.addHandler(hdlr)
 logger.setLevel(logging.DEBUG)
 
 SIGKEY_NAME = 'sigkey.jwks'
-
-
-def get_jwks(private_path, keydefs, public_path):
-    if os.path.isfile(private_path):
-        _jwks = open(private_path, 'r').read()
-        _kj = KeyJar()
-        _kj.import_jwks(json.loads(_jwks), '')
-    else:
-        _kj = build_keyjar(keydefs)[1]
-        jwks = _kj.export_jwks(private=True)
-        head, tail = os.path.split(private_path)
-        if not os.path.isdir(head):
-            os.makedirs(head)
-        fp = open(private_path, 'w')
-        fp.write(json.dumps(jwks))
-        fp.close()
-
-    jwks = _kj.export_jwks()  # public part
-    fp = open(public_path, 'w')
-    fp.write(json.dumps(jwks))
-    fp.close()
-
-    return _kj
 
 
 if __name__ == '__main__':
@@ -103,8 +80,9 @@ if __name__ == '__main__':
 
     _base_url = config.BASEURL
 
-    _kj = get_jwks(config.PRIVATE_JWKS_PATH, config.KEYDEFS,
-                   config.PUBLIC_JWKS_PATH)
+    _kj = init_key_jar(public_path=config.PUBLIC_JWKS_PATH,
+                       private_path=config.PRIVATE_JWKS_PATH,
+                       key_defs=config.KEYDEFS)
 
     if args.insecure:
         _kj.verify_ssl = False
