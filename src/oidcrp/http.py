@@ -6,7 +6,7 @@ from http.cookies import SimpleCookie
 
 import requests
 
-from oidcmsg.key_jar import KeyJar
+from cryptojwt.key_jar import KeyJar
 
 from oidcservice import sanitize
 from oidcservice.exception import NonFatalException

@@ -4,7 +4,7 @@ import sys
 import traceback
 from importlib import import_module
 
-from cryptojwt import as_bytes
+from cryptojwt.utils import as_bytes
 from oidcmsg.oauth2 import is_error_message
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import AccessTokenResponse
@@ -22,7 +22,7 @@ from oidcrp import oidc
 from oidcrp import provider
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.4.9'
+__version__ = '0.5.0'
 
 logger = logging.getLogger(__name__)
 
@@ -494,7 +494,8 @@ class RPHandler(object):
                 state=state
             )
         except Exception as err:
-            logger.error("%s", err)
+            message = traceback.format_exception(*sys.exc_info())
+            logger.error(message)
             raise
         else:
             if is_error_message(tokenresp):
@@ -529,7 +530,8 @@ class RPHandler(object):
                 state=state, request_args=req_args
             )
         except Exception as err:
-            logger.error("%s", err)
+            message = traceback.format_exception(*sys.exc_info())
+            logger.error(message)
             raise
         else:
             if is_error_message(tokenresp):
@@ -596,6 +598,8 @@ class RPHandler(object):
                                                          sformat='dict')
         except Exception as err:
             logger.error('Parsing authorization_response: {}'.format(err))
+            message = traceback.format_exception(*sys.exc_info())
+            logger.error(message)
             raise
         else:
             logger.debug(

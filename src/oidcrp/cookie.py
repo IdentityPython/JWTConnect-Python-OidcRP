@@ -9,11 +9,10 @@ from http.cookies import SimpleCookie
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from cryptojwt import as_bytes
-from cryptojwt import as_unicode
-from cryptojwt import safe_str_cmp
-from cryptojwt.jwe import JWEException
-from cryptojwt.jwe import split_ctx_and_tag
+from cryptojwt.utils import as_bytes
+from cryptojwt.utils import as_unicode
+from cryptojwt.jwe.exception import JWEException
+from cryptojwt.jwe.utils import split_ctx_and_tag
 
 from oidcservice import rndstr
 from oidcservice.exception import ImproperlyConfigured
@@ -34,6 +33,16 @@ CORS_HEADERS = [
 class InvalidCookieSign(Exception):
     pass
 
+
+# 'Stolen' from Werkzeug
+def safe_str_cmp(a, b):
+    """Compare two strings in constant time."""
+    if len(a) != len(b):
+        return False
+    r = 0
+    for c, d in zip(a, b):
+        r |= ord(c) ^ ord(d)
+    return r == 0
 
 def _expiration(timeout, time_format=None):
     """

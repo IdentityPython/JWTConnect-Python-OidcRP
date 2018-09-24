@@ -1,4 +1,4 @@
-# Contributing to JwtConnect
+# Contributing to JwtConnect-Python
 
 All contributions to the Python JwtConnect packages are welcome!
 

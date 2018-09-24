@@ -37,7 +37,7 @@ CLIENT_CONFIG = {
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
         "client_id": "xxxxxxx",
-        "client_secret": "yyyyyyy",
+        "client_secret": "yyyyyyyyyyyyyyyyyyyy",
         "redirect_uris": ["{}/authz_cb/linkedin".format(BASEURL)],
         "behaviour": {
             "response_types": ["code"],
@@ -61,7 +61,7 @@ CLIENT_CONFIG = {
     "facebook": {
         "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
         "client_id": "ccccccccc",
-        "client_secret": "dddddddd",
+        "client_secret": "dddddddddddddd",
         "behaviour": {
             "response_types": ["code"],
             "scope": ["email", "public_profile"],
@@ -85,7 +85,7 @@ CLIENT_CONFIG = {
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
         'client_id': 'eeeeeeeee',
-        'client_secret': 'aaaaaaaaaaaaa',
+        'client_secret': 'aaaaaaaaaaaaaaaaaaaa',
         "redirect_uris": ["{}/authz_cb/github".format(BASEURL)],
         "behaviour": {
             "response_types": ["code"],
@@ -139,7 +139,7 @@ class TestRPHandler(object):
         _context = client.service_context
 
         assert _context.client_id == 'eeeeeeeee'
-        assert _context.client_secret == 'aaaaaaaaaaaaa'
+        assert _context.client_secret == 'aaaaaaaaaaaaaaaaaaaa'
         assert _context.issuer == "https://github.com/login/oauth/authorize"
 
         assert _context.provider_info
@@ -159,10 +159,10 @@ class TestRPHandler(object):
 
         assert list(_context.keyjar.owners()) == ['']
         keys = _context.keyjar.get_issuer_keys('')
-        assert len(keys) == 2
+        assert len(keys) == 1
         for key in keys:
             assert key.kty == 'oct'
-            assert key.key == b'aaaaaaaaaaaaa'
+            assert key.key == b'aaaaaaaaaaaaaaaaaaaa'
 
         assert _context.base_url == BASEURL
 
@@ -194,15 +194,15 @@ class TestRPHandler(object):
         _context = client.service_context
 
         assert _context.client_id == 'eeeeeeeee'
-        assert _context.client_secret == 'aaaaaaaaaaaaa'
+        assert _context.client_secret == 'aaaaaaaaaaaaaaaaaaaa'
         assert _context.issuer == "https://github.com/login/oauth/authorize"
 
         assert list(_context.keyjar.owners()) == ['']
         keys = _context.keyjar.get_issuer_keys('')
-        assert len(keys) == 2
+        assert len(keys) == 1
         for key in keys:
             assert key.kty == 'oct'
-            assert key.key == b'aaaaaaaaaaaaa'
+            assert key.key == b'aaaaaaaaaaaaaaaaaaaa'
 
         for service_type in ['authorization', 'accesstoken', 'userinfo']:
             _srv = client.service[service_type]

@@ -1,4 +1,7 @@
+import json
 import logging
+
+from oidcservice.client_auth import BearerHeader
 
 try:
     from json import JSONDecodeError
@@ -62,6 +65,10 @@ PROVIDER_DEFAULT = {
 }
 
 
+class FetchException(Exception):
+    pass
+
+
 class RP(oauth2.Client):
     def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
                  keyjar=None, verify_ssl=True, config=None, client_cert=None,
@@ -76,12 +83,11 @@ class RP(oauth2.Client):
                                httplib=httplib, services=_srvs,
                                service_factory=service_factory)
 
-    def fetch_distributed_claims(self, userinfo, service, callback=None):
+    def fetch_distributed_claims(self, userinfo, callback=None):
         """
 
-        :param userinfo: A :py:class:`oidcmsg.message.Message` sub class instance
-        :param service: Possibly an instance of the
-            :py:class:`oidcservice.oidc.service.UserInfo` class
+        :param userinfo: A :py:class:`oidcmsg.message.Message` sub class
+            instance
         :param callback: A function that can be used to fetch things
         :return: Updated userinfo instance
         """
@@ -93,27 +99,41 @@ class RP(oauth2.Client):
             for csrc, spec in _csrc.items():
                 if "endpoint" in spec:
                     if "access_token" in spec:
-                        _uinfo = self.service_request(
-                            service, spec["endpoint"], method='GET',
-                            token=spec["access_token"])
+                        cauth = BearerHeader()
+                        http_args = cauth.construct(
+                            service=self.service['userinfo'],
+                            access_token= spec['access_token'])
+                        _resp = self.http.send(spec["endpoint"], 'GET',
+                                                **http_args)
                     else:
                         if callback:
-                            _uinfo = self.service_request(
-                                service, spec["endpoint"], method='GET',
-                                token=callback(spec['endpoint']))
+                            token = callback(spec['endpoint'])
+                            cauth = BearerHeader()
+                            http_args = cauth.construct(
+                                service=self.service['userinfo'],
+                                access_token=token)
+                            _resp = self.http.send(
+                                spec["endpoint"], 'GET', **http_args)
                         else:
-                            _uinfo = self.service_request(
-                                service, spec["endpoint"], method='GET')
+                            _resp = self.http.send(spec["endpoint"], 'GET')
+
+                    if _resp.status_code == 200:
+                        _uinfo = json.loads(_resp.text)
+                    else:  # There shouldn't be any redirect
+                        raise FetchException(
+                            'HTTP error {}: {}'.format(_resp.status_code,
+                                                       _resp.reason))
 
                     claims = [value for value, src in
                               userinfo["_claim_names"].items() if src == csrc]
 
-                    if set(claims) != set(list(_uinfo.keys())):
+                    if set(claims) != set(_uinfo.keys()):
                         logger.warning(
                             "Claims from claim source doesn't match what's in "
                             "the userinfo")
 
-                    for key, vals in _uinfo.items():
-                        userinfo[key] = vals
+                    # only add those I expected
+                    for key in claims:
+                        userinfo[key] = _uinfo[key]
 
         return userinfo
