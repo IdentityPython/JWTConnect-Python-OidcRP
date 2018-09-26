@@ -3,18 +3,19 @@ import pytest
 import sys
 import time
 
+from cherrypy import HTTPError
 from cryptojwt.jwk.rsa import rsa_load
 from cryptojwt.key_bundle import KeyBundle
+from oidcmsg.exception import FormatError
 
-from oidcmsg.oauth2 import AccessTokenRequest
+from oidcmsg.oauth2 import AccessTokenRequest, ResponseMessage
 from oidcmsg.oauth2 import AccessTokenResponse
 from oidcmsg.oauth2 import AuthorizationRequest
 from oidcmsg.oauth2 import AuthorizationResponse
 from oidcmsg.oauth2 import RefreshAccessTokenRequest
 from oidcmsg.oidc import IdToken
 from oidcmsg.time_util import utc_time_sans_frac
-
-from oidcservice.state_interface import State
+from oidcservice.exception import ParseError
 
 from oidcrp.oauth2 import Client
 
@@ -42,6 +43,14 @@ class DB(object):
 
     def get(self, item):
         return self.db[item]
+
+
+class MockResponse():
+    def __init__(self, status_code, text, headers=None):
+        self.status_code = status_code
+        self.text = text
+        self.headers = headers or {}
+        self.url = ''
 
 
 class TestClient(object):
@@ -130,3 +139,30 @@ class TestClient(object):
             'client_secret': 'abcdefghijklmnop',
             'grant_type': 'refresh_token',
             'refresh_token': 'refresh_with_me'}
+
+    def test_error_response(self):
+        err = ResponseMessage(error='Illegal')
+        http_resp = MockResponse(400, err.to_urlencoded())
+        resp = self.client.parse_request_response(
+            self.client.service['authorization'], http_resp)
+
+        assert resp['error'] == 'Illegal'
+        assert resp['status_code'] == 400
+
+    def test_error_response_500(self):
+        err = ResponseMessage(error='Illegal')
+        http_resp = MockResponse(500, err.to_urlencoded())
+        with pytest.raises(ParseError):
+            self.client.parse_request_response(
+                self.client.service['authorization'], http_resp)
+
+    def test_error_response_2(self):
+        err = ResponseMessage(error='Illegal')
+        http_resp = MockResponse(
+            400, err.to_json(),
+            headers={'content-type': 'application/x-www-form-urlencoded'})
+
+        with pytest.raises(HTTPError):
+            self.client.parse_request_response(
+                self.client.service['authorization'], http_resp)
+

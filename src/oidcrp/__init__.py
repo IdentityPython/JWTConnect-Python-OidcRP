@@ -70,9 +70,7 @@ def load_registration_response(client):
 
     :param client: A :py:class:`oidcservice.oidc.Client` instance
     """
-    try:
-        _client_reg = client.service_context.config['registration_response']
-    except KeyError:
+    if not client.service_context.client_id:
         try:
             response = client.do_request('registration')
         except KeyError:
@@ -83,8 +81,6 @@ def load_registration_response(client):
         else:
             if 'error' in response:
                 raise OidcServiceError(response.to_json())
-    else:
-        client.service_context.registration_info = _client_reg
 
 
 def dynamic_provider_info_discovery(client):
@@ -114,7 +110,7 @@ class RPHandler(object):
     def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=True,
                  services=None, service_factory=None, client_configs=None,
                  client_authn_factory=None, client_cls=None,
-                 state_db=None, **kwargs):
+                 state_db=None, http_lib=None, **kwargs):
         self.base_url = base_url
         self.hash_seed = as_bytes(hash_seed)
         self.verify_ssl = verify_ssl
@@ -143,6 +139,7 @@ class RPHandler(object):
         # keep track on which RP instance that serves with OP
         self.issuer2rp = {}
         self.hash2issuer = {}
+        self.httplib = http_lib
 
     def supports_webfinger(self):
         """
@@ -209,7 +206,9 @@ class RPHandler(object):
                 state_db=self.state_db,
                 client_authn_factory=self.client_authn_factory,
                 verify_ssl=self.verify_ssl, services=_services,
-                service_factory=self.service_factory, config=_cnf)
+                service_factory=self.service_factory, config=_cnf,
+                httplib=self.httplib
+            )
         except Exception as err:
             logger.error('Failed initiating client: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())
@@ -413,7 +412,7 @@ class RPHandler(object):
 
         try:
             res = self.init_authorization(client)
-        except Exception as err:
+        except Exception:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
             raise

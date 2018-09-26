@@ -1,14 +1,14 @@
-from urllib.parse import urlsplit, parse_qs
+from urllib.parse import parse_qs, urlparse, urlsplit
 
 import pytest
-from oidcmsg.oidc import AccessTokenResponse
+from oidcmsg.oidc import AccessTokenResponse, OpenIDSchema
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import IdToken
 from oidcservice.service_context import ServiceContext
 
 from oidcrp import RPHandler, get_provider_specific_service
 
-BASEURL = 'https://example.com/rp'
+BASE_URL = 'https://example.com/rp'
 
 CLIENT_PREFS = {
     "application_type": "web",
@@ -38,7 +38,7 @@ CLIENT_CONFIG = {
         "issuer": "https://www.linkedin.com/oauth/v2/",
         "client_id": "xxxxxxx",
         "client_secret": "yyyyyyyyyyyyyyyyyyyy",
-        "redirect_uris": ["{}/authz_cb/linkedin".format(BASEURL)],
+        "redirect_uris": ["{}/authz_cb/linkedin".format(BASE_URL)],
         "behaviour": {
             "response_types": ["code"],
             "scope": ["r_basicprofile", "r_emailaddress"],
@@ -67,7 +67,7 @@ CLIENT_CONFIG = {
             "scope": ["email", "public_profile"],
             "token_endpoint_auth_method": ''
         },
-        "redirect_uris": ["{}/authz_cb/facebook".format(BASEURL)],
+        "redirect_uris": ["{}/authz_cb/facebook".format(BASE_URL)],
         "provider_info": {
             "authorization_endpoint":
                 "https://www.facebook.com/v2.11/dialog/oauth",
@@ -86,7 +86,7 @@ CLIENT_CONFIG = {
         "issuer": "https://github.com/login/oauth/authorize",
         'client_id': 'eeeeeeeee',
         'client_secret': 'aaaaaaaaaaaaaaaaaaaa',
-        "redirect_uris": ["{}/authz_cb/github".format(BASEURL)],
+        "redirect_uris": ["{}/authz_cb/github".format(BASE_URL)],
         "behaviour": {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
@@ -113,7 +113,7 @@ CLIENT_CONFIG = {
 class TestRPHandler(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
-        self.rph = RPHandler(base_url=BASEURL, client_configs=CLIENT_CONFIG)
+        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG)
 
     def test_support_webfinger(self):
         assert self.rph.supports_webfinger()
@@ -164,7 +164,7 @@ class TestRPHandler(object):
             assert key.kty == 'oct'
             assert key.key == b'aaaaaaaaaaaaaaaaaaaa'
 
-        assert _context.base_url == BASEURL
+        assert _context.base_url == BASE_URL
 
     def test_do_provider_info(self):
         client = self.rph.init_client('github')
@@ -186,7 +186,7 @@ class TestRPHandler(object):
         # only 2 things should have happened
 
         assert self.rph.hash2issuer['github'] == issuer
-        assert client.service_context.post_logout_redirect_uris == [BASEURL]
+        assert client.service_context.post_logout_redirect_uris == [BASE_URL]
 
     def test_do_client_setup(self):
         client = self.rph.client_setup('github')
@@ -266,6 +266,18 @@ class TestRPHandler(object):
         _session = self.rph.get_session_information(res['state'])
         assert self.rph.client_configs['github']['issuer'] == _session['iss']
 
+    def test_get_client_from_session_key(self):
+        res = self.rph.begin(issuer_id='linkedin')
+        cli1 = self.rph.get_client_from_session_key(state=res['state'])
+        _session = self.rph.get_session_information(res['state'])
+        cli2 = self.rph.issuer2rp[_session['iss']]
+        assert cli1 == cli2
+        # redo
+        self.rph.do_provider_info(state=res['state'])
+        # get new redirect_uris
+        cli2.service_context.redirect_uris = []
+        self.rph.do_client_registration(state=res['state'])
+
     def test_finalize_auth(self):
         res = self.rph.begin(issuer_id='linkedin')
         _session = self.rph.get_session_information(res['state'])
@@ -303,19 +315,24 @@ class TestRPHandler(object):
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
         _aud = client.client_id
-        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-                 'aud': _aud}
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud
+        }
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
             key=client.service_context.keyjar.get_signing_key('oct'),
             algorithm="HS256", lifetime=300)
 
-        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
-                 "token_type": "Bearer", "expires_in": 3600}
+        _info = {
+            "access_token": "accessTok", "id_token": _signed_jwt,
+            "token_type": "Bearer", "expires_in": 3600
+        }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json())
+        httpserver.serve_content(at.to_json(),
+                                 headers={'Content-Type': 'application/json'})
         client.service['accesstoken'].endpoint = httpserver.url
 
         auth_response = AuthorizationResponse(code='access_code',
@@ -342,19 +359,24 @@ class TestRPHandler(object):
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
         _aud = client.client_id
-        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-                 'aud': _aud}
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud
+        }
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
             key=client.service_context.keyjar.get_signing_key('oct'),
             algorithm="HS256", lifetime=300)
 
-        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
-                 "token_type": "Bearer", "expires_in": 3600}
+        _info = {
+            "access_token": "accessTok", "id_token": _signed_jwt,
+            "token_type": "Bearer", "expires_in": 3600
+        }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json())
+        httpserver.serve_content(at.to_json(),
+                                 headers={'Content-Type': 'application/json'})
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
@@ -372,19 +394,24 @@ class TestRPHandler(object):
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
         _aud = client.client_id
-        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-                 'aud': _aud}
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud
+        }
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
             key=client.service_context.keyjar.get_signing_key('oct'),
             algorithm="HS256", lifetime=300)
 
-        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
-                 "token_type": "Bearer", "expires_in": 3600}
+        _info = {
+            "access_token": "accessTok", "id_token": _signed_jwt,
+            "token_type": "Bearer", "expires_in": 3600
+        }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json())
+        httpserver.serve_content(at.to_json(),
+                                 headers={'Content-Type': 'application/json'})
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
@@ -402,19 +429,24 @@ class TestRPHandler(object):
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
         _aud = client.client_id
-        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-                 'aud': _aud}
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud
+        }
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
             key=client.service_context.keyjar.get_signing_key('oct'),
             algorithm="HS256", lifetime=300)
 
-        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
-                 "token_type": "Bearer", "expires_in": 3600}
+        _info = {
+            "access_token": "accessTok", "id_token": _signed_jwt,
+            "token_type": "Bearer", "expires_in": 3600
+        }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json())
+        httpserver.serve_content(at.to_json(),
+                                 headers={'Content-Type': 'application/json'})
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
@@ -425,7 +457,8 @@ class TestRPHandler(object):
         token_resp = self.rph.get_access_and_id_token(auth_response,
                                                       client=client)
 
-        httpserver.serve_content('{"sub":"EndUserSubject"}')
+        httpserver.serve_content('{"sub":"EndUserSubject"}',
+                                 headers={'Content-Type': 'application/json'})
         client.service['userinfo'].endpoint = httpserver.url
 
         userinfo_resp = self.rph.get_user_info(res['state'], client,
@@ -439,9 +472,11 @@ class TestRPHandler(object):
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
         _aud = client.client_id
-        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-                 'aud': _aud, 'given_name': 'Diana', 'family_name': 'Krall',
-                 'occupation': 'Jazz pianist'}
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud, 'given_name': 'Diana', 'family_name': 'Krall',
+            'occupation': 'Jazz pianist'
+        }
 
         idts = IdToken(**idval)
 
@@ -472,27 +507,32 @@ def test_get_provider_specific_service():
 class TestRPHandlerTier2(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self, httpserver):
-        self.rph = RPHandler(base_url=BASEURL, client_configs=CLIENT_CONFIG)
+        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG)
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
         _aud = client.client_id
-        idval = {'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-                 'aud': _aud}
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud
+        }
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
             key=client.service_context.keyjar.get_signing_key('oct'),
             algorithm="HS256", lifetime=300)
 
-        _info = {"access_token": "accessTok", "id_token": _signed_jwt,
-                 "token_type": "Bearer", "expires_in": 3600,
-                 'refresh_token': 'refreshing'}
+        _info = {
+            "access_token": "accessTok", "id_token": _signed_jwt,
+            "token_type": "Bearer", "expires_in": 3600,
+            'refresh_token': 'refreshing'
+        }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json())
+        httpserver.serve_content(at.to_json(),
+                                 headers={'Content-Type': 'application/json'})
         client.service['accesstoken'].endpoint = httpserver.url
 
         _response = AuthorizationResponse(code='access_code',
@@ -503,7 +543,8 @@ class TestRPHandlerTier2(object):
         token_resp = self.rph.get_access_and_id_token(auth_response,
                                                       client=client)
 
-        httpserver.serve_content('{"sub":"EndUserSubject"}')
+        httpserver.serve_content('{"sub":"EndUserSubject"}',
+                                 headers={'Content-Type': 'application/json'})
         client.service['userinfo'].endpoint = httpserver.url
 
         self.rph.get_user_info(res['state'], client,
@@ -523,10 +564,13 @@ class TestRPHandlerTier2(object):
         _session = self.rph.get_session_information(self.state)
         client = self.rph.issuer2rp[_session['iss']]
 
-        _info = {"access_token": "2nd_accessTok",
-                 "token_type": "Bearer", "expires_in": 3600}
+        _info = {
+            "access_token": "2nd_accessTok",
+            "token_type": "Bearer", "expires_in": 3600
+        }
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json())
+        httpserver.serve_content(at.to_json(),
+                                 headers={'Content-Type': 'application/json'})
         client.service['refresh_token'].endpoint = httpserver.url
 
         res = self.rph.refresh_access_token(self.state, client,
@@ -538,7 +582,8 @@ class TestRPHandlerTier2(object):
         client = self.rph.issuer2rp[_session['iss']]
 
         httpserver.serve_content(
-            '{"sub":"EndUserSubject", "mail":"foo@example.com"}')
+            '{"sub":"EndUserSubject", "mail":"foo@example.com"}',
+            headers={'Content-Type': 'application/json'})
         client.service['userinfo'].endpoint = httpserver.url
 
         resp = self.rph.get_user_info(self.state, client)
@@ -552,3 +597,112 @@ class TestRPHandlerTier2(object):
         (token, expires_at) = self.rph.get_valid_access_token(self.state)
         assert token == 'accessTok'
         assert expires_at > 0
+
+
+class MockResponse():
+    def __init__(self, status_code, text, headers=None):
+        self.status_code = status_code
+        self.text = text
+        self.headers = headers or {}
+
+
+class MockOP(object):
+    def __init__(self, issuer, keyjar=None):
+        self.keyjar = keyjar
+        self.issuer = issuer
+        self.state = ''
+        self.nonce = ''
+
+    def construct_access_token_response(self, client_id):
+        _nonce = self.nonce
+        _iss = self.issuer
+        _aud = client_id
+
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud
+        }
+
+        idts = IdToken(**idval)
+        _signed_jwt = idts.to_jwt(
+            key=self.keyjar.get_signing_key('oct'),
+            algorithm="HS256", lifetime=300)
+
+        _info = {
+            "access_token": "accessTok", "id_token": _signed_jwt,
+            "token_type": "Bearer", "expires_in": 3600
+        }
+
+        return AccessTokenResponse(**_info)
+
+    def __call__(self, url, method="GET", data=None, headers=None, **kwargs):
+        if method == 'GET':
+            p = urlparse(url)
+            if p.path.endswith('authorize'):
+                qp = parse_qs(p.query)
+                self.state = qp['state'][0]
+                self.nonce = qp['nonce'][0]
+                r = MockResponse(302, 'Redirect')
+                r.location = qp['redirect_uri'][0]
+                return r
+            elif p.path.endswith('user'):
+                qp = parse_qs(p.query)
+                if qp['access_token'][0] == 'accessTok':
+                    # what else could it be?
+                    _info = OpenIDSchema(sub='EndUserSubject',
+                                         given_name='Diana',
+                                         family_name='Krall',
+                                         occupation='Jazz pianist')
+                    return MockResponse(200, _info.to_json(),
+                                        headers={
+                                            'content-type': "application/json"
+                                        })
+                else:
+                    return MockResponse(400, 'Illegal request')
+            else:
+                r = MockResponse(200, 'Some text')
+                return r
+        elif method == 'POST':
+            p = urlparse(url)
+            if p.path.endswith('access_token'):
+                # Content type expected to be urlencoded
+                query = parse_qs(data)
+                resp = self.construct_access_token_response(
+                    query['client_id'][0])
+
+                r = MockResponse(200, resp.to_json(),
+                                 headers={'content-type': "application/json"})
+                return r
+
+
+class TestRPHandlerWithMockOP(object):
+    @pytest.fixture(autouse=True)
+    def rphandler_setup(self):
+        self.rph = RPHandler(
+            base_url=BASE_URL, client_configs=CLIENT_CONFIG,
+            http_lib=MockOP(issuer='https://github.com/login/oauth/authorize'))
+
+    def test_finalize(self):
+        auth_query = self.rph.begin(issuer_id='github')
+        #  The authorization query is sent and after successful authentication
+        client = self.rph.get_client_from_session_key(
+            state=auth_query['state'])
+        _ = client.http(auth_query['url'])
+
+        #  the user is redirected back to the RP with a positive response
+        auth_response = AuthorizationResponse(code='access_code',
+                                              state=auth_query['state'])
+
+        # need session information and the client instance
+        _session = self.rph.get_session_information(auth_response['state'])
+        client = self.rph.get_client_from_session_key(
+            state=auth_response['state'])
+
+        # Faking
+        self.rph.httplib.keyjar = client.service_context.keyjar
+
+        # do the rest (= get access token and user info)
+        # assume code flow
+        resp = self.rph.finalize(_session['iss'], auth_response.to_dict())
+
+        assert set(resp.keys()) == {'userinfo', 'state', 'token'}

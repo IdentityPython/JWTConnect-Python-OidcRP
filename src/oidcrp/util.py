@@ -122,25 +122,6 @@ def set_cookie(cookiejar, kaka):
             cookiejar.set_cookie(new_cookie)
 
 
-def get_response_body_type(response):
-    try:
-        _ctype = response.headers["content-type"]
-    except KeyError:
-        raise ValueError('Missing Content-type specification')
-
-    body_type = ''
-
-    if match_to_("application/json", _ctype) or match_to_(
-            'application/jrd+json', _ctype):
-        body_type = 'json'
-    elif match_to_("application/jwt", _ctype):
-        body_type = "jwt"
-    elif match_to_(URL_ENCODED, _ctype):
-        body_type = 'urlencoded'
-
-    return body_type
-
-
 def verify_header(reqresp, body_type):
     """
     
@@ -215,7 +196,7 @@ def get_deserialization_method(reqresp):
     try:
         _ctype = reqresp.headers["content-type"]
     except KeyError:
-        return 'txt'  # reasonable default ??
+        return 'urlencoded'  # reasonable default ??
 
     if match_to_("application/json", _ctype) or match_to_(
             'application/jrd+json', _ctype):
@@ -232,21 +213,21 @@ def get_deserialization_method(reqresp):
     return deser_method
 
 
-SORT_ORDER = {'RS': 0, 'ES': 1, 'HS': 2, 'PS': 3, 'no': 4}
-
-
-def sort_sign_alg(alg1, alg2):
-    if SORT_ORDER[alg1[0:2]] < SORT_ORDER[alg2[0:2]]:
-        return -1
-    elif SORT_ORDER[alg1[0:2]] > SORT_ORDER[alg2[0:2]]:
-        return 1
-    else:
-        if alg1 < alg2:
-            return -1
-        elif alg1 > alg2:
-            return 1
-        else:
-            return 0
+# SORT_ORDER = {'RS': 0, 'ES': 1, 'HS': 2, 'PS': 3, 'no': 4}
+#
+#
+# def sort_sign_alg(alg1, alg2):
+#     if SORT_ORDER[alg1[0:2]] < SORT_ORDER[alg2[0:2]]:
+#         return -1
+#     elif SORT_ORDER[alg1[0:2]] > SORT_ORDER[alg2[0:2]]:
+#         return 1
+#     else:
+#         if alg1 < alg2:
+#             return -1
+#         elif alg1 > alg2:
+#             return 1
+#         else:
+#             return 0
 
 
 def get_value_type(http_response, body_type):

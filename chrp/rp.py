@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
+import cherrypy
 import importlib
-import json
 import logging
 import os
 import sys
 
-import cherrypy
-
-from oidcmsg.key_jar import build_keyjar, init_key_jar
-from oidcmsg.key_jar import KeyJar
+from cryptojwt.key_jar import init_key_jar
 
 from oidcrp import RPHandler
 
@@ -21,6 +18,7 @@ base_formatter = logging.Formatter(
 hdlr.setFormatter(base_formatter)
 logger.addHandler(hdlr)
 logger.setLevel(logging.DEBUG)
+
 
 SIGKEY_NAME = 'sigkey.jwks'
 

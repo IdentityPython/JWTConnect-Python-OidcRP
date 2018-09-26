@@ -6,7 +6,7 @@ from http.cookies import SimpleCookie
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-
+from oidcrp.util import get_deserialization_method, URL_ENCODED
 from oidcservice.exception import WrongContentType
 
 from oidcrp import util
@@ -101,12 +101,13 @@ def test_match_to():
     assert not util.match_to_(str3, list_of_str)
 
 
-def test_verify_header():
-    class FakeResponse():
-        def __init__(self, header):
-            self.headers = {"content-type": header}
-            self.text = "TEST_RESPONSE"
+class FakeResponse():
+    def __init__(self, header):
+        self.headers = {"content-type": header}
+        self.text = "TEST_RESPONSE"
 
+
+def test_verify_header():
     json_header = "application/json"
     jwt_header = "application/jwt"
     default_header = util.DEFAULT_POST_CONTENT_TYPE
@@ -120,6 +121,15 @@ def test_verify_header():
                               "urlencoded") == "urlencoded"
     assert util.verify_header(FakeResponse(plain_text_header),
                               "urlencoded") == "urlencoded"
+    assert util.verify_header(FakeResponse('text/html'), 'txt')
+    assert util.verify_header(FakeResponse('text/plain'), 'txt')
+
+    assert util.verify_header(FakeResponse(json_header), "") == "json"
+    assert util.verify_header(FakeResponse(jwt_header), "") == "jwt"
+    assert util.verify_header(FakeResponse(jwt_header), "") == "jwt"
+    assert util.verify_header(FakeResponse(default_header), "") == "urlencoded"
+    assert util.verify_header(FakeResponse(plain_text_header), "") == "txt"
+    assert util.verify_header(FakeResponse('text/html'), '') == 'txt'
 
     with pytest.raises(WrongContentType):
         util.verify_header(FakeResponse(json_header), "urlencoded")
@@ -130,3 +140,38 @@ def test_verify_header():
 
     with pytest.raises(ValueError):
         util.verify_header(FakeResponse(json_header), "undefined")
+
+
+def test_get_deserialization_method_json():
+    resp = FakeResponse("application/json")
+    assert get_deserialization_method(resp) == 'json'
+
+    resp = FakeResponse("application/json; charset=utf-8")
+    assert get_deserialization_method(resp) == 'json'
+
+    resp.headers["content-type"] = "application/jrd+json"
+    assert get_deserialization_method(resp) == 'json'
+
+
+def test_get_deserialization_method_jwt():
+    resp = FakeResponse("application/jwt")
+    assert get_deserialization_method(resp) == 'jwt'
+
+
+def test_get_deserialization_method_urlencoded():
+    resp = FakeResponse(URL_ENCODED)
+    assert get_deserialization_method(resp) == 'urlencoded'
+
+
+def test_get_deserialization_method_text():
+    resp = FakeResponse('text/html')
+    assert get_deserialization_method(resp) == ''
+
+    resp = FakeResponse('text/plain')
+    assert get_deserialization_method(resp) == ''
+
+
+def test_verify_no_content_type():
+    resp = FakeResponse('text/html')
+    del resp.headers['content-type']
+    assert util.verify_header(resp, 'txt') == 'txt'

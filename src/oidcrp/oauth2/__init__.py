@@ -3,6 +3,7 @@ import logging
 import cherrypy
 
 from cryptojwt.key_jar import KeyJar
+from oidcmsg.exception import FormatError
 
 from oidcservice.client_auth import factory as ca_factory
 from oidcservice.exception import OidcServiceError
@@ -65,8 +66,7 @@ class Client(object):
         self.session_interface = StateInterface(state_db)
         self.http = httplib or HTTPLib(ca_certs=ca_certs,
                                        verify_ssl=verify_ssl,
-                                       client_cert=client_cert,
-                                       keyjar=keyjar)
+                                       client_cert=client_cert)
 
         if not keyjar:
             keyjar = KeyJar()
@@ -89,16 +89,6 @@ class Client(object):
         self.service_context.service = self.service
 
         self.verify_ssl = verify_ssl
-
-    def construct(self, request_type, request_args=None, extra_args=None,
-                  **kwargs):
-        try:
-            self.service[request_type]
-        except KeyError:
-            raise NotImplemented(request_type)
-
-        method = getattr(self, 'construct_{}_request'.format(request_type))
-        return method(self.service_context, request_args, extra_args, **kwargs)
 
     def do_request(self, request_type, response_body_type="", request_args=None,
                    **kwargs):
@@ -222,12 +212,12 @@ class Client(object):
 
             try:
                 err_resp = service.parse_response(reqresp.text, _deser_method)
-            except OidcServiceError:
+            except FormatError:
                 if _deser_method != response_body_type:
                     try:
                         err_resp = service.parse_response(reqresp.text,
                                                           response_body_type)
-                    except OidcServiceError:
+                    except (OidcServiceError, FormatError):
                         raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
                             reqresp.text, reqresp.status_code, reqresp.url))
                 else:
