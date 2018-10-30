@@ -215,6 +215,7 @@ class RPHandler(object):
             logger.error(message)
             raise
 
+        client.service_context.keyjar = self.keyjar.copy()
         client.service_context.base_url = self.base_url
         return client
 

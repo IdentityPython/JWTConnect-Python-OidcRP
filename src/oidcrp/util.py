@@ -203,6 +203,8 @@ def get_deserialization_method(reqresp):
         deser_method = 'json'
     elif match_to_("application/jwt", _ctype):
         deser_method = "jwt"
+    elif match_to_("application/jose", _ctype):
+        deser_method = "jose"
     elif match_to_(URL_ENCODED, _ctype):
         deser_method = 'urlencoded'
     elif match_to_("text/plain", _ctype) or match_to_("test/html", _ctype):
