@@ -284,6 +284,10 @@ class RPHandler(object):
             client.service_context.post_logout_redirect_uris
         except AttributeError:
             client.service_context.post_logout_redirect_uris = [self.base_url]
+        else:
+            if not client.service_context.post_logout_redirect_uris:
+                client.service_context.post_logout_redirect_uris = [
+                    self.base_url]
 
         if not client.service_context.client_id:
             load_registration_response(client)

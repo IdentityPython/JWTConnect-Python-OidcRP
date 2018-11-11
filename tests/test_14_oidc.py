@@ -4,8 +4,10 @@ import sys
 import time
 
 import pytest
-from cryptojwt.jwk.rsa import rsa_load
+
+from cryptojwt.jwk.rsa import import_private_rsa_key_from_file
 from cryptojwt.key_bundle import KeyBundle
+
 from oidcmsg.oauth2 import AccessTokenRequest
 from oidcmsg.oauth2 import AccessTokenResponse
 from oidcmsg.oauth2 import AuthorizationRequest
@@ -22,7 +24,7 @@ sys.path.insert(0, '.')
 _dirname = os.path.dirname(os.path.abspath(__file__))
 BASE_PATH = os.path.join(_dirname, "data", "keys")
 
-_key = rsa_load(os.path.join(BASE_PATH, "rsa.key"))
+_key = import_private_rsa_key_from_file(os.path.join(BASE_PATH, "rsa.key"))
 KC_RSA = KeyBundle({"key": _key, "kty": "RSA", "use": "sig"})
 
 CLIENT_ID = "client_1"
@@ -99,7 +101,7 @@ class TestClient(object):
             'client_secret': 'abcdefghijklmnop',
             'grant_type': 'authorization_code',
             'redirect_uri': 'https://example.com/cli/authz_cb',
-            'state': 'state'
+            'state': 'ABCDE'
         }
 
     def test_construct_refresh_token_request(self):

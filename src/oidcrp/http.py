@@ -75,6 +75,30 @@ class HTTPLib(object):
 
         return cookie_dict
 
+    def add_cookies(self, kwargs):
+        if self.cookiejar:
+            kwargs["cookies"] = self._cookies()
+            logger.debug("SENT {} COOKIES".format(len(kwargs["cookies"])))
+        return kwargs
+
+    def run_req_callback(self, url, method, kwargs):
+        if self.req_callback is not None:
+            kwargs = self.req_callback(method, url, **kwargs)
+        return kwargs
+
+    def set_cookie(self, response):
+        try:
+            _cookie = response.headers["set-cookie"]
+            logger.debug("RECEIVED COOKIE")
+            try:
+                # add received cookies to the cookie jar
+                set_cookie(self.cookiejar, SimpleCookie(_cookie))
+            except CookieError as err:
+                logger.error(err)
+                raise NonFatalException(response, "{}".format(err))
+        except (AttributeError, KeyError) as err:
+            pass
+
     def __call__(self, url, method="GET", **kwargs):
         """
         Send a HTTP request to a URL using a specified method
@@ -91,14 +115,11 @@ class HTTPLib(object):
             _kwargs.update(kwargs)
 
         # If I have cookies add them all to the request
-        if self.cookiejar:
-            _kwargs["cookies"] = self._cookies()
-            logger.debug("SENT {} COOKIES".format(len(_kwargs["cookies"])))
+        self.add_cookies(kwargs)
 
         # If I want to modify the request arguments based on URL, method
         # and current arguments I can use this call back function.
-        if self.req_callback is not None:
-            _kwargs = self.req_callback(method, url, **_kwargs)
+        self.run_req_callback(url, method, kwargs)
 
         try:
             # Do the request
@@ -112,17 +133,7 @@ class HTTPLib(object):
         if self.events is not None:
             self.events.store('HTTP response', r, ref=url)
 
-        try:
-            _cookie = r.headers["set-cookie"]
-            logger.debug("RECEIVED COOKIE")
-            try:
-                # add received cookies to the cookie jar
-                set_cookie(self.cookiejar, SimpleCookie(_cookie))
-            except CookieError as err:
-                logger.error(err)
-                raise NonFatalException(r, "{}".format(err))
-        except (AttributeError, KeyError) as err:
-            pass
+        self.set_cookie(r)
 
         # return the response
         return r

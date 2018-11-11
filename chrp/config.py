@@ -17,7 +17,7 @@ VERIFY_SSL = False
 KEYDEFS = [
     {"type": "RSA", "key": '', "use": ["sig"]},
     {"type": "EC", "crv": "P-256", "use": ["sig"]}
-]
+    ]
 
 PRIVATE_JWKS_PATH = "jwks_dir/jwks.json"
 PUBLIC_JWKS_PATH = 'static/jwks.json'
@@ -35,7 +35,7 @@ CLIENT_PREFS = {
     "scope": ["openid", "profile", "email", "address", "phone"],
     "token_endpoint_auth_method": ["client_secret_basic", 'client_secret_post'],
     'services': SERVICES
-}
+    }
 
 # The keys in this dictionary are the OPs short user friendly name
 # not the issuer (iss) name.
@@ -55,8 +55,8 @@ CLIENTS = {
             'AccessToken': {},
             'RefreshAccessToken': {},
             'UserInfo': {}
-        }
-    },
+            }
+        },
     # Supports OP information lookup but not client registration
     "google": {
         "issuer": "https://accounts.google.com/",
@@ -68,10 +68,10 @@ CLIENTS = {
             "scope": ["openid", "profile", "email"],
             "token_endpoint_auth_method": ["client_secret_basic",
                                            'client_secret_post']
-        },
+            },
         "allow": {
             "issuer_mismatch": True
-        },
+            },
         # "userinfo_request_method": "GET",
         "services": {
             'ProviderInfoDiscovery': {},
@@ -79,8 +79,8 @@ CLIENTS = {
             'AccessToken': {},
             'RefreshAccessToken': {},
             'UserInfo': {}
-        }
-    },
+            }
+        },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
         "client_id": "xxxxxxx",
@@ -90,27 +90,27 @@ CLIENTS = {
             "response_types": ["code"],
             "scope": ["r_basicprofile", "r_emailaddress"],
             "token_endpoint_auth_method": ['client_secret_post']
-        },
+            },
         "provider_info": {
             "authorization_endpoint":
                 "https://www.linkedin.com/oauth/v2/authorization",
             "token_endpoint": "https://www.linkedin.com/oauth/v2/accessToken",
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
-        },
+            },
         'services': {
             'Authorization': {},
             'linkedin.AccessToken': {},
             'linkedin.UserInfo': {}
-        }
-    },
+            }
+        },
     "facebook": {
         "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
         "behaviour": {
             "response_types": ["code"],
             "scope": ["email", "public_profile"],
             "token_endpoint_auth_method": ['']
-        },
+            },
         "redirect_uris": ["{}/authz_cb/facebook".format(BASEURL)],
         "provider_info": {
             "authorization_endpoint":
@@ -119,13 +119,13 @@ CLIENTS = {
                 "https://graph.facebook.com/v2.11/oauth/access_token",
             "userinfo_endpoint":
                 "https://graph.facebook.com/me"
-        },
+            },
         'services': {
             'Authorization': {},
             'AccessToken': {'default_authn_method': ''},
-            'UserInfo': {'default_authn_method':''}
-        }
-    },
+            'UserInfo': {'default_authn_method': ''}
+            }
+        },
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
         'client_id': 'eeeeeeeee',
@@ -135,7 +135,7 @@ CLIENTS = {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
             "token_endpoint_auth_method": ['']
-        },
+            },
         "provider_info": {
             "authorization_endpoint":
                 "https://github.com/login/oauth/authorize",
@@ -143,13 +143,13 @@ CLIENTS = {
                 "https://github.com/login/oauth/access_token",
             "userinfo_endpoint":
                 "https://api.github.com/user"
-        },
+            },
         'services': {
             'Authorization': {},
             'AccessToken': {},
             'UserInfo': {'default_authn_method': ''}
-        }
-    },
+            }
+        },
     "salesforce": {
         "issuer": "https://login.salesforce.com",
         "client_id": "xxxxxxxxx.yyy",
@@ -160,7 +160,7 @@ CLIENTS = {
             "scope": ["openid", "profile", "email"],
             "token_endpoint_auth_method": ["client_secret_basic",
                                            'client_secret_post']
-        },
+            },
         # "allow": {
         #     "issuer_mismatch": True
         # },
@@ -171,9 +171,9 @@ CLIENTS = {
             'AccessToken': {},
             'RefreshAccessToken': {},
             'UserInfo': {}
-        },
+            },
         "keys": {'file': {"https://login.salesforce.com": 'salesforce.jwks'}}
-    },
+        },
     "okta": {
         "issuer": "https://dev-968755.oktapreview.com/",
         "client_id": "123456789",
@@ -184,7 +184,7 @@ CLIENTS = {
             "scope": ["openid", "profile", "email"],
             "token_endpoint_auth_method": ["client_secret_basic",
                                            'client_secret_post']
-        },
+            },
         "provider_info": {
             "authorization_endpoint":
                 "https://dev-968755.oktapreview.com/oauth2/default/v1"
@@ -193,15 +193,64 @@ CLIENTS = {
                 "https://dev-968755.oktapreview.com/oauth2/default/v1/token",
             "userinfo_endpoint":
                 "https://dev-968755.oktapreview.com/oauth2/v1/userinfo"
-        },
+            },
         # "userinfo_request_method": "GET",
         "services": {
             'Authorization': {},
             'AccessToken': {},
             'UserInfo': {}
+            }
+        },
+    'microsoft': {
+        'issuer': 'https://login.microsoftonline.com/<UUID>>/v2.0',
+        'client_id': '1234567890',
+        'client_secret': 'abcdefghijklmnop',
+        "redirect_uris": ["{}/authz_cb/microsoft".format(BASEURL)],
+        "client_preferences": {
+            "response_types": ["id_token"],
+            "scope": ["openid"],
+            "token_endpoint_auth_method": ["private_key_jwt",
+                                           'client_secret_post'],
+            "response_mode": 'form_post'
+            },
+        "allow": {
+            "issuer_mismatch": True
+            },
+        "services": {
+            'ProviderInfoDiscovery',
+            'Authorization'
+            }
+        },
+    "aws": {
+        "issuer": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1",
+        'client_id': '1234567890',
+        'client_secret': 'abcdefghijklmnop',
+        "redirect_uris": ["{}/authz_cb/aws".format(BASEURL)],
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["email", "openid"],
+            "token_endpoint_auth_method": ['']
+            },
+        "provider_info": {
+            "authorization_endpoint":
+                "https://catalogix.auth.eu-central-1.amazoncognito.com/oauth2"
+                "/authorize",
+            "token_endpoint":
+                "https://catalogix.auth.eu-central-1.amazoncognito.com/oauth2"
+                "/token"
+            },
+        'services': {
+            'Authorization': {},
+            'AccessToken': {}
+            },
+        'keys': {
+            'url': {
+                'https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1':
+                    'https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1/.well-known/jwks.json'
+                }
+            }
         }
     }
-}
 
 # Whether an attempt to fetch the userinfo should be made
 USERINFO = True

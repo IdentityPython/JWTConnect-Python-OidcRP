@@ -1,9 +1,16 @@
+import json
+import os
 from urllib.parse import parse_qs, urlparse, urlsplit
 
 import pytest
-from oidcmsg.oidc import AccessTokenResponse, OpenIDSchema
+from cryptojwt.key_jar import KeyJar, init_key_jar
+from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import IdToken
+from oidcmsg.oidc import JRD
+from oidcmsg.oidc import Link
+from oidcmsg.oidc import OpenIDSchema
+from oidcmsg.oidc import ProviderConfigurationResponse
 from oidcservice.service_context import ServiceContext
 
 from oidcrp import RPHandler, get_provider_specific_service
@@ -18,11 +25,11 @@ CLIENT_PREFS = {
                        "code id_token token", "code token"],
     "scope": ["openid", "profile", "email", "address", "phone"],
     "token_endpoint_auth_method": "client_secret_basic"
-}
+    }
 
 CLIENT_CONFIG = {
     "": {
-        "client_prefs": CLIENT_PREFS,
+        "client_preferences": CLIENT_PREFS,
         "redirect_uris": None,
         "services": {
             'WebFinger': {},
@@ -32,8 +39,8 @@ CLIENT_CONFIG = {
             'AccessToken': {},
             'RefreshAccessToken': {},
             'UserInfo': {}
-        }
-    },
+            }
+        },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
         "client_id": "xxxxxxx",
@@ -43,21 +50,21 @@ CLIENT_CONFIG = {
             "response_types": ["code"],
             "scope": ["r_basicprofile", "r_emailaddress"],
             "token_endpoint_auth_method": 'client_secret_post'
-        },
+            },
         "provider_info": {
             "authorization_endpoint":
                 "https://www.linkedin.com/oauth/v2/authorization",
             "token_endpoint": "https://www.linkedin.com/oauth/v2/accessToken",
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
-        },
+            },
         "userinfo_request_method": "GET",
         'services': {
             'Authorization': {},
             'linkedin.AccessToken': {},
             'linkedin.UserInfo': {}
-        }
-    },
+            }
+        },
     "facebook": {
         "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
         "client_id": "ccccccccc",
@@ -66,7 +73,7 @@ CLIENT_CONFIG = {
             "response_types": ["code"],
             "scope": ["email", "public_profile"],
             "token_endpoint_auth_method": ''
-        },
+            },
         "redirect_uris": ["{}/authz_cb/facebook".format(BASE_URL)],
         "provider_info": {
             "authorization_endpoint":
@@ -75,13 +82,13 @@ CLIENT_CONFIG = {
                 "https://graph.facebook.com/v2.11/oauth/access_token",
             "userinfo_endpoint":
                 "https://graph.facebook.com/me"
-        },
+            },
         'services': {
             'Authorization': {},
             'AccessToken': {'default_authn_method': ''},
             'UserInfo': {'default_authn_method': ''}
-        }
-    },
+            }
+        },
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
         'client_id': 'eeeeeeeee',
@@ -91,7 +98,7 @@ CLIENT_CONFIG = {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
             "token_endpoint_auth_method": ''
-        },
+            },
         "provider_info": {
             "authorization_endpoint":
                 "https://github.com/login/oauth/authorize",
@@ -99,21 +106,61 @@ CLIENT_CONFIG = {
                 "https://github.com/login/oauth/access_token",
             "userinfo_endpoint":
                 "https://api.github.com/user"
-        },
+            },
         'services': {
             'Authorization': {},
             'AccessToken': {},
             'RefreshAccessToken': {},
             'UserInfo': {'default_authn_method': ''}
+            }
         }
     }
-}
+
+
+KEYDEFS = [
+    {"type": "RSA", "use": ["sig"]},
+    {"type": "EC", "crv": "P-256", "use": ["sig"]},
+]
+
+_dirname = os.path.dirname(os.path.abspath(__file__))
+
+ISS = 'https://example.com'
+
+CLI_KEY = init_key_jar(public_path='{}/pub_client.jwks'.format(_dirname),
+                       private_path='{}/priv_client.jwks'.format(_dirname),
+                       key_defs=KEYDEFS, owner='')
+
+LINKEDIN_KEY = init_key_jar(
+    public_path='{}/pub_linkedin.jwks'.format(_dirname),
+    private_path='{}/priv_linkedin.jwks'.format(_dirname),
+    key_defs=KEYDEFS,
+    owner=CLIENT_CONFIG['linkedin']['issuer']
+)
+
+FACEBOOK_KEY = init_key_jar(
+    public_path='{}/pub_facebook.jwks'.format(_dirname),
+    private_path='{}/priv_facebook.jwks'.format(_dirname),
+    key_defs=KEYDEFS,
+    owner=CLIENT_CONFIG['facebook']['issuer']
+)
+
+GITHUB_KEY = init_key_jar(
+    public_path='{}/pub_github.jwks'.format(_dirname),
+    private_path='{}/priv_github.jwks'.format(_dirname),
+    key_defs=KEYDEFS,
+    owner=CLIENT_CONFIG['github']['issuer']
+)
+
+
+def iss_id(iss):
+    return CLIENT_CONFIG[iss]['issuer']
 
 
 class TestRPHandler(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
-        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG)
+        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG,
+                             keyjar=CLI_KEY)
 
     def test_support_webfinger(self):
         assert self.rph.supports_webfinger()
@@ -145,31 +192,32 @@ class TestRPHandler(object):
         assert _context.provider_info
         assert set(_context.provider_info.keys()) == {
             'authorization_endpoint', 'token_endpoint', 'userinfo_endpoint'
-        }
+            }
 
         assert _context.behaviour == {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
             "token_endpoint_auth_method": ''
-        }
+            }
+
+        _github_id = iss_id('github')
+        _context.keyjar.import_jwks(GITHUB_KEY.export_jwks(issuer=_github_id),
+                                    _github_id)
 
         # The key jar should only contain a symmetric key that is the clients
         # secret. 2 because one is marked for encryption and the other signing
         # usage.
 
-        assert list(_context.keyjar.owners()) == ['']
+        assert list(_context.keyjar.owners()) == ['', _github_id]
         keys = _context.keyjar.get_issuer_keys('')
-        assert len(keys) == 1
-        for key in keys:
-            assert key.kty == 'oct'
-            assert key.key == b'aaaaaaaaaaaaaaaaaaaa'
+        assert len(keys) == 2
 
         assert _context.base_url == BASE_URL
 
     def test_do_provider_info(self):
         client = self.rph.init_client('github')
         issuer = self.rph.do_provider_info(client)
-        assert issuer == "https://github.com/login/oauth/authorize"
+        assert issuer == iss_id('github')
 
         # Make sure the service endpoints are set
 
@@ -190,19 +238,19 @@ class TestRPHandler(object):
 
     def test_do_client_setup(self):
         client = self.rph.client_setup('github')
-
+        _github_id = iss_id('github')
         _context = client.service_context
 
         assert _context.client_id == 'eeeeeeeee'
         assert _context.client_secret == 'aaaaaaaaaaaaaaaaaaaa'
-        assert _context.issuer == "https://github.com/login/oauth/authorize"
+        assert _context.issuer == _github_id
 
-        assert list(_context.keyjar.owners()) == ['']
+        _context.keyjar.import_jwks(GITHUB_KEY.export_jwks(issuer=_github_id),
+                                    _github_id)
+
+        assert list(_context.keyjar.owners()) == ['', _github_id]
         keys = _context.keyjar.get_issuer_keys('')
-        assert len(keys) == 1
-        for key in keys:
-            assert key.kty == 'oct'
-            assert key.key == b'aaaaaaaaaaaaaaaaaaaa'
+        assert len(keys) == 2
 
         for service_type in ['authorization', 'accesstoken', 'userinfo']:
             _srv = client.service[service_type]
@@ -226,7 +274,7 @@ class TestRPHandler(object):
                 '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
             '__hex':
                 '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
-        }
+            }
 
         assert list(self.rph.hash2issuer.keys()) == [
             '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d']
@@ -238,12 +286,12 @@ class TestRPHandler(object):
     def test_begin(self):
         res = self.rph.begin(issuer_id='github')
         assert set(res.keys()) == {'url', 'state'}
+        _github_id = iss_id('github')
 
         _session = self.rph.session_interface.get_state(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
 
-        assert client.service_context.issuer == \
-               "https://github.com/login/oauth/authorize"
+        assert client.service_context.issuer == _github_id
 
         part = urlsplit(res['url'])
         assert part.scheme == 'https'
@@ -312,23 +360,28 @@ class TestRPHandler(object):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
+
+        _github_id = iss_id('github')
+        client.service_context.keyjar.import_jwks(
+            GITHUB_KEY.export_jwks(issuer=_github_id), _github_id)
+
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
         _aud = client.client_id
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-        }
+            }
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
-            key=client.service_context.keyjar.get_signing_key('oct'),
-            algorithm="HS256", lifetime=300)
+            key=GITHUB_KEY.get_signing_key(owner=_github_id), algorithm="RS256",
+            lifetime=300)
 
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-        }
+            }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -362,17 +415,21 @@ class TestRPHandler(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-        }
+            }
+
+        _github_id = iss_id('github')
+        client.service_context.keyjar.import_jwks(
+            GITHUB_KEY.export_jwks(issuer=_github_id), _github_id)
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
-            key=client.service_context.keyjar.get_signing_key('oct'),
-            algorithm="HS256", lifetime=300)
+            key=GITHUB_KEY.get_signing_key('rsa', owner=_github_id),
+            algorithm="RS256", lifetime=300)
 
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-        }
+            }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -397,17 +454,21 @@ class TestRPHandler(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-        }
+            }
+
+        _github_id = iss_id('github')
+        client.service_context.keyjar.import_jwks(
+            GITHUB_KEY.export_jwks(issuer=_github_id), _github_id)
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
-            key=client.service_context.keyjar.get_signing_key('oct'),
-            algorithm="HS256", lifetime=300)
+            key=GITHUB_KEY.get_signing_key('rsa', owner=_github_id),
+            algorithm="RS256", lifetime=300)
 
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-        }
+            }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -432,17 +493,21 @@ class TestRPHandler(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-        }
+            }
+
+        _github_id = iss_id('github')
+        client.service_context.keyjar.import_jwks(
+            GITHUB_KEY.export_jwks(issuer=_github_id), _github_id)
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
-            key=client.service_context.keyjar.get_signing_key('oct'),
-            algorithm="HS256", lifetime=300)
+            key=GITHUB_KEY.get_signing_key('rsa', owner=_github_id),
+            algorithm="RS256", lifetime=300)
 
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-        }
+            }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -476,7 +541,7 @@ class TestRPHandler(object):
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud, 'given_name': 'Diana', 'family_name': 'Krall',
             'occupation': 'Jazz pianist'
-        }
+            }
 
         idts = IdToken(**idval)
 
@@ -507,7 +572,8 @@ def test_get_provider_specific_service():
 class TestRPHandlerTier2(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self, httpserver):
-        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG)
+        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG,
+                             keyjar=CLI_KEY)
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -517,18 +583,22 @@ class TestRPHandlerTier2(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-        }
+            }
+
+        _github_id = iss_id('github')
+        client.service_context.keyjar.import_jwks(
+            GITHUB_KEY.export_jwks(issuer=_github_id), _github_id)
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
-            key=client.service_context.keyjar.get_signing_key('oct'),
-            algorithm="HS256", lifetime=300)
+            key=GITHUB_KEY.get_signing_key('rsa', owner=_github_id),
+            algorithm="RS256", lifetime=300)
 
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600,
             'refresh_token': 'refreshing'
-        }
+            }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -567,7 +637,7 @@ class TestRPHandlerTier2(object):
         _info = {
             "access_token": "2nd_accessTok",
             "token_type": "Bearer", "expires_in": 3600
-        }
+            }
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
                                  headers={'Content-Type': 'application/json'})
@@ -612,81 +682,95 @@ class MockOP(object):
         self.issuer = issuer
         self.state = ''
         self.nonce = ''
+        self.get_response = {}
+        self.register_get_response('default', 'OK', 200)
+        self.post_response = {}
+        self.register_post_response('default', 'OK', 200)
 
-    def construct_access_token_response(self, client_id):
-        _nonce = self.nonce
-        _iss = self.issuer
-        _aud = client_id
+    def register_get_response(self, path, data, status_code=200,
+                         headers=None):
+        _headers = headers or {}
+        self.get_response[path] = MockResponse(status_code, data, _headers)
 
-        idval = {
-            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-            'aud': _aud
-        }
-
-        idts = IdToken(**idval)
-        _signed_jwt = idts.to_jwt(
-            key=self.keyjar.get_signing_key('oct'),
-            algorithm="HS256", lifetime=300)
-
-        _info = {
-            "access_token": "accessTok", "id_token": _signed_jwt,
-            "token_type": "Bearer", "expires_in": 3600
-        }
-
-        return AccessTokenResponse(**_info)
+    def register_post_response(self, path, data, status_code=200, headers=None):
+        _headers = headers or {}
+        self.post_response[path] = MockResponse(status_code, data, _headers)
 
     def __call__(self, url, method="GET", data=None, headers=None, **kwargs):
         if method == 'GET':
             p = urlparse(url)
-            if p.path.endswith('authorize'):
-                qp = parse_qs(p.query)
-                self.state = qp['state'][0]
-                self.nonce = qp['nonce'][0]
-                r = MockResponse(302, 'Redirect')
-                r.location = qp['redirect_uri'][0]
-                return r
-            elif p.path.endswith('user'):
-                qp = parse_qs(p.query)
-                if qp['access_token'][0] == 'accessTok':
-                    # what else could it be?
-                    _info = OpenIDSchema(sub='EndUserSubject',
-                                         given_name='Diana',
-                                         family_name='Krall',
-                                         occupation='Jazz pianist')
-                    return MockResponse(200, _info.to_json(),
-                                        headers={
-                                            'content-type': "application/json"
-                                        })
-                else:
-                    return MockResponse(400, 'Illegal request')
-            else:
-                r = MockResponse(200, 'Some text')
-                return r
+            try:
+                _resp = self.get_response[p.path]
+            except KeyError:
+                _resp = self.get_response['default']
+
+            if callable(_resp.text):
+                _data = _resp.text(data)
+                _resp = MockResponse(_resp.status_code, _data, _resp.headers)
+
+            return _resp
         elif method == 'POST':
             p = urlparse(url)
-            if p.path.endswith('access_token'):
-                # Content type expected to be urlencoded
-                query = parse_qs(data)
-                resp = self.construct_access_token_response(
-                    query['client_id'][0])
+            try:
+                _resp = self.post_response[p.path]
+            except KeyError:
+                _resp = self.post_response['default']
 
-                r = MockResponse(200, resp.to_json(),
-                                 headers={'content-type': "application/json"})
-                return r
+            if callable(_resp.text):
+                _data = _resp.text(data)
+                _resp = MockResponse(_resp.status_code, _data, _resp.headers)
+
+            return _resp
+
+
+def construct_access_token_response(nonce, issuer, client_id, key_jar):
+    _aud = client_id
+
+    idval = {
+        'nonce': nonce, 'sub': 'EndUserSubject', 'iss': issuer,
+        'aud': _aud
+        }
+
+    idts = IdToken(**idval)
+    _signed_jwt = idts.to_jwt(
+        key=key_jar.get_signing_key('rsa', owner=issuer),
+        algorithm="RS256", lifetime=300)
+
+    _info = {
+        "access_token": "accessTok", "id_token": _signed_jwt,
+        "token_type": "Bearer", "expires_in": 3600
+        }
+
+    return AccessTokenResponse(**_info)
+
+
+def registration_callback(data):
+    _req = json.loads(data)
+    # add client_id and client_secret
+    _req['client_id'] = 'client1'
+    _req['client_secret'] = "ClientSecretString"
+    return json.dumps(_req)
 
 
 class TestRPHandlerWithMockOP(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
+        self.issuer = 'https://github.com/login/oauth/authorize'
+        self.mock_op = MockOP(issuer=self.issuer)
         self.rph = RPHandler(
             base_url=BASE_URL, client_configs=CLIENT_CONFIG,
-            http_lib=MockOP(issuer='https://github.com/login/oauth/authorize'))
+            http_lib=self.mock_op, keyjar=KeyJar())
 
     def test_finalize(self):
         auth_query = self.rph.begin(issuer_id='github')
         #  The authorization query is sent and after successful authentication
         client = self.rph.get_client_from_session_key(
             state=auth_query['state'])
+        # register a response
+        p = urlparse(
+            CLIENT_CONFIG['github']['provider_info']['authorization_endpoint'])
+        self.mock_op.register_get_response(p.path, 'Redirect', 302)
+
         _ = client.http(auth_query['url'])
 
         #  the user is redirected back to the RP with a positive response
@@ -699,10 +783,88 @@ class TestRPHandlerWithMockOP(object):
             state=auth_response['state'])
 
         # Faking
-        self.rph.httplib.keyjar = client.service_context.keyjar
+        resp = construct_access_token_response(
+            _session['auth_request']['nonce'], issuer=self.issuer,
+            client_id=CLIENT_CONFIG['github']['client_id'],
+            key_jar=GITHUB_KEY)
+
+        p = urlparse(
+            CLIENT_CONFIG['github']['provider_info']['token_endpoint'])
+        self.mock_op.register_post_response(
+            p.path, resp.to_json(), 200, {'content-type': "application/json"}
+            )
+
+        _info = OpenIDSchema(sub='EndUserSubject',
+                             given_name='Diana',
+                             family_name='Krall',
+                             occupation='Jazz pianist')
+        p = urlparse(
+            CLIENT_CONFIG['github']['provider_info']['userinfo_endpoint'])
+        self.mock_op.register_get_response(
+            p.path, _info.to_json(), 200, {'content-type': "application/json"})
+
+        _github_id = iss_id('github')
+        client.service_context.keyjar.import_jwks(GITHUB_KEY.export_jwks(
+            issuer=_github_id), _github_id)
 
         # do the rest (= get access token and user info)
         # assume code flow
         resp = self.rph.finalize(_session['iss'], auth_response.to_dict())
 
         assert set(resp.keys()) == {'userinfo', 'state', 'token'}
+
+    def test_dynamic_setup(self):
+        user_id = 'acct:foobar@example.com'
+        _link = Link(rel="http://openid.net/specs/connect/1.0/issuer",
+                     href="https://server.example.com")
+        webfinger_response = JRD(subject=user_id,
+                                 links=[_link])
+        self.mock_op.register_get_response(
+            '/.well-known/webfinger', webfinger_response.to_json(), 200,
+            {'content-type': "application/json"})
+
+        resp = {
+            "authorization_endpoint":
+                "https://server.example.com/connect/authorize",
+            "issuer": "https://server.example.com",
+            "subject_types_supported": ['public'],
+            "token_endpoint": "https://server.example.com/connect/token",
+            "token_endpoint_auth_methods_supported": ["client_secret_basic",
+                                                      "private_key_jwt"],
+            "userinfo_endpoint": "https://server.example.com/connect/user",
+            "check_id_endpoint": "https://server.example.com/connect/check_id",
+            "refresh_session_endpoint":
+                "https://server.example.com/connect/refresh_session",
+            "end_session_endpoint":
+                "https://server.example.com/connect/end_session",
+            "jwks_uri": "https://server.example.com/jwk.json",
+            "registration_endpoint":
+                "https://server.example.com/connect/register",
+            "scopes_supported": ["openid", "profile", "email", "address",
+                                 "phone"],
+            "response_types_supported": ["code", "code id_token",
+                                         "token id_token"],
+            "acrs_supported": ["1", "2",
+                               "http://id.incommon.org/assurance/bronze"],
+            "user_id_types_supported": ["public", "pairwise"],
+            "userinfo_algs_supported": ["HS256", "RS256", "A128CBC", "A128KW",
+                                        "RSA1_5"],
+            "id_token_signing_alg_values_supported": ["HS256", "RS256",
+                                                      "A128CBC", "A128KW",
+                                                      "RSA1_5"],
+            "request_object_algs_supported": ["HS256", "RS256", "A128CBC",
+                                              "A128KW",
+                                              "RSA1_5"]
+            }
+
+        pcr = ProviderConfigurationResponse(**resp)
+        self.mock_op.register_get_response(
+            '/.well-known/openid-configuration', pcr.to_json(), 200,
+            {'content-type': "application/json"})
+
+        self.mock_op.register_post_response(
+            '/connect/register', registration_callback, 200,
+            {'content-type': "application/json"})
+
+        auth_query = self.rph.begin(user_id=user_id)
+        assert auth_query
