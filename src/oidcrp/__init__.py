@@ -5,8 +5,8 @@ import traceback
 from importlib import import_module
 
 from cryptojwt.utils import as_bytes
-from oidcmsg.oauth2 import is_error_message
 from oidcmsg.oauth2 import ResponseMessage
+from oidcmsg.oauth2 import is_error_message
 from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
@@ -14,8 +14,8 @@ from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
-from oidcservice.state_interface import StateInterface
 from oidcservice.state_interface import InMemoryStateDataBase
+from oidcservice.state_interface import StateInterface
 
 from oidcrp import oauth2
 from oidcrp import oidc
@@ -329,7 +329,21 @@ class RPHandler(object):
             return client
 
         issuer = self.do_provider_info(client)
-        self.do_client_registration(client, iss_id)
+        _sc = client.service_context
+        try:
+            _fe = _sc.federation_entity
+        except AttributeError:
+            _fe = None
+            registration_type = 'explicit'
+        else:
+            registration_type = _fe.registration_type
+
+        if registration_type == 'implicit':
+            _sc.client_id = client.client_id = _fe.entity_id
+            _sc.redirect_uris = _sc.behaviour['redirect_uris']
+        else:
+            self.do_client_registration(client, iss_id)
+
         self.issuer2rp[issuer] = client
         return client
 
@@ -804,6 +818,39 @@ class RPHandler(object):
                 return token
             else:
                 raise OidcServiceError('No valid access token')
+
+    def logout(self, state, client=None, post_logout_redirect_uri=''):
+        """
+        Does a RP initiated logout from an OP. After logout the user will be
+        redirect by the OP to a URL of choice (post_logout_redirect_uri).
+
+        :param state: Key to an active session
+        :param client: Which client to use
+        :param post_logout_redirect_uri: If a special post_logout_redirect_uri
+            should be used
+        :return:
+        """
+        if client is None:
+            client = self.get_client_from_session_key(state)
+
+        try:
+            srv = client.service['end_session']
+        except KeyError:
+            raise OidcServiceError("Does not know how to logout")
+
+        if post_logout_redirect_uri:
+            request_args = {
+                "post_logout_redirect_uri": post_logout_redirect_uri
+            }
+        else:
+            request_args = {}
+
+        resp = client.do_request('end_session', state=state,
+                                 request_args=request_args)
+        if is_error_message(resp):
+            raise OidcServiceError(resp['error'])
+
+        return resp
 
 
 def get_provider_specific_service(service_provider, service, **kwargs):

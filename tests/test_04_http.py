@@ -8,9 +8,10 @@ from oidcrp.http import HTTPLib
 from oidcrp.util import set_cookie
 
 _dirname = os.path.dirname(os.path.abspath(__file__))
+_keydir = os.path.join(_dirname, "data", "keys")
 
-CLIENT_CERT = open(os.path.join(_dirname, "data", "keys",'cert.key')).read()
-CA_CERT = open(os.path.join(_dirname, "data", "keys",'cacert.pem')).read()
+# CLIENT_CERT = open(os.path.join(_keydir,'cert.key')).read()
+# CA_CERT = open(os.path.join(_keydir, 'cacert.pem')).read()
 
 
 @pytest.fixture
@@ -22,12 +23,12 @@ def cookie_dealer():
     return CookieDealer(DummyServer())
 
 
-def test_ca_cert():
-    with pytest.raises(ValueError):
-        HTTPLib(CA_CERT, False, CLIENT_CERT)
-
-    _h = HTTPLib(CA_CERT, True, CLIENT_CERT)
-    assert _h.request_args["verify"] == CA_CERT
+# def test_ca_cert():
+#     with pytest.raises(ValueError):
+#         HTTPLib(CA_CERT, False, CLIENT_CERT)
+#
+#     _h = HTTPLib(CA_CERT, True, CLIENT_CERT)
+#     assert _h.request_args["verify"] == CA_CERT
 
 
 def test_cookie(cookie_dealer):
