@@ -2,6 +2,7 @@ import json
 import logging
 
 from oidcservice.client_auth import BearerHeader
+from oidcservice.service_factory import service_factory as default_service_factory
 
 try:
     from json import JSONDecodeError
@@ -10,7 +11,6 @@ except ImportError:  # Only works for >= 3.5
 else:
     _decode_err = JSONDecodeError
 
-from oidcservice.oidc import service
 from oidcrp import oauth2
 
 __author__ = 'Roland Hedberg'
@@ -72,16 +72,20 @@ class FetchException(Exception):
 class RP(oauth2.Client):
     def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
                  keyjar=None, verify_ssl=True, config=None, client_cert=None,
-                 httplib=None, services=None, service_factory=None):
+                 httplib=None, services=None, service_factory=None,
+                 module_dirs=None):
 
         _srvs = services or DEFAULT_SERVICES
-        service_factory = service_factory or service.factory
+        service_factory = service_factory or default_service_factory
+        module_dirs = module_dirs or ['oidc']
+
         oauth2.Client.__init__(self, state_db, ca_certs,
                                client_authn_factory=client_authn_factory,
                                keyjar=keyjar, verify_ssl=verify_ssl,
                                config=config, client_cert=client_cert,
                                httplib=httplib, services=_srvs,
-                               service_factory=service_factory)
+                               service_factory=service_factory,
+                               module_dirs=module_dirs)
 
     def fetch_distributed_claims(self, userinfo, callback=None):
         """

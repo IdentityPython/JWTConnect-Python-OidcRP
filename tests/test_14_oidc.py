@@ -80,7 +80,7 @@ class TestClient(object):
     def test_construct_accesstoken_request(self):
         auth_request = AuthorizationRequest(
             redirect_uri='https://example.com/cli/authz_cb',
-            state='state'
+            state='ABCDE'
         )
 
         self.client.session_interface.store_item(auth_request,

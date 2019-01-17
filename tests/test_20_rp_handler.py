@@ -160,7 +160,7 @@ class TestRPHandler(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
         self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG,
-                             keyjar=CLI_KEY)
+                             keyjar=CLI_KEY, module_dirs=['oidc'])
 
     def test_support_webfinger(self):
         assert self.rph.supports_webfinger()

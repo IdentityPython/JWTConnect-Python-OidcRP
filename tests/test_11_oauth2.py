@@ -85,7 +85,7 @@ class TestClient(object):
 
         auth_request = AuthorizationRequest(
             redirect_uri='https://example.com/cli/authz_cb',
-            state='state'
+            state='ABCDE'
         )
 
         self.client.session_interface.store_item(auth_request, 'auth_request',

@@ -8,7 +8,7 @@ from oidcmsg.exception import FormatError
 from oidcservice.client_auth import factory as ca_factory
 from oidcservice.exception import OidcServiceError
 from oidcservice.exception import ParseError
-from oidcservice.oauth2 import service
+from oidcservice.service_factory import service_factory as default_service_factory
 from oidcservice.service import REQUEST_INFO
 from oidcservice.service import SUCCESSFUL
 from oidcservice.service import build_services
@@ -43,7 +43,7 @@ class Client(object):
     def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
                  keyjar=None, verify_ssl=True, config=None, client_cert=None,
                  httplib=None, services=None, service_factory=None,
-                 jwks_uri=''):
+                 jwks_uri='', module_dirs=None):
         """
 
         :param ca_certs: Certificates used to verify HTTPS certificates
@@ -80,10 +80,14 @@ class Client(object):
             self.client_id = self.service_context.client_id
 
         _cam = client_authn_factory or ca_factory
-        self.service_factory = service_factory or service.factory
+        self.service_factory = service_factory or default_service_factory
         _srvs = services or DEFAULT_SERVICES
 
+        if not module_dirs:
+            module_dirs = ['oauth2']
+
         self.service = build_services(_srvs, self.service_factory,
+                                      module_dirs,
                                       self.service_context, state_db, _cam)
 
         self.service_context.service = self.service

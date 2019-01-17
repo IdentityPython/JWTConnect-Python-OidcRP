@@ -1,12 +1,12 @@
-from oidcservice.oidc import service as oidc_service
-from oidcservice.oauth2 import service
-
 from oidcmsg import oauth2
 from oidcmsg.message import Message
 from oidcmsg.message import SINGLE_OPTIONAL_JSON
 from oidcmsg.message import SINGLE_OPTIONAL_STRING
 from oidcmsg.message import SINGLE_REQUIRED_INT
 from oidcmsg.message import SINGLE_REQUIRED_STRING
+
+from oidcservice.oauth2 import access_token
+from oidcservice.oidc import userinfo
 
 
 class AccessTokenResponse(Message):
@@ -29,11 +29,11 @@ class UserSchema(Message):
     }
 
 
-class AccessToken(service.AccessToken):
+class AccessToken(access_token.AccessToken):
     msg_type = oauth2.AccessTokenRequest
     response_cls = AccessTokenResponse
     error_msg = oauth2.TokenErrorResponse
 
 
-class UserInfo(oidc_service.UserInfo):
+class UserInfo(userinfo.UserInfo):
     response_cls = UserSchema

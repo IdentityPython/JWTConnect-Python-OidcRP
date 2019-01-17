@@ -14,6 +14,7 @@ from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
+from oidcservice.service_factory import service_factory
 from oidcservice.state_interface import InMemoryStateDataBase
 from oidcservice.state_interface import StateInterface
 
@@ -22,7 +23,7 @@ from oidcrp import oidc
 from oidcrp import provider
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ class RPHandler(object):
     def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=True,
                  services=None, service_factory=None, client_configs=None,
                  client_authn_factory=None, client_cls=None,
-                 state_db=None, http_lib=None, **kwargs):
+                 state_db=None, http_lib=None, module_dirs=None, **kwargs):
         self.base_url = base_url
         self.hash_seed = as_bytes(hash_seed)
         self.verify_ssl = verify_ssl
@@ -135,6 +136,7 @@ class RPHandler(object):
         self.service_factory = service_factory or factory
         self.client_authn_factory = client_authn_factory
         self.client_configs = client_configs
+        self.module_dirs = module_dirs or ['oidc', 'oauth2']
 
         # keep track on which RP instance that serves with OP
         self.issuer2rp = {}
@@ -207,7 +209,7 @@ class RPHandler(object):
                 client_authn_factory=self.client_authn_factory,
                 verify_ssl=self.verify_ssl, services=_services,
                 service_factory=self.service_factory, config=_cnf,
-                httplib=self.httplib
+                httplib=self.httplib, module_dirs=self.module_dirs
             )
         except Exception as err:
             logger.error('Failed initiating client: {}'.format(err))
@@ -872,7 +874,7 @@ def get_provider_specific_service(service_provider, service, **kwargs):
     return None
 
 
-def factory(service_name, **kwargs):
+def factory(service_name, ignore, **kwargs):
     """
     A factory the given a service name will return a
     :py:class:`oidcservice.service.Service` instance if a service matching the
@@ -887,10 +889,10 @@ def factory(service_name, **kwargs):
     if '.' in service_name:
         group, name = service_name.split('.')
         if group == 'oauth2':
-            oauth2.service.factory(service_name[1], **kwargs)
+            service_factory(service_name[1], ['oauth2'], **kwargs)
         elif group == 'oidc':
-            oidc.service.factory(service_name[1], **kwargs)
+            service_factory(service_name[1], ['oidc'], **kwargs)
         else:
             return get_provider_specific_service(group, name, **kwargs)
     else:
-        return oidc.service.factory(service_name, **kwargs)
+        return service_factory(service_name, ['oidc', 'oauth2'], **kwargs)
