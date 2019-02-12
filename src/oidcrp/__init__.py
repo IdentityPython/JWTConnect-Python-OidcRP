@@ -4,13 +4,15 @@ import sys
 import traceback
 from importlib import import_module
 
-from cryptojwt.utils import as_bytes
+from cryptojwt.utils import as_bytes, as_unicode
+from oidcmsg.exception import MessageException, NotForMe
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oauth2 import is_error_message
-from oidcmsg.oidc import AccessTokenResponse
+from oidcmsg.oidc import AccessTokenResponse, verified_claim_name
 from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import OpenIDSchema
+from oidcmsg.oidc.session import BackChannelLogoutRequest
 from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
@@ -732,7 +734,6 @@ class RPHandler(object):
                                              state=_state, client=client)
 
         if 'userinfo' in client.service and token['access_token']:
-
             inforesp = self.get_user_info(
                 state=authorization_response['state'], client=client,
                 access_token=token['access_token'])
@@ -750,10 +751,32 @@ class RPHandler(object):
 
         logger.debug("UserInfo: %s", inforesp)
 
+        try:
+            _sid_support = client.service_context.provider_info[
+                'backchannel_logout_session_supported']
+        except KeyError:
+            try:
+                _sid_support = client.service_context.provider_info[
+                    'frontchannel_logout_session_supported']
+            except:
+                _sid_support = False
+
+        if _sid_support:
+            try:
+                sid = token['id_token']['sid']
+            except KeyError:
+                pass
+            else:
+                client.session_interface.store_sid2state(sid, _state)
+
+        client.session_interface.store_sub2state(token['id_token']['sub'],
+                                                 _state)
+
         return {
             'userinfo': inforesp,
             'state': authorization_response['state'],
-            'token': token['access_token']
+            'token': token['access_token'],
+            'id_token': token['id_token']
         }
 
     def has_active_authentication(self, state):
@@ -830,7 +853,7 @@ class RPHandler(object):
         :param client: Which client to use
         :param post_logout_redirect_uri: If a special post_logout_redirect_uri
             should be used
-        :return:
+        :return: A US
         """
         if client is None:
             client = self.get_client_from_session_key(state)
@@ -847,12 +870,53 @@ class RPHandler(object):
         else:
             request_args = {}
 
-        resp = client.do_request('end_session', state=state,
-                                 request_args=request_args)
-        if is_error_message(resp):
-            raise OidcServiceError(resp['error'])
+        resp = srv.get_request_parameters(state=state,
+                                          request_args=request_args)
 
         return resp
+
+    def backchannel_logout(self, client, request='', request_args=None):
+        """
+
+        :param request: URL encoded logout request
+        :return:
+        """
+
+        if request:
+            req = BackChannelLogoutRequest().from_urlencoded(as_unicode(request))
+        else:
+            req = BackChannelLogoutRequest(**request_args)
+
+        kwargs = {
+            'aud': client.service_context.client_id,
+            'iss': client.service_context.issuer,
+            'keyjar': client.service_context.keyjar
+        }
+
+        try:
+            req.verify(**kwargs)
+        except (MessageException, ValueError, NotForMe) as err:
+            raise MessageException('Bogus logout request: {}'.format(err))
+
+        # Find the subject through 'sid' or 'sub'
+
+        try:
+            sub = req[verified_claim_name('logout_token')]['sub']
+        except KeyError:
+            try:
+                sid = req[verified_claim_name('logout_token')]['sid']
+            except KeyError:
+                raise MessageException('Neither "sid" nor "sub"')
+            else:
+                _state = client.session_interface.get_state_by_sid(sid)
+        else:
+            _state = client.session_interface.get_state_by_sub(sub)
+
+        return _state
+
+    def clear_session(self, state):
+        client = self.get_client_from_session_key(state)
+        client.session_interface.remove_state(state)
 
 
 def get_provider_specific_service(service_provider, service, **kwargs):

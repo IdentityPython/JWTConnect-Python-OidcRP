@@ -108,7 +108,7 @@ class RP(oauth2.Client):
                             service=self.service['userinfo'],
                             access_token= spec['access_token'])
                         _resp = self.http.send(spec["endpoint"], 'GET',
-                                                **http_args)
+                                               **http_args)
                     else:
                         if callback:
                             token = callback(spec['endpoint'])
