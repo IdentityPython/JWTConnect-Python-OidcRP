@@ -318,7 +318,6 @@ class RPHandler(object):
 
             temporary_client = self.init_client('')
             temporary_client.do_request('webfinger', resource=user)
-            issuer = temporary_client.service_context.issuer
         else:
             temporary_client = None
 
