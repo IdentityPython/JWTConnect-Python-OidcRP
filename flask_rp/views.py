@@ -89,7 +89,11 @@ def get_rp(op_hash):
 def finalize(op_hash, request_args):
     rp = get_rp(op_hash)
 
-    session['client_id'] = rp.service_context.registration_response['client_id']
+    try:
+        session['client_id'] = rp.service_context.registration_response['client_id']
+    except KeyError:
+        session['client_id'] = rp.service_context.client_id
+
     session['state'] = request_args['state']
     try:
         iss = rp.session_interface.get_iss(request_args['state'])
