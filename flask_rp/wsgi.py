@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 try:
     from . import application
@@ -18,13 +19,13 @@ logger.setLevel(logging.DEBUG)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-template_dir = os.path.join(dir_path, 'templates')
-
-name = 'oidc_rp'
-app = application.oidc_provider_init_app('fc_conf.py', name, template_folder=template_dir)
-logging.basicConfig(level=logging.DEBUG)
-
 if __name__ == "__main__":
+    conf = sys.argv[1]
+    name = 'oidc_rp'
+    template_dir = os.path.join(dir_path, 'templates')
+    app = application.oidc_provider_init_app(conf, name,
+                                             template_folder=template_dir)
+
     app.run(host='127.0.0.1', port=app.config.get('PORT'),
             debug=True,
             ssl_context=('{}/certs/cert.pem'.format(dir_path),

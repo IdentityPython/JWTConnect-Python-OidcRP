@@ -1,5 +1,5 @@
 PORT = 8090
-BASEURL = "https://localhost:{}".format(PORT)
+BASEURL = "https://127.0.0.1:{}".format(PORT)
 
 # If BASE is https these has to be specified
 SERVER_CERT = "certs/cert.pem"
@@ -61,7 +61,7 @@ CLIENTS = {
     # support dynamic discovery and registration.
     "": CLIENT_CONFIG,
     "filip": {
-        'issuer':"https://guarded-cliffs-8635.herokuapp.com/",
+        'issuer': "https://guarded-cliffs-8635.herokuapp.com/",
         "redirect_uris": ["{}/authz_cb/filip".format(BASEURL)],
         "post_logout_redirect_uris": ["{}/session_logout".format(BASEURL)],
         "client_preferences": DEFAULT_CLIENT_PREFS,
@@ -70,7 +70,7 @@ CLIENTS = {
         "backchannel_logout_uri": "{}/bc_logout".format(BASEURL)
     },
     "flop": {
-        'issuer':"https://127.0.0.1:5000/",
+        'issuer': "https://127.0.0.1:5000/",
         "redirect_uris": ["{}/authz_cb/flop".format(BASEURL)],
         "post_logout_redirect_uris": ["{}/session_logout".format(BASEURL)],
         "client_preferences": DEFAULT_CLIENT_PREFS,
@@ -86,6 +86,21 @@ CLIENTS = {
         "services": DEFAULT_SERVICES,
         # "backchannel_logout_session_required": True,
         "backchannel_logout_uri": "{}/bc_logout".format(BASEURL)
+    },
+    'bobcat': {
+        'issuer': 'https://127.0.0.1:8443/',
+        "client_id": "client3",
+        "client_secret": "2222222222222222222222222222222222222222",
+        "redirect_uris": ["{}/authz_cb/bobcat".format(BASEURL)],
+        "client_preferences": {
+            "response_types": ["code"],
+            "scope": ["openid", "offline_access"],
+            "token_endpoint_auth_method": "client_secret_basic"
+        },
+        "services": {
+            'ProviderInfoDiscovery': {}, 'Authorization': {}, 'AccessToken': {},
+            'RefreshAccessToken': {}
+        }
     }
 }
 
