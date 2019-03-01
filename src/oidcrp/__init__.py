@@ -874,7 +874,8 @@ class RPHandler(object):
 
         return resp
 
-    def backchannel_logout(self, client, request='', request_args=None):
+    @staticmethod
+    def backchannel_logout(client, request='', request_args=None):
         """
 
         :param request: URL encoded logout request
