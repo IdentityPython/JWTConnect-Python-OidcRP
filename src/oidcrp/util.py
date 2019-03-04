@@ -1,8 +1,12 @@
+import importlib
 import logging
+import os
+import sys
 
 from http.cookiejar import Cookie
 from http.cookiejar import http2time
 
+import yaml
 from oidcservice import sanitize
 from oidcservice.exception import TimeFormatError
 from oidcservice.exception import WrongContentType
@@ -230,3 +234,10 @@ def get_value_type(http_response, body_type):
         return 'urlencoded'
 
 
+def load_configuration(filename):
+    if filename.endswith('.yaml'):
+        with open(filename) as fp:
+            conf = yaml.load(fp)
+    elif filename.endswith('.py'):
+        sys.path.insert(0, ".")
+        conf = importlib.import_module(filename[:-3])

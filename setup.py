@@ -64,9 +64,9 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries :: Python Modules"],
     install_requires=[
-        'cryptojwt>=0.3.1',
-        'oidcservice>=0.6.0',
-        'oidcmsg>=0.5.0'
+        'cryptojwt>=0.6.6',
+        'oidcservice>=0.6.2',
+        'oidcmsg>=0.6.2'
     ],
     tests_require=[
         'pytest',
