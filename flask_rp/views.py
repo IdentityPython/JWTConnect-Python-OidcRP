@@ -11,6 +11,8 @@ from flask import session
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
 
+import oidcrp
+
 logger = logging.getLogger(__name__)
 
 oidc_rp_views = Blueprint('oidc_rp', __name__, url_prefix='')
@@ -215,7 +217,7 @@ def logout():
 def backchannel_logout(op_hash):
     _rp = get_rp(op_hash)
     try:
-        _state = current_app.rph.backchannel_logout(request.data, _rp)
+        _state = oidcrp.backchannel_logout(request.data, _rp)
     except Exception as err:
         logger.error('Exception: {}'.format(err))
         return 'System error!', 400

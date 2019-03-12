@@ -874,49 +874,49 @@ class RPHandler(object):
 
         return resp
 
-    @staticmethod
-    def backchannel_logout(client, request='', request_args=None):
-        """
-
-        :param request: URL encoded logout request
-        :return:
-        """
-
-        if request:
-            req = BackChannelLogoutRequest().from_urlencoded(as_unicode(request))
-        else:
-            req = BackChannelLogoutRequest(**request_args)
-
-        kwargs = {
-            'aud': client.service_context.client_id,
-            'iss': client.service_context.issuer,
-            'keyjar': client.service_context.keyjar
-        }
-
-        try:
-            req.verify(**kwargs)
-        except (MessageException, ValueError, NotForMe) as err:
-            raise MessageException('Bogus logout request: {}'.format(err))
-
-        # Find the subject through 'sid' or 'sub'
-
-        try:
-            sub = req[verified_claim_name('logout_token')]['sub']
-        except KeyError:
-            try:
-                sid = req[verified_claim_name('logout_token')]['sid']
-            except KeyError:
-                raise MessageException('Neither "sid" nor "sub"')
-            else:
-                _state = client.session_interface.get_state_by_sid(sid)
-        else:
-            _state = client.session_interface.get_state_by_sub(sub)
-
-        return _state
-
     def clear_session(self, state):
         client = self.get_client_from_session_key(state)
         client.session_interface.remove_state(state)
+
+
+def backchannel_logout(client, request='', request_args=None):
+    """
+
+    :param request: URL encoded logout request
+    :return:
+    """
+
+    if request:
+        req = BackChannelLogoutRequest().from_urlencoded(as_unicode(request))
+    else:
+        req = BackChannelLogoutRequest(**request_args)
+
+    kwargs = {
+        'aud': client.service_context.client_id,
+        'iss': client.service_context.issuer,
+        'keyjar': client.service_context.keyjar
+    }
+
+    try:
+        req.verify(**kwargs)
+    except (MessageException, ValueError, NotForMe) as err:
+        raise MessageException('Bogus logout request: {}'.format(err))
+
+    # Find the subject through 'sid' or 'sub'
+
+    try:
+        sub = req[verified_claim_name('logout_token')]['sub']
+    except KeyError:
+        try:
+            sid = req[verified_claim_name('logout_token')]['sid']
+        except KeyError:
+            raise MessageException('Neither "sid" nor "sub"')
+        else:
+            _state = client.session_interface.get_state_by_sid(sid)
+    else:
+        _state = client.session_interface.get_state_by_sub(sub)
+
+    return _state
 
 
 def get_provider_specific_service(service_provider, service, **kwargs):

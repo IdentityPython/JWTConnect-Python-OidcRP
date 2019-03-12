@@ -149,6 +149,9 @@ class Client(object):
         if not response_body_type:
             response_body_type = service.response_body_type
 
+        if 300 <= resp.status_code < 400:
+            return {'http_response': resp}
+
         if response_body_type == 'html':
             return resp.text
 
