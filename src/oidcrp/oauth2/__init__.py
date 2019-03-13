@@ -70,8 +70,7 @@ class Client(object):
 
         if not keyjar:
             keyjar = KeyJar()
-
-        keyjar.verify_ssl = verify_ssl
+            keyjar.verify_ssl = verify_ssl
 
         self.events = None
         self.service_context = ServiceContext(keyjar, config=config,
