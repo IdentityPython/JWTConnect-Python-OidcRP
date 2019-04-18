@@ -16,7 +16,6 @@ from oidcmsg.oidc.session import BackChannelLogoutRequest
 from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
-from oidcservice.service_factory import service_factory
 from oidcservice.state_interface import InMemoryStateDataBase
 from oidcservice.state_interface import StateInterface
 
@@ -111,9 +110,8 @@ def dynamic_provider_info_discovery(client):
 
 class RPHandler(object):
     def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=True,
-                 services=None, service_factory=None, client_configs=None,
-                 client_authn_factory=None, client_cls=None,
-                 state_db=None, http_lib=None, module_dirs=None, **kwargs):
+                 services=None, client_configs=None, client_authn_factory=None,
+                 client_cls=None, state_db=None, http_lib=None, **kwargs):
         self.base_url = base_url
         self.hash_seed = as_bytes(hash_seed)
         self.verify_ssl = verify_ssl
@@ -135,28 +133,13 @@ class RPHandler(object):
 
         self.client_cls = client_cls or oidc.RP
         self.services = services
-        self.service_factory = service_factory or factory
         self.client_authn_factory = client_authn_factory
         self.client_configs = client_configs
-        self.module_dirs = module_dirs or ['oidc', 'oauth2']
 
         # keep track on which RP instance that serves with OP
         self.issuer2rp = {}
         self.hash2issuer = {}
         self.httplib = http_lib
-
-    def supports_webfinger(self):
-        """
-        WebFinger is only used when you don't know which OP/AS to talk to until
-        a user gives you some information you can base a search on.
-
-        :return: True if WebFinger is among the services supported.
-        """
-        _cnf = self.pick_config('')
-        if 'WebFinger' in _cnf['services']:
-            return True
-        else:
-            return False
 
     def state2issuer(self, state):
         """
@@ -210,9 +193,7 @@ class RPHandler(object):
                 state_db=self.state_db,
                 client_authn_factory=self.client_authn_factory,
                 verify_ssl=self.verify_ssl, services=_services,
-                service_factory=self.service_factory, config=_cnf,
-                httplib=self.httplib, module_dirs=self.module_dirs
-            )
+                config=_cnf, httplib=self.httplib)
         except Exception as err:
             logger.error('Failed initiating client: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())
@@ -919,44 +900,44 @@ def backchannel_logout(client, request='', request_args=None):
     return _state
 
 
-def get_provider_specific_service(service_provider, service, **kwargs):
-    """
-    Get a class instance of a :py:class:`oidcservice.service.Service` subclass
-    specific to a specified service provider.
-
-    :param service_provider: The name of the service provider
-    :param service: The name of the service
-    :param kwargs: Arguments provided when initiating the class
-    :return: An initiated subclass of :py:class:`oidcservice.service.Service`
-        or None if the service or the service provider could not be found.
-    """
-    if service_provider in provider.__all__:
-        mod = import_module('oidcrp.provider.' + service_provider)
-        cls = getattr(mod, service)
-        return cls(**kwargs)
-
-    return None
-
-
-def factory(service_name, ignore, **kwargs):
-    """
-    A factory the given a service name will return a
-    :py:class:`oidcservice.service.Service` instance if a service matching the
-    name could be found.
-
-    :param service_name: A service name, could be either of the format
-        'group.name' or 'name'.
-    :param kwargs: A set of key word arguments to be used when initiating the
-        Service class
-    :return: A :py:class:`oidcservice.service.Service` instance or None
-    """
-    if '.' in service_name:
-        group, name = service_name.split('.')
-        if group == 'oauth2':
-            service_factory(service_name[1], ['oauth2'], **kwargs)
-        elif group == 'oidc':
-            service_factory(service_name[1], ['oidc'], **kwargs)
-        else:
-            return get_provider_specific_service(group, name, **kwargs)
-    else:
-        return service_factory(service_name, ['oidc', 'oauth2'], **kwargs)
+# def get_provider_specific_service(service_provider, service, **kwargs):
+#     """
+#     Get a class instance of a :py:class:`oidcservice.service.Service` subclass
+#     specific to a specified service provider.
+#
+#     :param service_provider: The name of the service provider
+#     :param service: The name of the service
+#     :param kwargs: Arguments provided when initiating the class
+#     :return: An initiated subclass of :py:class:`oidcservice.service.Service`
+#         or None if the service or the service provider could not be found.
+#     """
+#     if service_provider in provider.__all__:
+#         mod = import_module('oidcrp.provider.' + service_provider)
+#         cls = getattr(mod, service)
+#         return cls(**kwargs)
+#
+#     return None
+#
+#
+# def factory(service_name, ignore, **kwargs):
+#     """
+#     A factory the given a service name will return a
+#     :py:class:`oidcservice.service.Service` instance if a service matching the
+#     name could be found.
+#
+#     :param service_name: A service name, could be either of the format
+#         'group.name' or 'name'.
+#     :param kwargs: A set of key word arguments to be used when initiating the
+#         Service class
+#     :return: A :py:class:`oidcservice.service.Service` instance or None
+#     """
+#     if '.' in service_name:
+#         group, name = service_name.split('.')
+#         if group == 'oauth2':
+#             service_factory(service_name[1], ['oauth2'], **kwargs)
+#         elif group == 'oidc':
+#             service_factory(service_name[1], ['oidc'], **kwargs)
+#         else:
+#             return get_provider_specific_service(group, name, **kwargs)
+#     else:
+#         return service_factory(service_name, ['oidc', 'oauth2'], **kwargs)

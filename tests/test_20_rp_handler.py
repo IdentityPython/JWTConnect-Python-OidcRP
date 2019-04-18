@@ -1,9 +1,12 @@
 import json
 import os
-from urllib.parse import parse_qs, urlparse, urlsplit
+from urllib.parse import parse_qs
+from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 import pytest
-from cryptojwt.key_jar import KeyJar, init_key_jar
+from cryptojwt.key_jar import KeyJar
+from cryptojwt.key_jar import init_key_jar
 from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import IdToken
@@ -11,9 +14,10 @@ from oidcmsg.oidc import JRD
 from oidcmsg.oidc import Link
 from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.oidc import ProviderConfigurationResponse
+from oidcservice.service import init_services
 from oidcservice.service_context import ServiceContext
 
-from oidcrp import RPHandler, get_provider_specific_service
+from oidcrp import RPHandler
 
 BASE_URL = 'https://example.com/rp'
 
@@ -25,22 +29,38 @@ CLIENT_PREFS = {
                        "code id_token token", "code token"],
     "scope": ["openid", "profile", "email", "address", "phone"],
     "token_endpoint_auth_method": "client_secret_basic"
-    }
+}
 
 CLIENT_CONFIG = {
     "": {
         "client_preferences": CLIENT_PREFS,
         "redirect_uris": None,
         "services": {
-            'WebFinger': {},
-            'ProviderInfoDiscovery': {},
-            'Registration': {},
-            'Authorization': {},
-            'AccessToken': {},
-            'RefreshAccessToken': {},
-            'UserInfo': {}
+            'web_finger': {
+                'class': 'oidcservice.oidc.webfinger.WebFinger'
+            },
+            "discovery": {
+                'class': 'oidcservice.oidc.provider_info_discovery'
+                         '.ProviderInfoDiscovery'
+            },
+            'registration': {
+                'class': 'oidcservice.oidc.registration.Registration'
+            },
+            'authorization': {
+                'class': 'oidcservice.oidc.authorization.Authorization'
+            },
+            'access_token': {
+                'class': 'oidcservice.oidc.access_token.AccessToken'
+            },
+            'refresh_access_token': {
+                'class': 'oidcservice.oidc.refresh_access_token'
+                         '.RefreshAccessToken'
+            },
+            'userinfo': {
+                'class': 'oidcservice.oidc.userinfo.UserInfo'
             }
-        },
+        }
+    },
     "linkedin": {
         "issuer": "https://www.linkedin.com/oauth/v2/",
         "client_id": "xxxxxxx",
@@ -50,21 +70,27 @@ CLIENT_CONFIG = {
             "response_types": ["code"],
             "scope": ["r_basicprofile", "r_emailaddress"],
             "token_endpoint_auth_method": 'client_secret_post'
-            },
+        },
         "provider_info": {
             "authorization_endpoint":
                 "https://www.linkedin.com/oauth/v2/authorization",
             "token_endpoint": "https://www.linkedin.com/oauth/v2/accessToken",
             "userinfo_endpoint":
                 "https://api.linkedin.com/v1/people/~?format=json"
-            },
+        },
         "userinfo_request_method": "GET",
         'services': {
-            'Authorization': {},
-            'linkedin.AccessToken': {},
-            'linkedin.UserInfo': {}
+            'authorization': {
+                'class': 'oidcservice.oidc.authorization.Authorization'
+            },
+            'access_token': {
+                'class': 'oidcrp.provider.linkedin.AccessToken'
+            },
+            'userinfo': {
+                'class': 'oidcrp.provider.linkedin.UserInfo'
             }
-        },
+        }
+    },
     "facebook": {
         "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
         "client_id": "ccccccccc",
@@ -73,7 +99,7 @@ CLIENT_CONFIG = {
             "response_types": ["code"],
             "scope": ["email", "public_profile"],
             "token_endpoint_auth_method": ''
-            },
+        },
         "redirect_uris": ["{}/authz_cb/facebook".format(BASE_URL)],
         "provider_info": {
             "authorization_endpoint":
@@ -82,13 +108,21 @@ CLIENT_CONFIG = {
                 "https://graph.facebook.com/v2.11/oauth/access_token",
             "userinfo_endpoint":
                 "https://graph.facebook.com/me"
-            },
-        'services': {
-            'Authorization': {},
-            'AccessToken': {'default_authn_method': ''},
-            'UserInfo': {'default_authn_method': ''}
-            }
         },
+        'services': {
+            'authorization': {
+                'class': 'oidcservice.oidc.authorization.Authorization'
+            },
+            'access_token': {
+                'class': 'oidcservice.oidc.access_token.AccessToken',
+                'kwargs': {'conf':{'default_authn_method': ''}}
+            },
+            'userinfo': {
+                'class': 'oidcservice.oidc.userinfo.UserInfo',
+                'kwargs': {'conf':{'default_authn_method': ''}}
+            }
+        }
+    },
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
         'client_id': 'eeeeeeeee',
@@ -98,7 +132,7 @@ CLIENT_CONFIG = {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
             "token_endpoint_auth_method": ''
-            },
+        },
         "provider_info": {
             "authorization_endpoint":
                 "https://github.com/login/oauth/authorize",
@@ -106,16 +140,25 @@ CLIENT_CONFIG = {
                 "https://github.com/login/oauth/access_token",
             "userinfo_endpoint":
                 "https://api.github.com/user"
-            },
+        },
         'services': {
-            'Authorization': {},
-            'AccessToken': {},
-            'RefreshAccessToken': {},
-            'UserInfo': {'default_authn_method': ''}
+            'authorization': {
+                'class': 'oidcservice.oidc.authorization.Authorization'
+            },
+            'access_token': {
+                'class': 'oidcservice.oidc.access_token.AccessToken'
+            },
+            'userinfo': {
+                'class': 'oidcservice.oidc.userinfo.UserInfo',
+                'kwargs': {'conf':{'default_authn_method': ''}}
+            },
+            'refresh_access_token': {
+                'class': 'oidcservice.oidc.refresh_access_token'
+                         '.RefreshAccessToken'
             }
         }
     }
-
+}
 
 KEYDEFS = [
     {"type": "RSA", "use": ["sig"]},
@@ -162,9 +205,6 @@ class TestRPHandler(object):
         self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG,
                              keyjar=CLI_KEY, module_dirs=['oidc'])
 
-    def test_support_webfinger(self):
-        assert self.rph.supports_webfinger()
-
     def test_pick_config(self):
         cnf = self.rph.pick_config('facebook')
         assert cnf['issuer'] == "https://www.facebook.com/v2.11/dialog/oauth"
@@ -192,13 +232,13 @@ class TestRPHandler(object):
         assert _context.provider_info
         assert set(_context.provider_info.keys()) == {
             'authorization_endpoint', 'token_endpoint', 'userinfo_endpoint'
-            }
+        }
 
         assert _context.behaviour == {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
             "token_endpoint_auth_method": ''
-            }
+        }
 
         _github_id = iss_id('github')
         _context.keyjar.import_jwks(GITHUB_KEY.export_jwks(issuer=_github_id),
@@ -274,7 +314,7 @@ class TestRPHandler(object):
                 '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
             '__hex':
                 '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
-            }
+        }
 
         assert list(self.rph.hash2issuer.keys()) == [
             '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d']
@@ -371,7 +411,7 @@ class TestRPHandler(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-            }
+        }
 
         idts = IdToken(**idval)
         _signed_jwt = idts.to_jwt(
@@ -381,7 +421,7 @@ class TestRPHandler(object):
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-            }
+        }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -415,7 +455,7 @@ class TestRPHandler(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-            }
+        }
 
         _github_id = iss_id('github')
         client.service_context.keyjar.import_jwks(
@@ -429,7 +469,7 @@ class TestRPHandler(object):
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-            }
+        }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -454,7 +494,7 @@ class TestRPHandler(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-            }
+        }
 
         _github_id = iss_id('github')
         client.service_context.keyjar.import_jwks(
@@ -468,7 +508,7 @@ class TestRPHandler(object):
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-            }
+        }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -493,7 +533,7 @@ class TestRPHandler(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-            }
+        }
 
         _github_id = iss_id('github')
         client.service_context.keyjar.import_jwks(
@@ -507,7 +547,7 @@ class TestRPHandler(object):
         _info = {
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600
-            }
+        }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -541,7 +581,7 @@ class TestRPHandler(object):
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud, 'given_name': 'Diana', 'family_name': 'Krall',
             'occupation': 'Jazz pianist'
-            }
+        }
 
         idts = IdToken(**idval)
 
@@ -563,10 +603,13 @@ class DB(object):
 
 def test_get_provider_specific_service():
     service_context = ServiceContext()
-    _srv = get_provider_specific_service('github', 'AccessToken',
-                                         service_context=service_context,
-                                         state_db=DB())
-    assert _srv.response_body_type == 'urlencoded'
+    srv_desc = {
+        'access_token': {
+            'class': 'oidcrp.provider.github.AccessToken'
+        }
+    }
+    _srv = init_services(srv_desc, service_context, DB())
+    assert _srv['accesstoken'].response_body_type == 'urlencoded'
 
 
 class TestRPHandlerTier2(object):
@@ -583,7 +626,7 @@ class TestRPHandlerTier2(object):
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
-            }
+        }
 
         _github_id = iss_id('github')
         client.service_context.keyjar.import_jwks(
@@ -598,7 +641,7 @@ class TestRPHandlerTier2(object):
             "access_token": "accessTok", "id_token": _signed_jwt,
             "token_type": "Bearer", "expires_in": 3600,
             'refresh_token': 'refreshing'
-            }
+        }
 
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
@@ -637,7 +680,7 @@ class TestRPHandlerTier2(object):
         _info = {
             "access_token": "2nd_accessTok",
             "token_type": "Bearer", "expires_in": 3600
-            }
+        }
         at = AccessTokenResponse(**_info)
         httpserver.serve_content(at.to_json(),
                                  headers={'Content-Type': 'application/json'})
@@ -688,7 +731,7 @@ class MockOP(object):
         self.register_post_response('default', 'OK', 200)
 
     def register_get_response(self, path, data, status_code=200,
-                         headers=None):
+                              headers=None):
         _headers = headers or {}
         self.get_response[path] = MockResponse(status_code, data, _headers)
 
@@ -729,7 +772,7 @@ def construct_access_token_response(nonce, issuer, client_id, key_jar):
     idval = {
         'nonce': nonce, 'sub': 'EndUserSubject', 'iss': issuer,
         'aud': _aud
-        }
+    }
 
     idts = IdToken(**idval)
     _signed_jwt = idts.to_jwt(
@@ -739,7 +782,7 @@ def construct_access_token_response(nonce, issuer, client_id, key_jar):
     _info = {
         "access_token": "accessTok", "id_token": _signed_jwt,
         "token_type": "Bearer", "expires_in": 3600
-        }
+    }
 
     return AccessTokenResponse(**_info)
 
@@ -792,7 +835,7 @@ class TestRPHandlerWithMockOP(object):
             CLIENT_CONFIG['github']['provider_info']['token_endpoint'])
         self.mock_op.register_post_response(
             p.path, resp.to_json(), 200, {'content-type': "application/json"}
-            )
+        )
 
         _info = OpenIDSchema(sub='EndUserSubject',
                              given_name='Diana',
@@ -811,7 +854,7 @@ class TestRPHandlerWithMockOP(object):
         # assume code flow
         resp = self.rph.finalize(_session['iss'], auth_response.to_dict())
 
-        assert set(resp.keys()) == {'userinfo', 'state', 'token'}
+        assert set(resp.keys()) == {'userinfo', 'state', 'token', 'id_token'}
 
     def test_dynamic_setup(self):
         user_id = 'acct:foobar@example.com'
@@ -855,7 +898,7 @@ class TestRPHandlerWithMockOP(object):
             "request_object_algs_supported": ["HS256", "RS256", "A128CBC",
                                               "A128KW",
                                               "RSA1_5"]
-            }
+        }
 
         pcr = ProviderConfigurationResponse(**resp)
         self.mock_op.register_get_response(

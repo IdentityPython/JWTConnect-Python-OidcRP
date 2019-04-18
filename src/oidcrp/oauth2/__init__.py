@@ -1,17 +1,15 @@
 import logging
 
 import cherrypy
-
 from cryptojwt.key_jar import KeyJar
 from oidcmsg.exception import FormatError
-
 from oidcservice.client_auth import factory as ca_factory
 from oidcservice.exception import OidcServiceError
 from oidcservice.exception import ParseError
-from oidcservice.service_factory import service_factory as default_service_factory
+from oidcservice.oauth2 import DEFAULT_SERVICES
 from oidcservice.service import REQUEST_INFO
 from oidcservice.service import SUCCESSFUL
-from oidcservice.service import build_services
+from oidcservice.service import init_services
 from oidcservice.service_context import ServiceContext
 from oidcservice.state_interface import StateInterface
 
@@ -24,13 +22,6 @@ logger = logging.getLogger(__name__)
 
 Version = "2.0"
 
-DEFAULT_SERVICES = {
-    'Authorization': {},
-    'AccessToken': {},
-    'RefreshAccessToken': {},
-    'ProviderInfoDiscovery': {}
-}
-
 
 class ExpiredToken(Exception):
     pass
@@ -42,8 +33,7 @@ class ExpiredToken(Exception):
 class Client(object):
     def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
                  keyjar=None, verify_ssl=True, config=None, client_cert=None,
-                 httplib=None, services=None, service_factory=None,
-                 jwks_uri='', module_dirs=None):
+                 httplib=None, services=None, jwks_uri=''):
         """
 
         :param ca_certs: Certificates used to verify HTTPS certificates
@@ -57,8 +47,6 @@ class Client(object):
         :param client_cert: Certificate used by the HTTP client
         :param httplib: A HTTP client to use
         :param services: A list of service definitions
-        :param service_factory: A factory to use when building the
-            :py:class:`oidcservice.service.Service` instances
         :param jwks_uri: A jwks_uri
         :return: Client instance
         """
@@ -79,15 +67,11 @@ class Client(object):
             self.client_id = self.service_context.client_id
 
         _cam = client_authn_factory or ca_factory
-        self.service_factory = service_factory or default_service_factory
+
         _srvs = services or DEFAULT_SERVICES
 
-        if not module_dirs:
-            module_dirs = ['oauth2']
-
-        self.service = build_services(_srvs, self.service_factory,
-                                      module_dirs,
-                                      self.service_context, state_db, _cam)
+        self.service = init_services(_srvs, self.service_context, state_db,
+                                     _cam)
 
         self.service_context.service = self.service
 

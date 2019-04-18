@@ -50,8 +50,6 @@ class DB(object):
         return self.db[item]
 
 
-
-
 class TestClient(object):
     @pytest.fixture(autouse=True)
     def create_client(self):

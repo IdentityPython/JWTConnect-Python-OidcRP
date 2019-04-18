@@ -3,7 +3,6 @@ import os
 from flask.app import Flask
 
 from cryptojwt.key_jar import init_key_jar
-from oidcservice.service_factory import service_factory
 
 from oidcrp import RPHandler
 
@@ -27,8 +26,7 @@ def init_oidc_rp_handler(app):
                     keyjar=_kj, jwks_path=_path,
                     client_configs=app.config.get('CLIENTS'),
                     services=app.config.get('SERVICES'),
-                    verify_ssl=verify_ssl, service_factory=service_factory,
-                    module_dirs=['oidc'])
+                    verify_ssl=verify_ssl)
 
     return rph
 

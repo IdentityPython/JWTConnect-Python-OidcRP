@@ -2,7 +2,7 @@ import json
 import logging
 
 from oidcservice.client_auth import BearerHeader
-from oidcservice.service_factory import service_factory as default_service_factory
+from oidcservice.oidc import DEFAULT_SERVICES
 
 try:
     from json import JSONDecodeError
@@ -16,15 +16,6 @@ from oidcrp import oauth2
 __author__ = 'Roland Hedberg'
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_SERVICES = {
-    'ProviderInfoDiscovery': {},
-    'Registration': {},
-    'Authorization': {},
-    'AccessToken': {},
-    'RefreshAccessToken': {},
-    'UserInfo': {}
-}
 
 # -----------------------------------------------------------------------------
 
@@ -72,20 +63,15 @@ class FetchException(Exception):
 class RP(oauth2.Client):
     def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
                  keyjar=None, verify_ssl=True, config=None, client_cert=None,
-                 httplib=None, services=None, service_factory=None,
-                 module_dirs=None):
+                 httplib=None, services=None):
 
         _srvs = services or DEFAULT_SERVICES
-        service_factory = service_factory or default_service_factory
-        module_dirs = module_dirs or ['oidc']
 
         oauth2.Client.__init__(self, state_db, ca_certs,
                                client_authn_factory=client_authn_factory,
                                keyjar=keyjar, verify_ssl=verify_ssl,
                                config=config, client_cert=client_cert,
-                               httplib=httplib, services=_srvs,
-                               service_factory=service_factory,
-                               module_dirs=module_dirs)
+                               httplib=httplib, services=_srvs)
 
     def fetch_distributed_claims(self, userinfo, callback=None):
         """
