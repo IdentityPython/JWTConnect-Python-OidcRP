@@ -309,7 +309,7 @@ keys
 
 If the provider info discovery is done dynamically you need this
 
-client_prefs
+client_preferences
     How the RP should prefer to behave against the OP/AS
 
 OP configuration parameters
