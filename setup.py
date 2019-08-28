@@ -66,8 +66,7 @@ setup(
     install_requires=[
         'cryptojwt>=0.7.0',
         'oidcservice>=0.6.3',
-        'oidcmsg>=0.6.3',
-        'CherryPy>=18.1'
+        'oidcmsg>=0.6.3'
     ],
     tests_require=[
         'pytest',
