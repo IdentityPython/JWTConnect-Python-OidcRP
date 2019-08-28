@@ -1,6 +1,5 @@
 import logging
 
-import cherrypy
 from cryptojwt.key_jar import KeyJar
 from oidcmsg.exception import FormatError
 from oidcservice.client_auth import factory as ca_factory
@@ -211,10 +210,10 @@ class Client(object):
                         err_resp = service.parse_response(reqresp.text,
                                                           response_body_type)
                     except (OidcServiceError, FormatError):
-                        raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
+                        raise OidcServiceError("HTTP ERROR: %s [%s] on %s" % (
                             reqresp.text, reqresp.status_code, reqresp.url))
                 else:
-                    raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
+                    raise OidcServiceError("HTTP ERROR: %s [%s] on %s" % (
                         reqresp.text, reqresp.status_code, reqresp.url))
 
             err_resp['status_code'] = reqresp.status_code
@@ -222,5 +221,5 @@ class Client(object):
         else:
             logger.error('Error response ({}): {}'.format(reqresp.status_code,
                                                           reqresp.text))
-            raise cherrypy.HTTPError("HTTP ERROR: %s [%s] on %s" % (
+            raise OidcServiceError("HTTP ERROR: %s [%s] on %s" % (
                 reqresp.text, reqresp.status_code, reqresp.url))
