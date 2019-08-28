@@ -241,3 +241,7 @@ def load_configuration(filename):
     elif filename.endswith('.py'):
         sys.path.insert(0, ".")
         conf = importlib.import_module(filename[:-3])
+    else:
+        raise ValueError('Wrong file type')
+
+    return conf

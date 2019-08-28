@@ -226,12 +226,18 @@ class RPHandler(object):
             return client.service_context.provider_info['issuer']
         else:
             _pi = client.service_context.provider_info
-            for endp in ['authorization_endpoint', 'token_endpoint',
-                         'userinfo_endpoint']:
-                if endp in _pi:
-                    for srv in client.service.values():
-                        if srv.endpoint_name == endp:
-                            srv.endpoint = _pi[endp]
+            for key, val in _pi.items():
+                # All service endpoint parameters in the provider info has
+                # a name ending in '_endpoint' so I can look specifically
+                # for those
+                if key.endswith("_endpoint"):
+                    for _srv in client.service_context.service.values():
+                        # Every service has an endpoint_name assigned
+                        # when initiated. This name *MUST* match the
+                        # endpoint names used in the provider info
+                        if _srv.endpoint_name == key:
+                            _srv.endpoint = val
+
             try:
                 return client.service_context.provider_info['issuer']
             except KeyError:

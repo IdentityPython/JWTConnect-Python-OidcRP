@@ -1,8 +1,8 @@
 import os
 
-from flask.app import Flask
-
 from cryptojwt.key_jar import init_key_jar
+from flask.app import Flask
+from oidcop.utils import load_yaml_config
 
 from oidcrp import RPHandler
 
@@ -34,7 +34,13 @@ def init_oidc_rp_handler(app):
 def oidc_provider_init_app(config_file, name=None, **kwargs):
     name = name or __name__
     app = Flask(name, static_url_path='', **kwargs)
-    app.config.from_pyfile(os.path.join(dir_path, config_file))
+
+    if config_file.endswith('.yaml'):
+        app.config.update(load_yaml_config(config_file))
+    elif config_file.endswith('.py'):
+        app.config.from_pyfile(os.path.join(dir_path, config_file))
+    else:
+        raise ValueError('Unknown configuration format')
 
     app.users = {'test_user': {'name': 'Testing Name'}}
 
