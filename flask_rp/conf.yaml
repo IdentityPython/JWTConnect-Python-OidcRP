@@ -25,11 +25,14 @@ SESSION_COOKIE_NAME: 'rp_session'
 PREFERRED_URL_SCHEME: 'https'
 
 OIDC_KEYS:
-    'private_path': "./priv/jwks.json"
+    'private_path': './private/jwks.json'
     'key_defs': *keydef
     'public_path': './static/jwks.json'
+    # this will create the jwks files if they absent
+    'read_only': False
 
-PUBLIC_JWKS_PATH: 'https://127.0.0.1:8090/static/jwks.json'
+# PUBLIC_JWKS_PATH: 'https://127.0.0.1:8090/static/jwks.json'
+# PRIVATE_JWKS_PATH: './private/jwks.json'
 
 client_preferences: &id001
     application_name: rphandler
@@ -67,6 +70,10 @@ CLIENTS:
   flop:
     client_preferences: *id001
     issuer: https://127.0.0.1:5000/
+    # keys:
+      # url:
+        # 'https://127.0.0.1:5000' : https://127.0.0.1:5000/static/jwks.json
+    jwks_uri: https://127.0.0.1:8090/static/jwks.json
     redirect_uris: ['https://127.0.0.1:8090/authz_cb/flop']
     services: *id002
 
