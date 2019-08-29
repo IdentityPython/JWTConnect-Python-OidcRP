@@ -1,6 +1,0 @@
-{
-  "tests/test_14_oidc.py::TestClient::()::test_service_request": true,
-  "tests/test_20_rp_handler.py::TestRPHandler::()::test_get_accesstoken": true,
-  "tests/test_20_rp_handler.py::TestRPHandler::()::test_get_userinfo": true,
-  "tests/test_20_rp_handler.py::TestRPHandler::test_support_webfinger": true
-}

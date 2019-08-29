@@ -182,7 +182,6 @@ class RPHandler(object):
         :return: A Client instance
         """
         _cnf = self.pick_config(issuer)
-
         try:
             _services = _cnf['services']
         except KeyError:
@@ -210,8 +209,8 @@ class RPHandler(object):
         discovery.
 
         :param client: A Client instance
-        :param state: A key by which the state of the session can be 
-            retrieved 
+        :param state: A key by which the state of the session can be
+            retrieved
         :return: issuer ID
         """
 
@@ -248,8 +247,8 @@ class RPHandler(object):
         Prepare for and do client registration if configured to do so
 
         :param client: A Client instance
-        :param state: A key by which the state of the session can be 
-            retrieved 
+        :param state: A key by which the state of the session can be
+            retrieved
         """
 
         if not client:
