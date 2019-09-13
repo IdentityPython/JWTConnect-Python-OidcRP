@@ -10,10 +10,11 @@ except ImportError:
     import application
 
 logger = logging.getLogger("")
-LOGFILE_NAME = 'flrp.log'
-hdlr = logging.FileHandler(LOGFILE_NAME)
+RP_LOGFILE_NAME = os.environ.get('RP_LOGFILE_NAME', 'flrp.log')
+
+hdlr = logging.FileHandler(RP_LOGFILE_NAME)
 base_formatter = logging.Formatter(
-    "%(asctime)s %(name)s:%(levelname)s %(message)s")
+    "%(asctime)s %(name)s:%(levelname)s %(message)s  [%(name)s.%(funcName)s:%(lineno)s]")
 
 hdlr.setFormatter(base_formatter)
 logger.addHandler(hdlr)
