@@ -11,13 +11,13 @@ VERIFY_SSL: False
 
 KEYDEFS: &keydef
   -
-    "type: "RSA"
-    "key: ''
-    "use: ["sig"]
+    "type": "RSA"
+    "key": ''
+    "use": ["sig"]
   -
-    "type: "EC"
-    "crv: "P-256"
-    "use: ["sig"]
+    "type": "EC"
+    "crv": "P-256"
+    "use": ["sig"]
 
 PRIVATE_JWKS_PATH: "jwks_dir/jwks.json"
 PUBLIC_JWKS_PATH: 'static/jwks.json'
