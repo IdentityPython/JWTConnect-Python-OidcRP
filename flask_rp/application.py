@@ -41,6 +41,8 @@ def oidc_provider_init_app(config_file, name=None, **kwargs):
     else:
         raise ValueError('Unknown configuration format')
 
+    app.config['SECRET_KEY'] = os.urandom(12).hex()
+
     app.users = {'test_user': {'name': 'Testing Name'}}
 
     try:
