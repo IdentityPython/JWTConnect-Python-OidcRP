@@ -11,12 +11,18 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def init_oidc_rp_handler(app):
-    oidc_keys_conf = app.config.get('OIDC_KEYS')
-    verify_ssl = app.config.get('VERIFY_SSL')
+    rp_keys_conf = app.config.get('RP_KEYS')
+    if rp_keys_conf is None:
+        rp_keys_conf = app.config.get('OIDC_KEYS')
 
-    if oidc_keys_conf:
-        _kj = init_key_jar(**oidc_keys_conf)
-        _path = oidc_keys_conf['public_path']
+    verify_ssl = app.config.get('VERIFY_SSL')
+    hash_seed = app.config.get('HASH_SEED')
+    if not hash_seed:
+        hash_seed = "BabyHoldOn"
+
+    if rp_keys_conf:
+        _kj = init_key_jar(**rp_keys_conf)
+        _path = rp_keys_conf['public_path']
         if _path.startswith('./'):
             _path = _path[2:]
         elif _path.startswith('/'):
@@ -26,7 +32,7 @@ def init_oidc_rp_handler(app):
         _path = ''
     _kj.verify_ssl = verify_ssl
 
-    rph = RPHandler(base_url=app.config.get('BASEURL'), hash_seed="BabyHoldOn",
+    rph = RPHandler(base_url=app.config.get('BASEURL'), hash_seed=hash_seed,
                     keyjar=_kj, jwks_path=_path,
                     client_configs=app.config.get('CLIENTS'),
                     services=app.config.get('SERVICES'),
