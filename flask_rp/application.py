@@ -1,5 +1,6 @@
 import os
 
+from cryptojwt import KeyJar
 from cryptojwt.key_jar import init_key_jar
 from flask.app import Flask
 from oidcop.utils import load_yaml_config
@@ -13,14 +14,17 @@ def init_oidc_rp_handler(app):
     oidc_keys_conf = app.config.get('OIDC_KEYS')
     verify_ssl = app.config.get('VERIFY_SSL')
 
-    _kj = init_key_jar(**oidc_keys_conf)
+    if oidc_keys_conf:
+        _kj = init_key_jar(**oidc_keys_conf)
+        _path = oidc_keys_conf['public_path']
+        if _path.startswith('./'):
+            _path = _path[2:]
+        elif _path.startswith('/'):
+            _path = _path[1:]
+    else:
+        _kj = KeyJar()
+        _path = ''
     _kj.verify_ssl = verify_ssl
-
-    _path = oidc_keys_conf['public_path']
-    if _path.startswith('./'):
-        _path = _path[2:]
-    elif _path.startswith('/'):
-        _path = _path[1:]
 
     rph = RPHandler(base_url=app.config.get('BASEURL'), hash_seed="BabyHoldOn",
                     keyjar=_kj, jwks_path=_path,
