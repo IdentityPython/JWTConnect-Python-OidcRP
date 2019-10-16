@@ -16,6 +16,7 @@ from oidcmsg.oauth2 import RefreshAccessTokenRequest
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import IdToken
 from oidcmsg.time_util import utc_time_sans_frac
+from oidcservice.exception import OidcServiceError
 from oidcservice.exception import ParseError
 
 from oidcrp.oauth2 import Client
@@ -163,7 +164,7 @@ class TestClient(object):
             400, err.to_json(),
             headers={'content-type': 'application/x-www-form-urlencoded'})
 
-        with pytest.raises(HTTPError):
+        with pytest.raises(OidcServiceError):
             self.client.parse_request_response(
                 self.client.service['authorization'], http_resp)
 
