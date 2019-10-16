@@ -241,18 +241,19 @@ class RPHandler(object):
                             _srv.endpoint = val
 
             if 'keys' in _pi:
+                _kj = client.service_context.keyjar
                 for typ, _spec in _pi['keys'].items():
                     if typ == 'url':
                         for _iss, _url in _spec.items():
-                            self.keyjar.add_url(_iss, _url)
+                            _kj.add_url(_iss, _url)
                     elif typ == 'file':
                         for kty, _name in _spec.items():
                             if kty == 'jwks':
-                                self.keyjar.import_jwks_from_file(_name,
-                                                                  client.service_context.issuer)
+                                _kj.import_jwks_from_file(_name,
+                                                          client.service_context.issuer)
                             elif kty == 'rsa':  # PEM file
                                 _kb = keybundle_from_local_file(_name, "der", ["sig"])
-                                self.keyjar.add_kb(client.service_context.issuer, _kb)
+                                _kj.add_kb(client.service_context.issuer, _kb)
                     else:
                         raise ValueError('Unknown provider JWKS type: {}'.format(typ))
             try:
@@ -373,7 +374,7 @@ class RPHandler(object):
             'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
             'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
             '__hex': _hex
-            }
+        }
 
     def init_authorization(self, client=None, state='', req_args=None):
         """
@@ -400,7 +401,7 @@ class RPHandler(object):
             'scope': service_context.behaviour['scope'],
             'response_type': service_context.behaviour['response_types'][0],
             'nonce': _nonce
-            }
+        }
 
         if req_args is not None:
             request_args.update(req_args)
@@ -509,7 +510,7 @@ class RPHandler(object):
             'grant_type': 'authorization_code',
             'client_id': client.service_context.client_id,
             'client_secret': client.service_context.client_secret
-            }
+        }
         logger.debug('request_args: {}'.format(req_args))
         try:
             tokenresp = client.do_request(
@@ -517,7 +518,7 @@ class RPHandler(object):
                 authn_method=self.get_client_authn_method(client,
                                                           "token_endpoint"),
                 state=state
-                )
+            )
         except Exception as err:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
@@ -553,7 +554,7 @@ class RPHandler(object):
                 authn_method=self.get_client_authn_method(client,
                                                           "token_endpoint"),
                 state=state, request_args=req_args
-                )
+            )
         except Exception as err:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
@@ -730,7 +731,7 @@ class RPHandler(object):
             return {
                 'state': authorization_response['state'],
                 'error': authorization_response['error']
-                }
+            }
 
         _state = authorization_response['state']
         token = self.get_access_and_id_token(authorization_response,
@@ -745,7 +746,7 @@ class RPHandler(object):
                 return {
                     'error': "Invalid response %s." % inforesp["error"],
                     'state': _state
-                    }
+                }
 
         elif token['id_token']:  # look for it in the ID Token
             inforesp = self.userinfo_in_id_token(token['id_token'])
@@ -780,7 +781,7 @@ class RPHandler(object):
             'state': authorization_response['state'],
             'token': token['access_token'],
             'id_token': token['id_token']
-            }
+        }
 
     def has_active_authentication(self, state):
         """
@@ -869,7 +870,7 @@ class RPHandler(object):
         if post_logout_redirect_uri:
             request_args = {
                 "post_logout_redirect_uri": post_logout_redirect_uri
-                }
+            }
         else:
             request_args = {}
 
@@ -899,7 +900,7 @@ def backchannel_logout(client, request='', request_args=None):
         'aud': client.service_context.client_id,
         'iss': client.service_context.issuer,
         'keyjar': client.service_context.keyjar
-        }
+    }
 
     try:
         req.verify(**kwargs)
