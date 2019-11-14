@@ -1,5 +1,6 @@
 import os
 
+from cryptojwt import KeyJar
 from cryptojwt.key_jar import init_key_jar
 from flask.app import Flask
 from oidcop.utils import load_yaml_config
@@ -10,19 +11,28 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def init_oidc_rp_handler(app):
-    oidc_keys_conf = app.config.get('OIDC_KEYS')
-    verify_ssl = app.config.get('VERIFY_SSL')
+    rp_keys_conf = app.config.get('RP_KEYS')
+    if rp_keys_conf is None:
+        rp_keys_conf = app.config.get('OIDC_KEYS')
 
-    _kj = init_key_jar(**oidc_keys_conf)
+    verify_ssl = app.config.get('VERIFY_SSL')
+    hash_seed = app.config.get('HASH_SEED')
+    if not hash_seed:
+        hash_seed = "BabyHoldOn"
+
+    if rp_keys_conf:
+        _kj = init_key_jar(**rp_keys_conf)
+        _path = rp_keys_conf['public_path']
+        if _path.startswith('./'):
+            _path = _path[2:]
+        elif _path.startswith('/'):
+            _path = _path[1:]
+    else:
+        _kj = KeyJar()
+        _path = ''
     _kj.verify_ssl = verify_ssl
 
-    _path = oidc_keys_conf['public_path']
-    if _path.startswith('./'):
-        _path = _path[2:]
-    elif _path.startswith('/'):
-        _path = _path[1:]
-
-    rph = RPHandler(base_url=app.config.get('BASEURL'), hash_seed="BabyHoldOn",
+    rph = RPHandler(base_url=app.config.get('BASEURL'), hash_seed=hash_seed,
                     keyjar=_kj, jwks_path=_path,
                     client_configs=app.config.get('CLIENTS'),
                     services=app.config.get('SERVICES'),
@@ -40,6 +50,8 @@ def oidc_provider_init_app(config_file, name=None, **kwargs):
         app.config.from_pyfile(os.path.join(dir_path, config_file))
     else:
         raise ValueError('Unknown configuration format')
+
+    app.config['SECRET_KEY'] = os.urandom(12).hex()
 
     app.users = {'test_user': {'name': 'Testing Name'}}
 

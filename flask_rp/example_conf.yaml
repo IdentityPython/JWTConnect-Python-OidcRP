@@ -11,16 +11,21 @@ VERIFY_SSL: False
 
 KEYDEFS: &keydef
   -
-    "type: "RSA"
-    "key: ''
-    "use: ["sig"]
+    "type": "RSA"
+    "key": ''
+    "use": ["sig"]
   -
-    "type: "EC"
-    "crv: "P-256"
-    "use: ["sig"]
+    "type": "EC"
+    "crv": "P-256"
+    "use": ["sig"]
 
-PRIVATE_JWKS_PATH: "jwks_dir/jwks.json"
-PUBLIC_JWKS_PATH: 'static/jwks.json'
+RP_KEYS:
+    'private_path': 'jwks_dir/jwks.json'
+    'key_defs': *keydef
+    'public_path': 'static/jwks.json'
+    # this will create the jwks files if they absent
+    'read_only': False
+
 # information used when registering the client, this may be the same for all OPs
 
 services: &services

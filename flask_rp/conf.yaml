@@ -24,15 +24,12 @@ SECRET_KEY: 'secret_key'
 SESSION_COOKIE_NAME: 'rp_session'
 PREFERRED_URL_SCHEME: 'https'
 
-OIDC_KEYS:
+RP_KEYS:
     'private_path': './private/jwks.json'
     'key_defs': *keydef
     'public_path': './static/jwks.json'
-    # this will create the jwks files if they absent
+    # this will create the jwks files if they are absent
     'read_only': False
-
-# PUBLIC_JWKS_PATH: 'https://127.0.0.1:8090/static/jwks.json'
-# PRIVATE_JWKS_PATH: './private/jwks.json'
 
 client_preferences: &id001
     application_name: rphandler

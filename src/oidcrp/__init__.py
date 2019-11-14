@@ -2,16 +2,19 @@ import hashlib
 import logging
 import sys
 import traceback
-from importlib import import_module
 
-from cryptojwt.utils import as_bytes, as_unicode
-from oidcmsg.exception import MessageException, NotForMe
+from cryptojwt.key_bundle import keybundle_from_local_file
+from cryptojwt.utils import as_bytes
+from cryptojwt.utils import as_unicode
+from oidcmsg.exception import MessageException
+from oidcmsg.exception import NotForMe
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oauth2 import is_error_message
-from oidcmsg.oidc import AccessTokenResponse, verified_claim_name
+from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import OpenIDSchema
+from oidcmsg.oidc import verified_claim_name
 from oidcmsg.oidc.session import BackChannelLogoutRequest
 from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
@@ -24,7 +27,7 @@ from oidcrp import oidc
 from oidcrp import provider
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.6.1'
+__version__ = '0.6.3'
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +240,22 @@ class RPHandler(object):
                         if _srv.endpoint_name == key:
                             _srv.endpoint = val
 
+            if 'keys' in _pi:
+                _kj = client.service_context.keyjar
+                for typ, _spec in _pi['keys'].items():
+                    if typ == 'url':
+                        for _iss, _url in _spec.items():
+                            _kj.add_url(_iss, _url)
+                    elif typ == 'file':
+                        for kty, _name in _spec.items():
+                            if kty == 'jwks':
+                                _kj.import_jwks_from_file(_name,
+                                                          client.service_context.issuer)
+                            elif kty == 'rsa':  # PEM file
+                                _kb = keybundle_from_local_file(_name, "der", ["sig"])
+                                _kj.add_kb(client.service_context.issuer, _kb)
+                    else:
+                        raise ValueError('Unknown provider JWKS type: {}'.format(typ))
             try:
                 return client.service_context.provider_info['issuer']
             except KeyError:
@@ -903,46 +922,3 @@ def backchannel_logout(client, request='', request_args=None):
         _state = client.session_interface.get_state_by_sub(sub)
 
     return _state
-
-
-# def get_provider_specific_service(service_provider, service, **kwargs):
-#     """
-#     Get a class instance of a :py:class:`oidcservice.service.Service` subclass
-#     specific to a specified service provider.
-#
-#     :param service_provider: The name of the service provider
-#     :param service: The name of the service
-#     :param kwargs: Arguments provided when initiating the class
-#     :return: An initiated subclass of :py:class:`oidcservice.service.Service`
-#         or None if the service or the service provider could not be found.
-#     """
-#     if service_provider in provider.__all__:
-#         mod = import_module('oidcrp.provider.' + service_provider)
-#         cls = getattr(mod, service)
-#         return cls(**kwargs)
-#
-#     return None
-#
-#
-# def factory(service_name, ignore, **kwargs):
-#     """
-#     A factory the given a service name will return a
-#     :py:class:`oidcservice.service.Service` instance if a service matching the
-#     name could be found.
-#
-#     :param service_name: A service name, could be either of the format
-#         'group.name' or 'name'.
-#     :param kwargs: A set of key word arguments to be used when initiating the
-#         Service class
-#     :return: A :py:class:`oidcservice.service.Service` instance or None
-#     """
-#     if '.' in service_name:
-#         group, name = service_name.split('.')
-#         if group == 'oauth2':
-#             service_factory(service_name[1], ['oauth2'], **kwargs)
-#         elif group == 'oidc':
-#             service_factory(service_name[1], ['oidc'], **kwargs)
-#         else:
-#             return get_provider_specific_service(group, name, **kwargs)
-#     else:
-#         return service_factory(service_name, ['oidc', 'oauth2'], **kwargs)
