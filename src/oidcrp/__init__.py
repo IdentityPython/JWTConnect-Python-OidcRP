@@ -647,6 +647,8 @@ class RPHandler(object):
 
         _srv.update_service_context(authorization_response,
                                     state=authorization_response['state'])
+        self.session_interface.store_item(authorization_response, "auth_response",
+                                          authorization_response['state'])
         return authorization_response
 
     def get_access_and_id_token(self, authorization_response=None, state='',
