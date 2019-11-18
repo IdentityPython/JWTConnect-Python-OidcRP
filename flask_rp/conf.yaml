@@ -31,7 +31,7 @@ RP_KEYS:
     # this will create the jwks files if they are absent
     'read_only': False
 
-client_preferences: &id001
+CLIENT_PREFERENCES: &id001
     application_name: rphandler
     application_type: web
     contacts: [ops@example.com]
@@ -39,7 +39,7 @@ client_preferences: &id001
     scope: [openid, profile, email, address, phone]
     token_endpoint_auth_method: [client_secret_basic, client_secret_post]
 
-services: &id002
+SERVICES: &id002
   discovery:
     class: oidcservice.oidc.provider_info_discovery.ProviderInfoDiscovery
     kwargs: {}
@@ -62,7 +62,6 @@ services: &id002
     class: oidcservice.oidc.end_session.EndSession
     kwargs: {}
 
-
 CLIENTS:
   flop:
     client_preferences: *id001
@@ -73,6 +72,12 @@ CLIENTS:
     jwks_uri: https://127.0.0.1:8090/static/jwks.json
     redirect_uris: ['https://127.0.0.1:8090/authz_cb/flop']
     services: *id002
+    add_ons:
+      pkce:
+        function: oidcservice.oidc.add_on.pkce.add_pkce_support
+        kwargs:
+          code_challenge_length: 64
+          code_challenge_method: S256
 
 # Whether an attempt to fetch the userinfo should be made
 USERINFO: true

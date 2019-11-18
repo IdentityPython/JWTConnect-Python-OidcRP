@@ -13,6 +13,7 @@ from oidcservice.service_context import ServiceContext
 from oidcservice.state_interface import StateInterface
 
 from oidcrp.http import HTTPLib
+from oidcrp.util import do_add_ons
 from oidcrp.util import get_deserialization_method
 
 __author__ = 'Roland Hedberg'
@@ -41,7 +42,7 @@ class Client(object):
         :param keyjar: A py:class:`oidcmsg.key_jar.KeyJar` instance
         :param verify_ssl: Whether the SSL certificate should be verified.
         :param config: Configuration information passed on to the
-            :py:class:`oidcservice.service_context.ServiceContext` 
+            :py:class:`oidcservice.service_context.ServiceContext`
             initialization
         :param client_cert: Certificate used by the HTTP client
         :param httplib: A HTTP client to use
@@ -71,6 +72,9 @@ class Client(object):
 
         self.service = init_services(_srvs, self.service_context, state_db,
                                      _cam)
+
+        if 'add_ons' in config:
+            do_add_ons(config['add_ons'], self.service)
 
         self.service_context.service = self.service
 
@@ -142,6 +146,11 @@ class Client(object):
         if 'error' in response:
             pass
         else:
+            try:
+                kwargs['key'] = kwargs['state']
+            except KeyError:
+                pass
+
             service.update_service_context(response, **kwargs)
         return response
 
