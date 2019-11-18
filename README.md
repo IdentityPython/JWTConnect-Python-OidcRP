@@ -1,4 +1,4 @@
-# oicrp
+# oidcrp
 High level interface to the OIDC RP library
 
 oidcrp represents the 4th layer in the
