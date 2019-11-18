@@ -37,6 +37,7 @@ def init_oidc_rp_handler(app):
                     client_configs=app.config.get('CLIENTS'),
                     services=app.config.get('SERVICES'),
                     verify_ssl=verify_ssl)
+
     return rph
 
 

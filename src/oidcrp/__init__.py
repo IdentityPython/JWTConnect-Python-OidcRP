@@ -805,7 +805,7 @@ class RPHandler(object):
 
     def get_valid_access_token(self, state):
         """
-        Find me a valid access token
+        Find a valid access token.
 
         :param state:
         :return: An access token if a valid one exists and when it
@@ -825,20 +825,16 @@ class RPHandler(object):
             except KeyError:
                 pass
             else:
-                try:
-                    access_token = response['access_token']
-                except:
-                    continue
-                else:
+                if 'access_token' in response:
+                    access_token = response["access_token"]
                     try:
                         _exp = response['__expires_at']
                     except KeyError:  # No expiry date, lives for ever
                         indefinite.append((access_token, 0))
                     else:
-                        if _exp > now:  # expires sometime in the future
-                            if _exp > exp:
-                                exp = _exp
-                                token = (access_token, _exp)
+                        if _exp > now and _exp > exp:  # expires sometime in the future
+                            exp = _exp
+                            token = (access_token, _exp)
 
         if indefinite:
             return indefinite[0]
