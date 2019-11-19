@@ -10,6 +10,7 @@ import yaml
 from oidcservice import sanitize
 from oidcservice.exception import TimeFormatError
 from oidcservice.exception import WrongContentType
+from oidcservice.util import importer
 
 logger = logging.getLogger(__name__)
 
@@ -128,10 +129,10 @@ def set_cookie(cookiejar, kaka):
 
 def verify_header(reqresp, body_type):
     """
-    
-    :param reqresp: Class instance with attributes: ['status', 'text', 
-        'headers', 'url'] 
-    :param body_type: If information returned in the body part 
+
+    :param reqresp: Class instance with attributes: ['status', 'text',
+        'headers', 'url']
+    :param body_type: If information returned in the body part
     :return: Verified body content type
     """
     logger.debug("resp.headers: %s" % (sanitize(reqresp.headers),))
@@ -237,7 +238,7 @@ def get_value_type(http_response, body_type):
 def load_configuration(filename):
     if filename.endswith('.yaml'):
         with open(filename) as fp:
-            conf = yaml.load(fp)
+            conf = yaml.safe_load(fp)
     elif filename.endswith('.py'):
         sys.path.insert(0, ".")
         conf = importlib.import_module(filename[:-3])
@@ -245,3 +246,9 @@ def load_configuration(filename):
         raise ValueError('Wrong file type')
 
     return conf
+
+
+def do_add_ons(add_ons, services):
+        for key, spec in add_ons.items():
+            _func = importer(spec['function'])
+            _func(services, **spec['kwargs'])
