@@ -3,9 +3,9 @@ import os
 from cryptojwt import KeyJar
 from cryptojwt.key_jar import init_key_jar
 from flask.app import Flask
-from oidcop.utils import load_yaml_config
 
 from oidcrp import RPHandler
+from oidcrp.util import load_yaml_config
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
