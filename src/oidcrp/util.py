@@ -6,7 +6,10 @@ import sys
 from http.cookiejar import Cookie
 from http.cookiejar import http2time
 
+import io
+import json
 import yaml
+
 from oidcservice import sanitize
 from oidcservice.exception import TimeFormatError
 from oidcservice.exception import WrongContentType
@@ -249,6 +252,28 @@ def load_configuration(filename):
 
 
 def do_add_ons(add_ons, services):
-        for key, spec in add_ons.items():
-            _func = importer(spec['function'])
-            _func(services, **spec['kwargs'])
+    for key, spec in add_ons.items():
+        _func = importer(spec['function'])
+        _func(services, **spec['kwargs'])
+
+
+def load_json(file_name):
+    with open(file_name) as fp:
+        js = json.load(fp)
+    return js
+
+
+def load_yaml_config(file_name):
+    with open(file_name) as fp:
+        c = yaml.safe_load(fp)
+    return c
+
+
+def yaml_to_py_stream(file_name):
+    d = load_yaml_config(file_name)
+    fstream = io.StringIO()
+    for i in d:
+        section = '{} = {}\n\n'.format(i, json.dumps(d[i], indent=2))
+        fstream.write(section)
+    fstream.seek(0)
+    return fstream
