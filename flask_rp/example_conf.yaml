@@ -5,9 +5,10 @@ BASEURL: "https://localhost:8089"
 # If BASE is https these has to be specified
 SERVER_CERT: "certs/cert.pem"
 SERVER_KEY: "certs/key.pem"
-CA_BUNDLE: None
+CA_BUNDLE: ''
 
-VERIFY_SSL: False
+# This is just for testing an local usage. In all other cases it MUST be True
+VERIFY_SSL: false
 
 KEYDEFS: &keydef
   -
@@ -19,38 +20,51 @@ KEYDEFS: &keydef
     "crv": "P-256"
     "use": ["sig"]
 
+HTML_HOME: 'html'
+SECRET_KEY: 'secret_key'
+SESSION_COOKIE_NAME: 'rp_session'
+PREFERRED_URL_SCHEME: 'https'
+
 RP_KEYS:
-    'private_path': 'jwks_dir/jwks.json'
+    'private_path': './private/jwks.json'
     'key_defs': *keydef
-    'public_path': 'static/jwks.json'
+    'public_path': './static/jwks.json'
     # this will create the jwks files if they absent
     'read_only': False
 
 # information used when registering the client, this may be the same for all OPs
 
+client_preferences: &prefs
+    application_name: rphandler
+    application_type: web
+    contacts: [ops@example.com]
+    response_types: [code]
+    scope: [openid, profile, email, address, phone]
+    token_endpoint_auth_method: [client_secret_basic, client_secret_post]
+
 services: &services
   discovery:
-    class: oidcservice.rp.provider_info_discovery.ProviderInfoDiscovery
+    class: oidcservice.oidc.provider_info_discovery.ProviderInfoDiscovery
+    kwargs: {}
   registration:
-    class: oidcservice.rp.registration.Registration
+    class: oidcservice.oidc.registration.Registration
+    kwargs: {}
   authorization:
     class: oidcservice.oidc.authorization.Authorization
+    kwargs: {}
   accesstoken:
-    class: oidcservice.oidc.accesstoken.Accesstoken
+    class: oidcservice.oidc.access_token.AccessToken
+    kwargs: {}
   refresh_accesstoken:
     class: oidcservice.oidc.refresh_access_token.RefreshAccessToken
+    kwargs: {}
   userinfo:
     class: oidcservice.oidc.userinfo.UserInfo
+    kwargs: {}
   end_session:
-    class: oidcservice.oidc.session.EndSession
+    class: oidcservice.oidc.end_session.EndSession
+    kwargs: {}
 
-client_preferences: &prefs
-  application_name: rphandler
-  application_type: web
-  contacts: [ops@example.com]
-  response_types: [code]
-  scope: [openid, profile, email, address, phone]
-  token_endpoint_auth_method: [client_secret_basic, client_secret_post]
 
 
 # The keys in this dictionary are the OPs short user friendly name
@@ -302,4 +316,5 @@ clients:
           https://pf.example.com/: https://pf.example.com/jwks.json
 
 # Whether an attempt to fetch the userinfo should be made
-userinfo: True
+USERINFO: true
+
