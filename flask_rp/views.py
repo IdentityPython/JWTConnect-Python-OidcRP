@@ -90,7 +90,6 @@ def get_rp(op_hash):
 
 def finalize(op_hash, request_args):
     rp = get_rp(op_hash)
-
     try:
         session['client_id'] = rp.service_context.registration_response['client_id']
     except KeyError:
