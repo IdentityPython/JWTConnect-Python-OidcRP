@@ -10,6 +10,7 @@ from flask import request
 from flask import session
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
+from oidcservice.exception import OidcServiceError
 
 import oidcrp
 
@@ -90,26 +91,35 @@ def get_rp(op_hash):
 
 def finalize(op_hash, request_args):
     rp = get_rp(op_hash)
-    try:
-        session['client_id'] = rp.service_context.registration_response['client_id']
-    except KeyError:
-        session['client_id'] = rp.service_context.client_id
 
-    session['state'] = request_args['state']
-    try:
-        iss = rp.session_interface.get_iss(request_args['state'])
-    except KeyError:
+    if hasattr(rp, 'status_code') and rp.status_code != 200:
+        logger.error(rp.response[0].decode())
+        return rp.response[0], rp.status_code
+
+    session['client_id'] = rp.service_context.registration_response.\
+                            get('client_id', rp.service_context.client_id)
+
+    session['state'] = request_args.get('state')
+
+    if session['state']:
+        iss = rp.session_interface.get_iss(session['state'])
+    else:
         return make_response('Unknown state', 400)
 
-    try:
-        session['session_state'] = request_args['session_state']
-    except KeyError:
-        session['session_state'] = ''
-
     logger.debug('Issuer: {}'.format(iss))
-    res = current_app.rph.finalize(iss, request_args)
 
-    if 'userinfo' in res:
+    try:
+        res = current_app.rph.finalize(iss, request_args)
+    except OidcServiceError as excp:
+        # replay attack prevention, is that code was already used before
+        return excp.__str__(), 403
+    except Exception as excp:
+        raise excp
+
+    if not 'userinfo' in res:
+        return make_response(res['error'], 400)
+
+    else:
         endpoints = {}
         for k, v in rp.service_context.provider_info.items():
             if k.endswith('_endpoint'):
@@ -117,13 +127,11 @@ def finalize(op_hash, request_args):
                 endp = endp.capitalize()
                 endpoints[endp] = v
 
-        try:
-            kwargs = {
-                'check_session_iframe': rp.service_context.provider_info[
-                    'check_session_iframe']
-            }
-        except KeyError:
-            kwargs = {}
+        kwargs = {}
+        ses_iframe = rp.service_context.provider_info.\
+                        get('check_session_iframe')
+        if ses_iframe:
+            kwargs = {'check_session_iframe': ses_iframe}
 
         kwargs['logout_url'] = "{}/logout".format(rp.service_context.base_url)
 
@@ -131,8 +139,6 @@ def finalize(op_hash, request_args):
                                userinfo=res['userinfo'],
                                access_token=res['token'],
                                **kwargs)
-    else:
-        return make_response(res['error'], 400)
 
 
 @oidc_rp_views.route('/authz_cb/<op_hash>')
