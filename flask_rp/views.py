@@ -102,10 +102,7 @@ def finalize(op_hash, request_args):
     except KeyError:
         return make_response('Unknown state', 400)
 
-    try:
-        session['session_state'] = request_args['session_state']
-    except KeyError:
-        session['session_state'] = ''
+    session['session_state'] = request_args.get('session_state', '')
 
     logger.debug('Issuer: {}'.format(iss))
     res = current_app.rph.finalize(iss, request_args)
