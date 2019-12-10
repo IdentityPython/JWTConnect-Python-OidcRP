@@ -111,6 +111,7 @@ def finalize(op_hash, request_args):
     session['session_state'] = request_args.get('session_state', '')
 
     logger.debug('Issuer: {}'.format(iss))
+
     res = current_app.rph.finalize(iss, request_args)
 
     if 'userinfo' in res:
@@ -135,6 +136,7 @@ def finalize(op_hash, request_args):
                                **kwargs)
     else:
         return make_response(res['error'], 400)
+
 
 
 @oidc_rp_views.route('/authz_cb/<op_hash>')

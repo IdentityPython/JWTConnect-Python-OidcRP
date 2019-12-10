@@ -525,7 +525,7 @@ class RPHandler(object):
             raise
         else:
             if is_error_message(tokenresp):
-                raise OidcServiceError(tokenresp['error'])
+                raise OidcServiceError(tokenresp)
 
         return tokenresp
 
