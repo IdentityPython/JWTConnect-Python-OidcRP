@@ -10,6 +10,7 @@ from flask import request
 from flask import session
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
+from oidcservice.exception import OidcServiceError
 
 import oidcrp
 
@@ -91,21 +92,31 @@ def get_rp(op_hash):
 def finalize(op_hash, request_args):
     rp = get_rp(op_hash)
 
-    try:
-        session['client_id'] = rp.service_context.registration_response['client_id']
-    except KeyError:
-        session['client_id'] = rp.service_context.client_id
+    if hasattr(rp, 'status_code') and rp.status_code != 200:
+        logger.error(rp.response[0].decode())
+        return rp.response[0], rp.status_code
 
-    session['state'] = request_args['state']
-    try:
-        iss = rp.session_interface.get_iss(request_args['state'])
-    except KeyError:
+    session['client_id'] = rp.service_context.registration_response.\
+                            get('client_id', rp.service_context.client_id)
+
+    session['state'] = request_args.get('state')
+
+    if session['state']:
+        iss = rp.session_interface.get_iss(session['state'])
+    else:
         return make_response('Unknown state', 400)
 
     session['session_state'] = request_args.get('session_state', '')
 
     logger.debug('Issuer: {}'.format(iss))
-    res = current_app.rph.finalize(iss, request_args)
+
+    try:
+        res = current_app.rph.finalize(iss, request_args)
+    except OidcServiceError as excp:
+        # replay attack prevention, is that code was already used before
+        return excp.__str__(), 403
+    except Exception as excp:
+        raise excp
 
     if 'userinfo' in res:
         endpoints = {}
