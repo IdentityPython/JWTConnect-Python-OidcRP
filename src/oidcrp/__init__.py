@@ -204,6 +204,7 @@ class RPHandler(object):
 
         client.service_context.keyjar = self.keyjar.copy()
         client.service_context.base_url = self.base_url
+        client.service_context.jwks_uri = self.jwks_uri
         return client
 
     def do_provider_info(self, client=None, state=''):
