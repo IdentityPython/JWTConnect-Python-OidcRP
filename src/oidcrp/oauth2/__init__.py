@@ -141,6 +141,9 @@ class Client(object):
         if response_body_type == 'html':
             return resp.text
 
+        if body:
+            kwargs['request_body'] = body
+
         response = self.parse_request_response(service, resp,
                                                response_body_type, **kwargs)
         if 'error' in response:

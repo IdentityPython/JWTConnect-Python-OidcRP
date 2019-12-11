@@ -106,13 +106,17 @@ def finalize(op_hash, request_args):
     else:
         return make_response('Unknown state', 400)
 
-    logger.debug('Issuer: {}'.format(iss))
-
     session['session_state'] = request_args.get('session_state', '')
 
     logger.debug('Issuer: {}'.format(iss))
 
-    res = current_app.rph.finalize(iss, request_args)
+    try:
+        res = current_app.rph.finalize(iss, request_args)
+    except OidcServiceError as excp:
+        # replay attack prevention, is that code was already used before
+        return excp.__str__(), 403
+    except Exception as excp:
+        raise excp
 
     if 'userinfo' in res:
         endpoints = {}
@@ -122,11 +126,12 @@ def finalize(op_hash, request_args):
                 endp = endp.capitalize()
                 endpoints[endp] = v
 
-        # try:
+
         kwargs = {}
         ses_iframe = rp.service_context.provider_info.get('check_session_iframe')
         if ses_iframe:
             kwargs['check_session_iframe'] = ses_iframe
+
 
         kwargs['logout_url'] = "{}/logout".format(rp.service_context.base_url)
 

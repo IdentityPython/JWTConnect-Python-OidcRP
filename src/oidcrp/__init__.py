@@ -27,7 +27,7 @@ from oidcrp import oidc
 from oidcrp import provider
 
 __author__ = 'Roland Hedberg'
-__version__ = '0.6.3'
+__version__ = '0.6.4'
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +204,7 @@ class RPHandler(object):
 
         client.service_context.keyjar = self.keyjar.copy()
         client.service_context.base_url = self.base_url
+        client.service_context.jwks_uri = self.jwks_uri
         return client
 
     def do_provider_info(self, client=None, state=''):
