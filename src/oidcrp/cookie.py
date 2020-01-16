@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import logging
 import os
+import sys
 import time
 
 from http.cookies import SimpleCookie
@@ -107,7 +108,7 @@ def _make_hashed_key(parts, hashfunc='sha256'):
 
 
 def make_cookie(name, load, seed, expire=0, domain="", path="", timestamp="",
-                enc_key=None):
+                enc_key=None, secure=True, http_only=True, same_site=""):
     """
     Create and return a cookie
 
@@ -137,6 +138,13 @@ def make_cookie(name, load, seed, expire=0, domain="", path="", timestamp="",
     :type timestamp: text
     :param enc_key: The key to use for cookie encryption.
     :type enc_key: byte string
+    :param secure: A secure cookie is only sent to the server with an encrypted request over the
+    HTTPS protocol.
+    :type secure: boolean
+    :param http_only: HttpOnly cookies are inaccessible to JavaScript's Document.cookie API
+    :type http_only: boolean
+    :param same_site: Whether SameSite (None,Strict or Lax) should be added to the cookie
+    :type same_site: byte string
     :return: A tuple to be added to headers
     """
     cookie = SimpleCookie()
@@ -172,6 +180,11 @@ def make_cookie(name, load, seed, expire=0, domain="", path="", timestamp="",
             cookie_signature(seed, load, timestamp).encode('utf-8')]
 
     cookie[name] = (b"|".join(cookie_payload)).decode('utf-8')
+
+    # Necessary if Python version < 3.8
+    if sys.version_info[:2] <= (3, 8):
+        cookie[name]._reserved[str("samesite")] = str("SameSite")
+
     if path:
         cookie[name]["path"] = path
     if domain:
@@ -179,6 +192,12 @@ def make_cookie(name, load, seed, expire=0, domain="", path="", timestamp="",
     if expire:
         cookie[name]["expires"] = _expiration(expire,
                                               "%a, %d-%b-%Y %H:%M:%S GMT")
+    if secure:
+        cookie[name]["Secure"] = secure
+    if http_only:
+        cookie[name]["httponly"] = http_only
+    if same_site:
+        cookie[name]["SameSite"] = same_site
 
     return tuple(cookie.output().split(": ", 1))
 
