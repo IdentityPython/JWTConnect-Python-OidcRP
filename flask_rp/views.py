@@ -133,6 +133,8 @@ def finalize(op_hash, request_args):
             }
         except KeyError:
             kwargs = {}
+        else:
+            kwargs["status_check_iframe"] = rp.service_context.add_on['status_check']
 
         kwargs['logout_url'] = "{}/logout".format(rp.service_context.base_url)
 
@@ -182,14 +184,15 @@ def session_iframe():  # session management
         'session_change_url': session_change_url
     }
     logger.debug('rp_iframe args: {}'.format(args))
-
-    return render_template('rp_iframe.html', **args)
+    _template = _rp.service_context.add_on["status_check"]["session_iframe_template_file"]
+    return render_template(_template, **args)
 
 
 @oidc_rp_views.route('/session_change')
 def session_change():
     logger.debug('session_change: {}'.format(session['op_hash']))
     _rp = get_rp(session['op_hash'])
+
     # If there is an ID token send it along as a id_token_hint
     _aserv = _rp.service_context.service['authorization']
     request_args = {"prompt": "none"}
