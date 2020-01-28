@@ -96,8 +96,8 @@ def finalize(op_hash, request_args):
         logger.error(rp.response[0].decode())
         return rp.response[0], rp.status_code
 
-    session['client_id'] = rp.service_context.registration_response.\
-                            get('client_id', rp.service_context.client_id)
+    session['client_id'] = rp.service_context.registration_response. \
+        get('client_id', rp.service_context.client_id)
 
     session['state'] = request_args.get('state')
 
@@ -126,15 +126,14 @@ def finalize(op_hash, request_args):
                 endp = endp.capitalize()
                 endpoints[endp] = v
 
-        try:
-            kwargs = {
-                'check_session_iframe': rp.service_context.provider_info[
-                    'check_session_iframe']
-            }
-        except KeyError:
-            kwargs = {}
-        else:
-            kwargs["status_check_iframe"] = rp.service_context.add_on['status_check']
+        kwargs = {}
+        _chk_iframe = rp.service_context.provider_info.get('check_session_iframe')
+        if _chk_iframe:
+            kwargs['check_session_iframe'] = _chk_iframe
+
+        _status_iframe = rp.service_context.add_on.get('status_check')
+        if _status_iframe:
+            kwargs["status_check_iframe"] = _status_iframe
 
         kwargs['logout_url'] = "{}/logout".format(rp.service_context.base_url)
 
