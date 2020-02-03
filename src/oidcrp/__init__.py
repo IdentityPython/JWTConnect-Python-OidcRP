@@ -130,7 +130,7 @@ class RPHandler(object):
         try:
             self.jwks_uri = add_path(base_url, kwargs['jwks_path'])
         except KeyError:
-            pass
+            self.jwks_uri = ""
 
         self.extra = kwargs
 
