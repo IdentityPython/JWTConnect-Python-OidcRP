@@ -2,6 +2,7 @@ import datetime
 from http.cookies import SimpleCookie
 
 import pytest
+from oidcrp.cookie import make_cookie
 
 from oidcservice.exception import ImproperlyConfigured
 from oidcrp.cookie import CookieDealer
@@ -143,3 +144,26 @@ def test_cookie_parts():
                       '1463043535',
                       '18a201305fa15a96ce4048e1fbb03f7715f86499']
 
+
+def test_cookie_default():
+    kaka = make_cookie('test', "data", b"1234567890abcdefg")
+    assert "Secure" in kaka[1]
+    assert "HttpOnly" in kaka[1]
+    assert "SameSite" not in kaka[1]
+
+
+def test_cookie_http_only_false():
+    kaka = make_cookie('test', "data", b"1234567890abcdefg", http_only=False)
+    assert "Secure" in kaka[1]
+    assert "HttpOnly" not in kaka[1]
+
+
+def test_cookie_not_secure():
+    kaka = make_cookie('test', "data", b"1234567890abcdefg", secure=False)
+    assert "Secure" not in kaka[1]
+    assert "HttpOnly" in kaka[1]
+
+
+def test_cookie_same_site_none():
+    kaka = make_cookie('test', "data", b"1234567890abcdefg", same_site="None")
+    assert "SameSite=None" in kaka[1]

@@ -96,8 +96,8 @@ def finalize(op_hash, request_args):
         logger.error(rp.response[0].decode())
         return rp.response[0], rp.status_code
 
-    session['client_id'] = rp.service_context.registration_response.\
-                            get('client_id', rp.service_context.client_id)
+    session['client_id'] = rp.service_context.registration_response. \
+        get('client_id', rp.service_context.client_id)
 
     session['state'] = request_args.get('state')
 
@@ -128,10 +128,13 @@ def finalize(op_hash, request_args):
 
 
         kwargs = {}
-        ses_iframe = rp.service_context.provider_info.get('check_session_iframe')
-        if ses_iframe:
-            kwargs['check_session_iframe'] = ses_iframe
+        _chk_iframe = rp.service_context.provider_info.get('check_session_iframe')
+        if _chk_iframe:
+            kwargs['check_session_iframe'] = _chk_iframe
 
+        _status_iframe = rp.service_context.add_on.get('status_check')
+        if _status_iframe:
+            kwargs["status_check_iframe"] = _status_iframe
 
         kwargs['logout_url'] = "{}/logout".format(rp.service_context.base_url)
 
@@ -182,14 +185,15 @@ def session_iframe():  # session management
         'session_change_url': session_change_url
     }
     logger.debug('rp_iframe args: {}'.format(args))
-
-    return render_template('rp_iframe.html', **args)
+    _template = _rp.service_context.add_on["status_check"]["session_iframe_template_file"]
+    return render_template(_template, **args)
 
 
 @oidc_rp_views.route('/session_change')
 def session_change():
     logger.debug('session_change: {}'.format(session['op_hash']))
     _rp = get_rp(session['op_hash'])
+
     # If there is an ID token send it along as a id_token_hint
     _aserv = _rp.service_context.service['authorization']
     request_args = {"prompt": "none"}
