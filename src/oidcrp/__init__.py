@@ -114,10 +114,11 @@ def dynamic_provider_info_discovery(client):
 class RPHandler(object):
     def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=True,
                  services=None, client_configs=None, client_authn_factory=None,
-                 client_cls=None, state_db=None, http_lib=None, **kwargs):
+                 client_cls=None, state_db=None, http_lib=None, httpc_params=None,
+                 **kwargs):
+
         self.base_url = base_url
         self.hash_seed = as_bytes(hash_seed)
-        self.verify_ssl = verify_ssl
         self.keyjar = keyjar
 
         if state_db:
@@ -143,6 +144,13 @@ class RPHandler(object):
         self.issuer2rp = {}
         self.hash2issuer = {}
         self.httplib = http_lib
+        if not httpc_params:
+            self.httpc_params = {'verify': verify_ssl}
+        else:
+            self.httpc_params = httpc_params
+
+        if not self.keyjar.httpc_params:
+            self.keyjar.httpc_params = self.httpc_params
 
     def state2issuer(self, state):
         """
@@ -192,10 +200,9 @@ class RPHandler(object):
 
         try:
             client = self.client_cls(
-                state_db=self.state_db,
-                client_authn_factory=self.client_authn_factory,
-                verify_ssl=self.verify_ssl, services=_services,
-                config=_cnf, httplib=self.httplib)
+                state_db=self.state_db, client_authn_factory=self.client_authn_factory,
+                services=_services, config=_cnf, httplib=self.httplib,
+                httpc_params=self.httpc_params)
         except Exception as err:
             logger.error('Failed initiating client: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())

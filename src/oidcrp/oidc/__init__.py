@@ -61,17 +61,15 @@ class FetchException(Exception):
 
 
 class RP(oauth2.Client):
-    def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
-                 keyjar=None, verify_ssl=True, config=None, client_cert=None,
-                 httplib=None, services=None):
+    def __init__(self, state_db, client_authn_factory=None,
+                 keyjar=None, verify_ssl=True, config=None,
+                 httplib=None, services=None, httpc_params=None):
 
         _srvs = services or DEFAULT_SERVICES
 
-        oauth2.Client.__init__(self, state_db, ca_certs,
-                               client_authn_factory=client_authn_factory,
-                               keyjar=keyjar, verify_ssl=verify_ssl,
-                               config=config, client_cert=client_cert,
-                               httplib=httplib, services=_srvs)
+        oauth2.Client.__init__(self, state_db, client_authn_factory=client_authn_factory,
+                               keyjar=keyjar, verify_ssl=verify_ssl, config=config,
+                               httplib=httplib, services=_srvs, httpc_params=httpc_params)
 
     def fetch_distributed_claims(self, userinfo, callback=None):
         """
@@ -90,20 +88,20 @@ class RP(oauth2.Client):
                 if "endpoint" in spec:
                     if "access_token" in spec:
                         cauth = BearerHeader()
-                        http_args = cauth.construct(
+                        httpc_params = cauth.construct(
                             service=self.service['userinfo'],
-                            access_token= spec['access_token'])
+                            access_token=spec['access_token'])
                         _resp = self.http.send(spec["endpoint"], 'GET',
-                                               **http_args)
+                                               **httpc_params)
                     else:
                         if callback:
                             token = callback(spec['endpoint'])
                             cauth = BearerHeader()
-                            http_args = cauth.construct(
+                            httpc_params = cauth.construct(
                                 service=self.service['userinfo'],
                                 access_token=token)
                             _resp = self.http.send(
-                                spec["endpoint"], 'GET', **http_args)
+                                spec["endpoint"], 'GET', **httpc_params)
                         else:
                             _resp = self.http.send(spec["endpoint"], 'GET')
 
