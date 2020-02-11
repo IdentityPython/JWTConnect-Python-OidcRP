@@ -103,6 +103,41 @@ class Client(object):
         self.client_id = client_id
         self.service_context.client_id = client_id
 
+    def get_response(self, service, url, method="GET", body=None, response_body_type="",
+                     headers=None, **kwargs):
+        """
+
+        :param url:
+        :param method:
+        :param body:
+        :param response_body_type:
+        :param headers:
+        :param kwargs:
+        :return:
+        """
+        try:
+            resp = self.http(url, method, data=body, headers=headers)
+        except Exception as err:
+            logger.error('Exception on request: {}'.format(err))
+            raise
+
+        if 300 <= resp.status_code < 400:
+            return {'http_response': resp}
+
+        if "keyjar" not in kwargs:
+            kwargs["keyjar"] = service.service_context.keyjar
+        if not response_body_type:
+            response_body_type = service.response_body_type
+
+        if response_body_type == 'html':
+            return resp.text
+
+        if body:
+            kwargs['request_body'] = body
+
+        return self.parse_request_response(service, resp,
+                                           response_body_type, **kwargs)
+
     def service_request(self, service, url, method="GET", body=None,
                         response_body_type="", headers=None, **kwargs):
         """
@@ -124,28 +159,9 @@ class Client(object):
 
         logger.debug(REQUEST_INFO.format(url, method, body, headers))
 
-        try:
-            resp = self.http(url, method, data=body, headers=headers)
-        except Exception as err:
-            logger.error('Exception on request: {}'.format(err))
-            raise
+        response = self.get_response(service, url, method, body, response_body_type, headers,
+                                     **kwargs)
 
-        if "keyjar" not in kwargs:
-            kwargs["keyjar"] = service.service_context.keyjar
-        if not response_body_type:
-            response_body_type = service.response_body_type
-
-        if 300 <= resp.status_code < 400:
-            return {'http_response': resp}
-
-        if response_body_type == 'html':
-            return resp.text
-
-        if body:
-            kwargs['request_body'] = body
-
-        response = self.parse_request_response(service, resp,
-                                               response_body_type, **kwargs)
         if 'error' in response:
             pass
         else:

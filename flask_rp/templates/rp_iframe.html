@@ -10,7 +10,7 @@
     var client_id = {{ client_id }};
     var session_state = {{ session_state }};
     console.log("RP session state: " + session_state);
-    var targetOrigin = {{ issuer }}.replace(/\/$/, "");
+    var targetOrigin = new URL({{ issuer }}).origin;
 
     var stat = "unchanged";
     var mes = client_id + " " + session_state;
@@ -32,9 +32,8 @@
         }
         stat = e.data;
 
-        if (stat == "changed") {
+        if (stat === "changed") {
             clearInterval(timer_id);
-            alert("Your session has changed, you will be redirected to log in again.");
             window.parent.window.location = {{ session_change_url }};
         }
     }

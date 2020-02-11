@@ -36,6 +36,5 @@ if __name__ == "__main__":
 
     app.run(host='127.0.0.1', port=app.config.get('PORT'),
             debug=True,
-            ssl_context=('{}/certs/cert.pem'.format(dir_path),
-                         '{}/certs/key.pem'.format(dir_path))
-            )
+            ssl_context=('{}/{}'.format(dir_path, app.config["SERVER_CERT"]),
+                         '{}/{}'.format(dir_path, app.config["SERVER_KEY"])))

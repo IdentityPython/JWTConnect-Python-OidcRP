@@ -4,10 +4,8 @@ import sys
 import time
 
 import pytest
-
 from cryptojwt.jwk.rsa import import_private_rsa_key_from_file
 from cryptojwt.key_bundle import KeyBundle
-
 from oidcmsg.oauth2 import AccessTokenRequest
 from oidcmsg.oauth2 import AccessTokenResponse
 from oidcmsg.oauth2 import AuthorizationRequest
