@@ -1,21 +1,15 @@
-PORT: 8090
-BASEURL: "https://127.0.0.1:8090"
+port: &port 8090
+domain: &domain 127.0.0.1
+base_url: "https://{domain}:{port}"
 
-# If BASE is https these has to be specified
-SERVER_CERT: "certs/cert.pem"
-SERVER_KEY: "certs/key.pem"
-CA_BUNDLE: ''
-# If you want the clients cert to be verified
-#VERIFY_USER: optional
+http_params:
+  # This is just for testing an local usage. In all other cases it MUST be True
+  verify_ssl: false
+  # Client side
+  #client_cert: "certs/client.crt"
+  #client_key: "certs/client.key"
 
-# This is just for testing an local usage. In all other cases it MUST be True
-VERIFY_SSL: false
-
-# Client side
-#CLIENT_CERT: "certs/client.crt"
-#CLIENT_KEY: "certs/client.key"
-
-KEYDEFS: &keydef
+keydefs: &keydef
   -
     "type": "RSA"
     "key": ''
@@ -25,19 +19,19 @@ KEYDEFS: &keydef
     "crv": "P-256"
     "use": ["sig"]
 
-HTML_HOME: 'html'
-SECRET_KEY: 'secret_key'
-SESSION_COOKIE_NAME: 'rp_session'
-PREFERRED_URL_SCHEME: 'https'
+html_home: 'html'
+secret_key: 'secret_key'
+session_cookie_name: 'rp_session'
+preferred_url_scheme: 'https'
 
-RP_KEYS:
-    'private_path': './private/jwks.json'
+rp_keys:
+    'private_path': 'private/jwks.json'
     'key_defs': *keydef
-    'public_path': './static/jwks.json'
+    'public_path': 'static/jwks.json'
     # this will create the jwks files if they are absent
     'read_only': False
 
-CLIENT_PREFERENCES: &id001
+client_preferences: &id001
     application_name: rphandler
     application_type: web
     contacts: [ops@example.com]
@@ -45,7 +39,7 @@ CLIENT_PREFERENCES: &id001
     scope: [openid, profile, email, address, phone]
     token_endpoint_auth_method: [client_secret_basic, client_secret_post]
 
-SERVICES: &id002
+services: &id002
   discovery:
     class: oidcservice.oidc.provider_info_discovery.ProviderInfoDiscovery
     kwargs: {}
@@ -68,7 +62,7 @@ SERVICES: &id002
     class: oidcservice.oidc.end_session.EndSession
     kwargs: {}
 
-CLIENTS:
+clients:
   "":
     client_preferences: *id001
     redirect_uris: None
@@ -76,8 +70,8 @@ CLIENTS:
   flop:
     client_preferences: *id001
     issuer: https://127.0.0.1:5000/
-    jwks_uri: https://127.0.0.1:8090/static/jwks.json
-    redirect_uris: ['https://127.0.0.1:8090/authz_cb/flop']
+    jwks_uri: 'static/jwks.json'
+    redirect_uris: ['authz_cb/flop']
     services: *id002
     add_ons:
       pkce:
@@ -87,5 +81,13 @@ CLIENTS:
           code_challenge_method: S256
 
 
-# Whether an attempt to fetch the userinfo should be made
-USERINFO: true
+webserver:
+  port: *port
+  domain: *domain
+  # If BASE is https these has to be specified
+  server_cert: "certs/cert.pem"
+  server_key: "certs/key.pem"
+  # If you want the clients cert to be verified
+  # verify_user: optional
+  # The you also need
+  # ca_bundle: ''
