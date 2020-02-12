@@ -1,4 +1,5 @@
 import logging
+from json import JSONDecodeError
 
 from cryptojwt.key_jar import KeyJar
 from oidcmsg.exception import FormatError
@@ -245,6 +246,8 @@ class Client(object):
                 else:
                     raise OidcServiceError("HTTP ERROR: %s [%s] on %s" % (
                         reqresp.text, reqresp.status_code, reqresp.url))
+            except JSONDecodeError: # So it's not JSON assume text then
+                err_resp = {'error': reqresp.text}
 
             err_resp['status_code'] = reqresp.status_code
             return err_resp

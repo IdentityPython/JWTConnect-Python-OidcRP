@@ -37,7 +37,9 @@ def oidc_provider_init_app(config_file, name=None, **kwargs):
     app = Flask(name, static_url_path='', **kwargs)
 
     app.rp_config = Configuration.create_from_config_file(config_file)
-    # app.config['SECRET_KEY'] = os.urandom(12).hex()
+
+    # Session key for the application session
+    app.config['SECRET_KEY'] = os.urandom(12).hex()
 
     app.users = {'test_user': {'name': 'Testing Name'}}
 

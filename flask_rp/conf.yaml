@@ -1,3 +1,21 @@
+logging:
+  version: 1
+  root:
+    handlers:
+      - console
+    level: DEBUG
+  loggers:
+    idp:
+      level: DEBUG
+  handlers:
+    console:
+      class: logging.StreamHandler
+      stream: 'ext://sys.stdout'
+      formatter: default
+  formatters:
+    default:
+      format: '%(asctime)s %(name)s %(levelname)s %(message)s'
+
 port: &port 8090
 domain: &domain 127.0.0.1
 base_url: "https://{domain}:{port}"
@@ -71,7 +89,7 @@ clients:
     client_preferences: *id001
     issuer: https://127.0.0.1:5000/
     jwks_uri: 'static/jwks.json'
-    redirect_uris: ['authz_cb/flop']
+    redirect_uris: ['https://{domain}:{port}/authz_cb/flop']
     services: *id002
     add_ons:
       pkce:
@@ -91,3 +109,4 @@ webserver:
   # verify_user: optional
   # The you also need
   # ca_bundle: ''
+  debug: true
