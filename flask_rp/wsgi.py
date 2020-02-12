@@ -4,6 +4,8 @@ import logging
 import os
 import sys
 
+from oidcrp.util import create_context
+
 try:
     from . import application
 except ImportError:
@@ -33,8 +35,9 @@ if __name__ == "__main__":
     template_dir = os.path.join(dir_path, 'templates')
     app = application.oidc_provider_init_app(conf, name,
                                              template_folder=template_dir)
+    _web_conf = app.rp_config.web_conf
+    context = create_context(dir_path, _web_conf)
 
-    app.run(host='127.0.0.1', port=app.config.get('PORT'),
-            debug=True,
-            ssl_context=('{}/{}'.format(dir_path, app.config["SERVER_CERT"]),
-                         '{}/{}'.format(dir_path, app.config["SERVER_KEY"])))
+    debug = _web_conf.get('debug', True)
+    app.run(host=app.rp_config.domain, port=app.rp_config.port,
+            debug=_web_conf.get("debug", False), ssl_context=context)
