@@ -354,10 +354,10 @@ class RPHandler(object):
         else:
             registration_type = _fe.registration_type
 
-        if registration_type == 'implicit':
+        if registration_type == 'automatic':
             _sc.client_id = client.client_id = _fe.entity_id
             _sc.redirect_uris = _sc.behaviour['redirect_uris']
-        else:
+        else: # explicit
             self.do_client_registration(client, iss_id)
 
         self.issuer2rp[issuer] = client
