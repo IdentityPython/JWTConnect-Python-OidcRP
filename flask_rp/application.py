@@ -12,31 +12,38 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def init_oidc_rp_handler(app):
-    rp_keys_conf = app.config.get('RP_KEYS')
-    if rp_keys_conf is None:
-        rp_keys_conf = app.config.get('OIDC_KEYS')
-
     verify_ssl = app.config.get('VERIFY_SSL')
+    httpc_params = {"verify": verify_ssl}
+
+    _cert = app.config.get("CLIENT_CERT")
+    _key = app.config.get("CLIENT_KEY")
+    if _cert and _key:
+        httpc_params["cert"] = (_cert, _key)
+    elif _cert:
+        httpc_params["cert"] = _cert
+
     hash_seed = app.config.get('HASH_SEED')
     if not hash_seed:
         hash_seed = "BabyHoldOn"
 
+    rp_keys_conf = app.config.get('RP_KEYS')
+    if rp_keys_conf is None:
+        rp_keys_conf = app.config.get('OIDC_KEYS')
+
     if rp_keys_conf:
         _kj = init_key_jar(**rp_keys_conf)
         _path = rp_keys_conf['public_path']
-        # replaces ./ and / from the begin of the string
+        # removes ./ and / from the begin of the string
         _path = re.sub('^(.)/', '', _path)
     else:
         _kj = KeyJar()
         _path = ''
-    _kj.verify_ssl = verify_ssl
+    _kj.httpc_params = httpc_params
 
     rph = RPHandler(base_url=app.config.get('BASEURL'),
-                    hash_seed=hash_seed,
-                    keyjar=_kj, jwks_path=_path,
+                    hash_seed=hash_seed, keyjar=_kj, jwks_path=_path,
                     client_configs=app.config.get('CLIENTS'),
-                    services=app.config.get('SERVICES'),
-                    verify_ssl=verify_ssl)
+                    services=app.config.get('SERVICES'), httpc_params=httpc_params)
 
     return rph
 

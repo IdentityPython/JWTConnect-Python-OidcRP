@@ -5,9 +5,15 @@ BASEURL: "https://127.0.0.1:8090"
 SERVER_CERT: "certs/cert.pem"
 SERVER_KEY: "certs/key.pem"
 CA_BUNDLE: ''
+# If you want the clients cert to be verified
+#VERIFY_USER: optional
 
 # This is just for testing an local usage. In all other cases it MUST be True
 VERIFY_SSL: false
+
+# Client side
+#CLIENT_CERT: "certs/client.crt"
+#CLIENT_KEY: "certs/client.key"
 
 KEYDEFS: &keydef
   -
@@ -63,12 +69,13 @@ SERVICES: &id002
     kwargs: {}
 
 CLIENTS:
+  "":
+    client_preferences: *id001
+    redirect_uris: None
+    services: *id002
   flop:
     client_preferences: *id001
     issuer: https://127.0.0.1:5000/
-    # keys:
-      # url:
-        # 'https://127.0.0.1:5000' : https://127.0.0.1:5000/static/jwks.json
     jwks_uri: https://127.0.0.1:8090/static/jwks.json
     redirect_uris: ['https://127.0.0.1:8090/authz_cb/flop']
     services: *id002
@@ -78,6 +85,7 @@ CLIENTS:
         kwargs:
           code_challenge_length: 64
           code_challenge_method: S256
+
 
 # Whether an attempt to fetch the userinfo should be made
 USERINFO: true

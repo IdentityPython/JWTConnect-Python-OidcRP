@@ -1,15 +1,13 @@
 import importlib
+import io
+import json
 import logging
-import os
+import ssl
 import sys
-
 from http.cookiejar import Cookie
 from http.cookiejar import http2time
 
-import io
-import json
 import yaml
-
 from oidcservice import sanitize
 from oidcservice.exception import TimeFormatError
 from oidcservice.exception import WrongContentType
@@ -30,24 +28,25 @@ PAIRS = {
     "path": "path_specified"
 }
 
-
-ATTRS = {"version": None,
-         "name": "",
-         "value": None,
-         "port": None,
-         "port_specified": False,
-         "domain": "",
-         "domain_specified": False,
-         "domain_initial_dot": False,
-         "path": "",
-         "path_specified": False,
-         "secure": False,
-         "expires": None,
-         "discard": True,
-         "comment": None,
-         "comment_url": None,
-         "rest": "",
-         "rfc2109": True}
+ATTRS = {
+    "version": None,
+    "name": "",
+    "value": None,
+    "port": None,
+    "port_specified": False,
+    "domain": "",
+    "domain_specified": False,
+    "domain_initial_dot": False,
+    "path": "",
+    "path_specified": False,
+    "secure": False,
+    "expires": None,
+    "discard": True,
+    "comment": None,
+    "comment_url": None,
+    "rest": "",
+    "rfc2109": True
+}
 
 
 def match_to_(val, vlist):
@@ -277,3 +276,64 @@ def yaml_to_py_stream(file_name):
         fstream.write(section)
     fstream.seek(0)
     return fstream
+
+
+def has_method(o, name):
+    """ Verifies whether an object has a specific method """
+    return callable(getattr(o, name, None))
+
+
+def lower_or_upper(config, param, default=None):
+    res = config.get(param.lower(), default)
+    if not res:
+        res = config.get(param.upper(), default)
+    return res
+
+
+def create_context(dir_path, config, **kwargs):
+    _fname = lower_or_upper(config, "server_cert")
+    if _fname:
+        _cert_file = "{}/{}".format(dir_path, _fname)
+    else:
+        return None
+    _fname = lower_or_upper(config, "server_key")
+    if _fname:
+        _key_file = "{}/{}".format(dir_path, _fname)
+    else:
+        return None
+
+    context = ssl.SSLContext(**kwargs)  # PROTOCOL_TLS by default
+
+    _verify_user = lower_or_upper(config, "verify_user")
+    if _verify_user:
+        if _verify_user == "optional":
+            context.verify_mode = ssl.CERT_OPTIONAL
+        elif _verify_user == "required":
+            context.verify_mode = ssl.CERT_REQUIRED
+        else:
+            sys.exit("Unknown verify_user specification: '{}'".format(_verify_user))
+        _ca_bundle = lower_or_upper(config, "ca_bundle")
+        if _ca_bundle:
+            context.load_verify_locations(_ca_bundle)
+    else:
+        context.verify_mode = ssl.CERT_NONE
+
+    try:
+        context.load_cert_chain(_cert_file, _key_file)
+    except Exception as e:
+        sys.exit("Error starting server. Missing cert or key. Details: {}".format(e))
+
+    return context
+
+
+def get_http_params(config):
+    params = {"verify": config.get('verify_ssl')}
+    _cert = config.get('client_cert')
+    _key = config.get('client_key')
+    if _cert:
+        if _key:
+            params['cert'] = (_cert, _key)
+        else:
+            params['cert'] = _cert
+
+    return params

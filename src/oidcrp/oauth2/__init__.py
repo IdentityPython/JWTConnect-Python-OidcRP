@@ -18,6 +18,8 @@ from oidcrp.util import get_deserialization_method
 
 __author__ = 'Roland Hedberg'
 
+from oidcrp.util import has_method
+
 logger = logging.getLogger(__name__)
 
 Version = "2.0"
@@ -31,30 +33,26 @@ class ExpiredToken(Exception):
 
 
 class Client(object):
-    def __init__(self, state_db, ca_certs=None, client_authn_factory=None,
-                 keyjar=None, verify_ssl=True, config=None, client_cert=None,
-                 httplib=None, services=None, jwks_uri=''):
+    def __init__(self, state_db, client_authn_factory=None,
+                 keyjar=None, verify_ssl=True, config=None,
+                 httplib=None, services=None, jwks_uri='', httpc_params=None):
         """
 
-        :param ca_certs: Certificates used to verify HTTPS certificates
         :param client_authn_factory: Factory that this client can use to
             initiate a client authentication class.
         :param keyjar: A py:class:`oidcmsg.key_jar.KeyJar` instance
-        :param verify_ssl: Whether the SSL certificate should be verified.
         :param config: Configuration information passed on to the
             :py:class:`oidcservice.service_context.ServiceContext`
             initialization
-        :param client_cert: Certificate used by the HTTP client
         :param httplib: A HTTP client to use
         :param services: A list of service definitions
         :param jwks_uri: A jwks_uri
+        :param httpc_params: HTTP request arguments
         :return: Client instance
         """
 
         self.session_interface = StateInterface(state_db)
-        self.http = httplib or HTTPLib(ca_certs=ca_certs,
-                                       verify_ssl=verify_ssl,
-                                       client_cert=client_cert)
+        self.http = httplib or HTTPLib(httpc_params)
 
         if not keyjar:
             keyjar = KeyJar()
@@ -62,7 +60,8 @@ class Client(object):
 
         self.events = None
         self.service_context = ServiceContext(keyjar, config=config,
-                                              jwks_uri=jwks_uri)
+                                              jwks_uri=jwks_uri,
+                                              httpc_params=httpc_params)
         if self.service_context.client_id:
             self.client_id = self.service_context.client_id
 
@@ -77,7 +76,6 @@ class Client(object):
             do_add_ons(config['add_ons'], self.service)
 
         self.service_context.service = self.service
-
         self.verify_ssl = verify_ssl
 
     def do_request(self, request_type, response_body_type="", request_args=None,
@@ -149,7 +147,7 @@ class Client(object):
         :param body: A message body if any
         :param response_body_type: The expected format of the body of the
             return message
-        :param http_args: Arguments for the HTTP client
+        :param httpc_params: Arguments for the HTTP client
         :return: A cls or ResponseMessage instance or the HTTP response
             instance if no response body was expected.
         """
@@ -159,8 +157,12 @@ class Client(object):
 
         logger.debug(REQUEST_INFO.format(url, method, body, headers))
 
-        response = self.get_response(service, url, method, body, response_body_type, headers,
-                                     **kwargs)
+        if has_method(service, "get_response"):
+            response = service.get_response(url, method, body, response_body_type, headers,
+                                            **kwargs)
+        else:
+            response = self.get_response(service, url, method, body, response_body_type, headers,
+                                         **kwargs)
 
         if 'error' in response:
             pass

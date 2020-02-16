@@ -17,48 +17,21 @@ logger = logging.getLogger(__name__)
 
 
 class HTTPLib(object):
-    def __init__(self, ca_certs=None, verify_ssl=True, client_cert=None):
+    def __init__(self, httpc_params=None):
         """
         A base class for OAuth2 clients and servers
 
-        :param ca_certs: the path to a CA_BUNDLE file or directory with
-            certificates of trusted CAs
-        :param verify_ssl: If True then the server SSL certificate is not
-            verfied
-        :param client_cert: local cert to use as client side certificate, as a
-            single file (containing the private key and the certificate) or as
-            a tuple of both file's path
+        :param httpc_params: Default arguments to be used for HTTP requests
         """
 
         self.request_args = {"allow_redirects": False}
+        if httpc_params:
+            self.request_args.update(httpc_params)
 
         self.cookiejar = FileCookieJar()
-        self.ca_certs = ca_certs
-
-        if ca_certs:
-            if verify_ssl is False:
-                raise ValueError(
-                    'conflict: ca_certs defined, but verify_ssl is False')
-
-            # Instruct requests to verify certificate against the CA cert
-            # bundle located at the path given by `ca_certs`.
-            self.request_args["verify"] = ca_certs
-
-        elif verify_ssl:
-            # Instruct requests to verify server certificates against the
-            # default CA bundle provided by 'certifi'. See
-            # http://docs.python-requests.org/en/master/user/advanced/#ca
-            # -certificates
-            self.request_args["verify"] = True
-
-        else:
-            # Instruct requests to not perform server cert verification.
-            self.request_args["verify"] = False
 
         self.events = None
         self.req_callback = None
-        if client_cert:
-            self.request_args['cert'] = client_cert
 
     def _cookies(self):
         """
