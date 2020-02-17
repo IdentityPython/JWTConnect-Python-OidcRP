@@ -327,7 +327,7 @@ def create_context(dir_path, config, **kwargs):
 
 
 def get_http_params(config):
-    params = {"verify": config.get('verify_ssl')}
+    params = {"verify": config.get('verify')}
     _cert = config.get('client_cert')
     _key = config.get('client_key')
     if _cert:
