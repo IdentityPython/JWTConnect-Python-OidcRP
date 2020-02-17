@@ -149,7 +149,7 @@ class RPHandler(object):
         else:
             self.httpc_params = httpc_params
 
-        if not self.keyjar.httpc_params:
+        if not getattr(self.keyjar, 'httpc_params', None):
             self.keyjar.httpc_params = self.httpc_params
 
     def state2issuer(self, state):
