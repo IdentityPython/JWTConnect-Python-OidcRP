@@ -116,7 +116,6 @@ fed_operator/statement.json
 fed_rp/certs/
 fed_rp/keys/
 fed_rp/static/
-tests/data/
 tests/test_weed.py
 .idea/
 doc/_build/
