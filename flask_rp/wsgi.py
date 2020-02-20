@@ -11,21 +11,21 @@ try:
 except ImportError:
     import application
 
-logger = logging.getLogger("")
-RP_LOGFILE_NAME = os.environ.get('RP_LOGFILE_NAME', 'flrp.log')
-
-hdlr = logging.FileHandler(RP_LOGFILE_NAME)
-log_format = ("%(asctime)s %(name)s:%(levelname)s "
-              "%(message)s  [%(name)s.%(funcName)s:%(lineno)s]")
-base_formatter = logging.Formatter(log_format)
-
-hdlr.setFormatter(base_formatter)
-logger.addHandler(hdlr)
-logger.setLevel(logging.DEBUG)
-
-stdout = logging.StreamHandler()
-stdout.setFormatter(base_formatter)
-logger.addHandler(stdout)
+# logger = logging.getLogger("")
+# RP_LOGFILE_NAME = os.environ.get('RP_LOGFILE_NAME', 'flrp.log')
+#
+# hdlr = logging.FileHandler(RP_LOGFILE_NAME)
+# log_format = ("%(asctime)s %(name)s:%(levelname)s "
+#               "%(message)s  [%(name)s.%(funcName)s:%(lineno)s]")
+# base_formatter = logging.Formatter(log_format)
+#
+# hdlr.setFormatter(base_formatter)
+# logger.addHandler(hdlr)
+# logger.setLevel(logging.DEBUG)
+#
+# stdout = logging.StreamHandler()
+# stdout.setFormatter(base_formatter)
+# logger.addHandler(stdout)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 

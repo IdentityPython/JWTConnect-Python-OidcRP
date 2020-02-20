@@ -158,10 +158,10 @@ class Client(object):
 
         logger.debug(REQUEST_INFO.format(url, method, body, headers))
 
-        if has_method(service, "get_response"):
-            response = service.get_response(url, method, body, response_body_type, headers,
-                                            **kwargs)
-        else:
+        try:
+            response = service.get_response_ext(url, method, body, response_body_type, headers,
+                                                **kwargs)
+        except AttributeError:
             response = self.get_response(service, url, method, body, response_body_type, headers,
                                          **kwargs)
 

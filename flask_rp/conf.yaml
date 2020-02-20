@@ -1,8 +1,10 @@
 logging:
   version: 1
+  disable_existing_loggers: False
   root:
     handlers:
       - console
+      - file
     level: DEBUG
   loggers:
     idp:
@@ -11,6 +13,10 @@ logging:
     console:
       class: logging.StreamHandler
       stream: 'ext://sys.stdout'
+      formatter: default
+    file:
+      class: logging.FileHandler
+      filename: 'debug.log'
       formatter: default
   formatters:
     default:
@@ -70,9 +76,6 @@ services: &id002
   accesstoken:
     class: oidcservice.oidc.access_token.AccessToken
     kwargs: {}
-  refresh_accesstoken:
-    class: oidcservice.oidc.refresh_access_token.RefreshAccessToken
-    kwargs: {}
   userinfo:
     class: oidcservice.oidc.userinfo.UserInfo
     kwargs: {}
@@ -97,6 +100,20 @@ clients:
         kwargs:
           code_challenge_length: 64
           code_challenge_method: S256
+  bobcat:
+    client_id: client3
+    client_secret: 2222222222222222222222222222222222222222
+    client_preferences: *id001
+    issuer: http://127.0.0.1:8080/
+    jwks_uri: 'static/jwks.json'
+    redirect_uris: ['https://{domain}:{port}/authz_cb/bobcat']
+    services: *id002
+    request_args:
+      claims:
+        id_token:
+          acr:
+            essential:
+              true
 
 
 webserver:
