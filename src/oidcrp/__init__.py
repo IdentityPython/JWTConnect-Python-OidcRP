@@ -13,6 +13,7 @@ from oidcmsg.oauth2 import is_error_message
 from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
+from oidcmsg.oidc import Claims
 from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.oidc import verified_claim_name
 from oidcmsg.oidc.session import BackChannelLogoutRequest
@@ -329,6 +330,7 @@ class RPHandler(object):
             if not user:
                 raise ValueError('Need issuer or user')
 
+            logger.debug("Connecting to previously unknown OP")
             temporary_client = self.init_client('')
             temporary_client.do_request('webfinger', resource=user)
         else:
@@ -340,10 +342,12 @@ class RPHandler(object):
             if temporary_client:
                 client = temporary_client
             else:
+                logger.debug("Creating new client: %s", iss_id)
                 client = self.init_client(iss_id)
         else:
             return client
 
+        logger.debug("Get provider info")
         issuer = self.do_provider_info(client)
         _sc = client.service_context
         try:
@@ -354,10 +358,18 @@ class RPHandler(object):
         else:
             registration_type = _fe.registration_type
 
-        if registration_type == 'implicit':
+        if registration_type == 'automatic':
             _sc.client_id = client.client_id = _fe.entity_id
-            _sc.redirect_uris = _sc.behaviour['redirect_uris']
-        else:
+            _redirect_uris = _sc.behaviour.get("redirect_uris")
+            if _redirect_uris:
+                _sc.redirect_uris = _redirect_uris
+            else:
+                _callbacks = self.create_callbacks(_sc.provider_info['issuer'])
+                _sc.redirect_uris = [
+                    v for k, v in _callbacks.items() if not k.startswith('__')]
+                _sc.callbacks = _callbacks
+        else: # explicit
+            logger.debug("Do client registration")
             self.do_client_registration(client, iss_id)
 
         self.issuer2rp[issuer] = client
@@ -410,6 +422,12 @@ class RPHandler(object):
             'response_type': service_context.behaviour['response_types'][0],
             'nonce': _nonce
         }
+
+        _req_args = service_context.config.get("request_args")
+        if _req_args:
+            if 'claims' in _req_args:
+                _req_args["claims"] = Claims(**_req_args["claims"])
+            request_args.update(_req_args)
 
         if req_args is not None:
             request_args.update(req_args)

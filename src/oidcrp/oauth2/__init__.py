@@ -1,4 +1,5 @@
 import logging
+from json import JSONDecodeError
 
 from cryptojwt.key_jar import KeyJar
 from oidcmsg.exception import FormatError
@@ -157,10 +158,10 @@ class Client(object):
 
         logger.debug(REQUEST_INFO.format(url, method, body, headers))
 
-        if has_method(service, "get_response"):
-            response = service.get_response(url, method, body, response_body_type, headers,
-                                            **kwargs)
-        else:
+        try:
+            response = service.get_response_ext(url, method, body, response_body_type, headers,
+                                                **kwargs)
+        except AttributeError:
             response = self.get_response(service, url, method, body, response_body_type, headers,
                                          **kwargs)
 
@@ -245,6 +246,8 @@ class Client(object):
                 else:
                     raise OidcServiceError("HTTP ERROR: %s [%s] on %s" % (
                         reqresp.text, reqresp.status_code, reqresp.url))
+            except JSONDecodeError: # So it's not JSON assume text then
+                err_resp = {'error': reqresp.text}
 
             err_resp['status_code'] = reqresp.status_code
             return err_resp
