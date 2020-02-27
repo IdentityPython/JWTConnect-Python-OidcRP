@@ -28,7 +28,7 @@ base_url: "https://{domain}:{port}"
 
 http_params:
   # This is just for testing an local usage. In all other cases it MUST be True
-  verify_ssl: false
+  verify: false
   # Client side
   #client_cert: "certs/client.crt"
   #client_key: "certs/client.key"
@@ -41,10 +41,10 @@ keydefs: &keydef
     "crv": "P-256"
     "use": ["sig"]
 
-html_home: 'html'
-secret_key: 'secret_key'
-session_cookie_name: 'rp_session'
-preferred_url_scheme: 'https'
+#html_home: 'html'
+#secret_key: 'secret_key'
+#session_cookie_name: 'rp_session'
+#preferred_url_scheme: 'https'
 
 rp_keys:
   'private_path': 'private/jwks.json'
