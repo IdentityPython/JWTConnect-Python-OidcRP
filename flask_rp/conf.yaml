@@ -41,11 +41,6 @@ keydefs: &keydef
     "crv": "P-256"
     "use": ["sig"]
 
-#html_home: 'html'
-#secret_key: 'secret_key'
-#session_cookie_name: 'rp_session'
-#preferred_url_scheme: 'https'
-
 rp_keys:
   'private_path': 'private/jwks.json'
   'key_defs': *keydef
@@ -98,7 +93,6 @@ clients:
   flop:
     client_preferences: *id001
     issuer: https://127.0.0.1:5000/
-    jwks_uri: 'static/jwks.json'
     redirect_uris:
       - 'https://{domain}:{port}/authz_cb/flop'
     post_logout_redirect_uris:
