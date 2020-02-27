@@ -290,6 +290,54 @@ def lower_or_upper(config, param, default=None):
     return res
 
 
+def replace(config, param, **kwargs):
+    lc_param = param.lower()
+    uc_param = None
+    res = config.get(lc_param)
+    if not res:
+        uc_param = param.upper()
+        res = config.get(uc_param)
+
+    if res:
+        if uc_param is not None:
+            del config[uc_param]
+
+        _keys = kwargs.keys()
+        if _keys:
+            # just grab one key
+            _key = list(_keys)[0]
+            if isinstance(res, list):
+                _lst = []
+                for _re in res:
+                    if "{{{}}}".format(_key) in _re:
+                        _lst.append(_re.format(**kwargs))
+                config[lc_param] = _lst
+            else:
+                if "{{{}}}".format(_key) in res:
+                    config[lc_param] = res.format(**kwargs)
+        else:
+            config[lc_param] = res
+
+
+def set_param(instance, config, param, **kwargs):
+    lc_param = param.lower()
+    res = config.get(lc_param)
+    if not res:
+        res = config.get(param.upper())
+
+    if res:
+        _keys = list(kwargs.keys())
+        if _keys:
+            # just grab one key
+            _key = list(kwargs.keys())[0]
+            if "{{{}}}".format(_key) in res:
+                setattr(instance, lc_param, res.format(**kwargs))
+            else:
+                setattr(instance, lc_param, res)
+        else:
+            setattr(instance, lc_param, res)
+
+
 def create_context(dir_path, config, **kwargs):
     _fname = lower_or_upper(config, "server_cert")
     if _fname:

@@ -6,6 +6,8 @@ from oidcrp.logging import configure_logging
 from oidcrp.util import get_http_params
 from oidcrp.util import load_yaml_config
 from oidcrp.util import lower_or_upper
+from oidcrp.util import replace
+from oidcrp.util import set_param
 
 try:
     from secrets import token_urlsafe as rnd_token
@@ -22,13 +24,9 @@ class Configuration:
         # server info
         self.domain = lower_or_upper(conf, "domain")
         self.port = lower_or_upper(conf, "port")
+        format_args = {'domain': self.domain, 'port': self.port}
         for param in ["server_name", "base_url"]:
-            _pre = lower_or_upper(conf, param)
-            if _pre:
-                if '{domain}' in _pre:
-                    setattr(self, param, _pre.format(domain=self.domain, port=self.port))
-                else:
-                    setattr(self, param, _pre)
+            set_param(self, conf, param, **format_args)
 
         # HTTP params
         _params = get_http_params(conf.get("http_params"))
@@ -42,7 +40,7 @@ class Configuration:
         # diverse
         for param in ["html_home", "session_cookie_name", "preferred_url_scheme",
                       "services", "federation"]:
-            setattr(self, param, lower_or_upper(conf, param))
+            set_param(self, conf, param)
 
         rp_keys_conf = lower_or_upper(conf, 'rp_keys')
         if rp_keys_conf is None:
@@ -53,16 +51,12 @@ class Configuration:
         for key, spec in _clients.items():
             if key == "":
                 continue
-            if not spec.get("redirect_uris"):
-                continue
+            # if not spec.get("redirect_uris"):
+            #     continue
 
-            _redirects = []
-            for _r in spec["redirect_uris"]:
-                if '{domain}' in _r:
-                    _redirects.append(_r.format(domain=self.domain, port=self.port))
-                else:
-                    _redirects.append(_r)
-            spec["redirect_uris"] = _redirects
+            for uri in ['redirect_uris', 'post_logout_redirect_uris','frontchannel_logout_uri',
+                        'backchannel_logout_uri']:
+                replace(spec, uri, **format_args)
 
         setattr(self, "clients", _clients)
 
