@@ -27,8 +27,8 @@
 </dl>
 
 {% if check_session_iframe is defined %}
-    <iframe id="rp_iframe" src={{ status_check_iframe }} hidden></iframe>
-    <iframe id="op_iframe" src={{ check_session_iframe }} hidden></iframe>
+    <iframe id="rp_iframe" src="{{ status_check_iframe }}" hidden></iframe>
+    <iframe id="op_iframe" src="{{ check_session_iframe }}" hidden></iframe>
 {% endif %}
 
 <input type="button" onclick="location.href='{{ logout_url }}'"
