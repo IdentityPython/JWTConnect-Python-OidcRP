@@ -77,7 +77,8 @@ class Client(object):
             do_add_ons(config['add_ons'], self.service)
 
         self.service_context.service = self.service
-        self.verify_ssl = verify_ssl
+        # just ignore verify_ssl until it goes away
+        self.verify_ssl = httpc_params["verify"]
 
     def do_request(self, request_type, response_body_type="", request_args=None,
                    **kwargs):
