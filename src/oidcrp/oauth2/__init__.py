@@ -53,6 +53,10 @@ class Client(object):
         """
 
         self.session_interface = StateInterface(state_db)
+
+        if httpc_params is None:
+            httpc_params = {"verify": True}
+
         self.http = httplib or HTTPLib(httpc_params)
 
         if not keyjar:
@@ -78,7 +82,7 @@ class Client(object):
 
         self.service_context.service = self.service
         # just ignore verify_ssl until it goes away
-        self.verify_ssl = httpc_params["verify"]
+        self.verify_ssl = httpc_params.get("verify", True)
 
     def do_request(self, request_type, response_body_type="", request_args=None,
                    **kwargs):
