@@ -127,14 +127,17 @@ def finalize(op_hash, request_args):
                 endpoints[endp] = v
 
         kwargs = {}
-        _chk_iframe = rp.service_context.provider_info.get('check_session_iframe')
-        if _chk_iframe:
-            kwargs['check_session_iframe'] = _chk_iframe
 
-        _status_iframe = rp.service_context.add_on.get('status_check')
-        if _status_iframe:
-            kwargs["status_check_iframe"] = _status_iframe
+        # Do I support session status checking ?
+        _status_check_info = rp.service_context.add_on.get('status_check')
+        if _status_check_info:
+            # Does the OP support session status checking ?
+            _chk_iframe = rp.service_context.provider_info.get('check_session_iframe')
+            if _chk_iframe:
+                kwargs['check_session_iframe'] = _chk_iframe
+                kwargs["status_check_iframe"] = _status_check_info['rp_iframe_path']
 
+        # Where to go if the user clicks on logout
         kwargs['logout_url'] = "{}/logout".format(rp.service_context.base_url)
 
         return render_template('opresult.html', endpoints=endpoints,
