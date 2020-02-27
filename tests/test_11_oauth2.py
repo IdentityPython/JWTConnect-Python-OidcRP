@@ -1,13 +1,10 @@
 import os
-import pytest
 import sys
 import time
 
-from cherrypy import HTTPError
-
+import pytest
 from cryptojwt.jwk.rsa import import_private_rsa_key_from_file
 from cryptojwt.key_bundle import KeyBundle
-
 from oidcmsg.oauth2 import AccessTokenRequest
 from oidcmsg.oauth2 import AccessTokenResponse
 from oidcmsg.oauth2 import AuthorizationRequest
@@ -27,7 +24,7 @@ _dirname = os.path.dirname(os.path.abspath(__file__))
 BASE_PATH = os.path.join(_dirname, "data", "keys")
 
 _key = import_private_rsa_key_from_file(os.path.join(BASE_PATH, "rsa.key"))
-KC_RSA = KeyBundle({"key": _key, "kty": "RSA", "use": "sig"})
+KC_RSA = KeyBundle({"priv_key": _key, "kty": "RSA", "use": "sig"})
 
 CLIENT_ID = "client_1"
 IDTOKEN = IdToken(iss="http://oidc.example.org/", sub="sub",
@@ -67,11 +64,13 @@ class TestClient(object):
         self.client = Client(DB(), config=conf)
 
     def test_construct_authorization_request(self):
-        req_args = {'state': 'ABCDE',
-                    'redirect_uri': 'https://example.com/auth_cb',
-                    'response_type': ['code']}
+        req_args = {
+            'state': 'ABCDE',
+            'redirect_uri': 'https://example.com/auth_cb',
+            'response_type': ['code']
+        }
 
-        self.client.session_interface.create_state('issuer',key='ABCDE')
+        self.client.session_interface.create_state('issuer', key='ABCDE')
         msg = self.client.service['authorization'].construct(
             request_args=req_args)
         assert isinstance(msg, AuthorizationRequest)
@@ -101,16 +100,17 @@ class TestClient(object):
             request_args=req_args, state='ABCDE')
 
         assert isinstance(msg, AccessTokenRequest)
-        assert msg.to_dict() == {'client_id': 'client_1',
-                                 'code': 'access_code',
-                                 'client_secret': 'abcdefghijklmnop',
-                                 'grant_type': 'authorization_code',
-                                 'redirect_uri':
-                                     'https://example.com/cli/authz_cb',
-                                 'state': 'ABCDE'}
+        assert msg.to_dict() == {
+            'client_id': 'client_1',
+            'code': 'access_code',
+            'client_secret': 'abcdefghijklmnop',
+            'grant_type': 'authorization_code',
+            'redirect_uri':
+                'https://example.com/cli/authz_cb',
+            'state': 'ABCDE'
+        }
 
     def test_construct_refresh_token_request(self):
-
         self.client.session_interface.create_state('issuer', 'ABCDE')
 
         auth_request = AuthorizationRequest(
@@ -140,7 +140,8 @@ class TestClient(object):
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
             'grant_type': 'refresh_token',
-            'refresh_token': 'refresh_with_me'}
+            'refresh_token': 'refresh_with_me'
+        }
 
     def test_error_response(self):
         err = ResponseMessage(error='Illegal')
@@ -167,4 +168,3 @@ class TestClient(object):
         with pytest.raises(OidcServiceError):
             self.client.parse_request_response(
                 self.client.service['authorization'], http_resp)
-

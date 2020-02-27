@@ -23,7 +23,7 @@ _dirname = os.path.dirname(os.path.abspath(__file__))
 BASE_PATH = os.path.join(_dirname, "data", "keys")
 
 _key = import_private_rsa_key_from_file(os.path.join(BASE_PATH, "rsa.key"))
-KC_RSA = KeyBundle({"key": _key, "kty": "RSA", "use": "sig"})
+KC_RSA = KeyBundle({"priv_key": _key, "kty": "RSA", "use": "sig"})
 
 CLIENT_ID = "client_1"
 IDTOKEN = IdToken(iss="http://oidc.example.org/", sub="sub",
