@@ -96,7 +96,7 @@ clients:
     redirect_uris:
       - 'https://{domain}:{port}/authz_cb/flop'
     post_logout_redirect_uris:
-      - "https://{domain}:{port}/session_logout"
+      - "https://{domain}:{port}/session_logout/flop"
     frontchannel_logout_uri: "https://{domain}:{port}/fc_logout/flop"
     frontchannel_logout_session_required: True
     backchannel_logout_uri: "https://{domain}:{port}/bc_logout/flop"
@@ -120,11 +120,13 @@ clients:
 #          rp_iframe_path: "templates/rp_iframe.html"
   bobcat:
     client_id: client3
-    client_secret: 2222222222222222222222222222222222222222
+    client_secret: 'abcdefghijklmnop'
     client_preferences: *id001
     issuer: http://127.0.0.1:8080/
     jwks_uri: 'static/jwks.json'
     redirect_uris: ['https://{domain}:{port}/authz_cb/bobcat']
+    post_logout_redirect_uris:
+      - "https://{domain}:{port}/session_logout/bobcat"
     services: *id002
     request_args:
       claims:

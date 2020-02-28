@@ -211,10 +211,11 @@ def session_change():
 
 
 # post_logout_redirect_uri
-@oidc_rp_views.route('/session_logout')
-def session_logout():
+@oidc_rp_views.route('/session_logout/<op_hash>')
+def session_logout(op_hash):
+    _rp = get_rp(op_hash)
     logger.debug('post_logout')
-    return "Post logout"
+    return "Post logout from {}".format(_rp.service_context.issuer)
 
 
 # RP initiated logout
