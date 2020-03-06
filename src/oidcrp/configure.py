@@ -24,7 +24,11 @@ class Configuration:
         # server info
         self.domain = lower_or_upper(conf, "domain")
         self.port = lower_or_upper(conf, "port")
-        format_args = {'domain': self.domain, 'port': self.port}
+        if self.port:
+            format_args = {'domain': self.domain, 'port': self.port}
+        else:
+            format_args = {'domain': self.domain, "port": ""}
+
         for param in ["server_name", "base_url"]:
             set_param(self, conf, param, **format_args)
 
@@ -48,22 +52,27 @@ class Configuration:
         setattr(self, "rp_keys", rp_keys_conf)
 
         _clients = lower_or_upper(conf, "clients")
-        for key, spec in _clients.items():
-            if key == "":
-                continue
-            # if not spec.get("redirect_uris"):
-            #     continue
+        if _clients:
+            for key, spec in _clients.items():
+                if key == "":
+                    continue
+                # if not spec.get("redirect_uris"):
+                #     continue
 
-            for uri in ['redirect_uris', 'post_logout_redirect_uris','frontchannel_logout_uri',
-                        'backchannel_logout_uri']:
-                replace(spec, uri, **format_args)
+                for uri in ['redirect_uris', 'post_logout_redirect_uris', 'frontchannel_logout_uri',
+                            'backchannel_logout_uri']:
+                    replace(spec, uri, **format_args)
 
-        setattr(self, "clients", _clients)
+            setattr(self, "clients", _clients)
 
         hash_seed = lower_or_upper(conf, 'hash_seed')
         if not hash_seed:
             hash_seed = rnd_token(32)
         setattr(self, "hash_seed", hash_seed)
+        self.load_extension(conf)
+
+    def load_extension(self, conf):
+        pass
 
     @classmethod
     def create_from_config_file(cls, filename: str):
