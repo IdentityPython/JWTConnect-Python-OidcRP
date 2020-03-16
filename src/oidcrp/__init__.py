@@ -924,7 +924,9 @@ def backchannel_logout(client, request='', request_args=None):
     kwargs = {
         'aud': client.service_context.client_id,
         'iss': client.service_context.issuer,
-        'keyjar': client.service_context.keyjar
+        'keyjar': client.service_context.keyjar,
+        'allowed_sign_alg': client.service_context.registration_response.get(
+            "id_token_signed_response_alg", "RS256")
     }
 
     try:
