@@ -359,10 +359,11 @@ class RPHandler(object):
             registration_type = _fe.registration_type
 
         if registration_type == 'automatic':
-            _redirect_uris = _sc.behaviour.get("redirect_uris")
+            _redirect_uris = _sc.config.get("redirect_uris")
             if _redirect_uris:
                 _sc.redirect_uris = _redirect_uris
                 _sc.client_id = client.client_id = add_path(_fe.entity_id, iss_id)
+                self.hash2issuer[iss_id] = issuer
             else:
                 _callbacks = self.create_callbacks(_sc.provider_info['issuer'])
                 _sc.redirect_uris = [
