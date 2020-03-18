@@ -202,7 +202,7 @@ def iss_id(iss):
 class TestRPHandler(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
-        self.rph = RPHandler(BASE_URL, CLIENT_CONFIG,
+        self.rph = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
                              keyjar=CLI_KEY, module_dirs=['oidc'])
 
     def test_pick_config(self):

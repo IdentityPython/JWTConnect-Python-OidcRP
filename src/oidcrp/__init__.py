@@ -181,10 +181,12 @@ class RPHandler(object):
         else:
             self.keyjar = keyjar
 
-        try:
+        if _jwks_path:
             self.jwks_uri = add_path(base_url, _jwks_path)
-        except KeyError:
+        else:
             self.jwks_uri = ""
+            if self.keyjar:
+                self.jwks = self.keyjar.export_jwks()
 
         if state_db:
             self.state_db = state_db
