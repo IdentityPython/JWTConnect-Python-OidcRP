@@ -88,10 +88,9 @@ if __name__ == '__main__':
     else:
         _verify_ssl = True
 
-    rph = RPHandler(base_url=_base_url, hash_seed="BabyHoldOn", keyjar=_kj,
-                    jwks_path=config.PUBLIC_JWKS_PATH,
-                    client_configs=config.CLIENTS,
-                    services=config.SERVICES, verify_ssl=_verify_ssl)
+    rph = RPHandler(_base_url, config.CLIENTS, services=config.SERVICES,
+                    hash_seed="BabyHoldOn", keyjar=_kj, jwks_path=config.PUBLIC_JWKS_PATH,
+                    verify_ssl=_verify_ssl)
 
     cherrypy.tree.mount(cprp.Consumer(rph, 'html'), '/', provider_config)
 

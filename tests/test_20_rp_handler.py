@@ -202,7 +202,7 @@ def iss_id(iss):
 class TestRPHandler(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
-        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG,
+        self.rph = RPHandler(BASE_URL, CLIENT_CONFIG,
                              keyjar=CLI_KEY, module_dirs=['oidc'])
 
     def test_pick_config(self):
@@ -303,25 +303,15 @@ class TestRPHandler(object):
         cb = self.rph.create_callbacks('https://op.example.com/')
 
         assert set(cb.keys()) == {'code', 'implicit', 'form_post', '__hex'}
-        assert cb == {
-            'code': 'https://example.com/rp/authz_cb'
-                    '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
-            'implicit':
-                'https://example.com/rp/authz_im_cb'
-                '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
-            'form_post':
-                'https://example.com/rp/authz_fp_cb'
-                '/7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d',
-            '__hex':
-                '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
-        }
+        _hash = cb['__hex']
 
-        assert list(self.rph.hash2issuer.keys()) == [
-            '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d']
+        assert cb['code'] == 'https://example.com/rp/authz_cb/{}'.format(_hash)
+        assert cb['implicit'] == 'https://example.com/rp/authz_im_cb/{}'.format(_hash)
+        assert cb['form_post'] == 'https://example.com/rp/authz_fp_cb/{}'.format(_hash)
 
-        assert self.rph.hash2issuer[
-                   '7f729285244adafbf5412e06b097e0e1f92049bfc432fed0a13cbcb5661b137d'
-               ] == 'https://op.example.com/'
+        assert list(self.rph.hash2issuer.keys()) == [_hash]
+
+        assert self.rph.hash2issuer[_hash] == 'https://op.example.com/'
 
     def test_begin(self):
         res = self.rph.begin(issuer_id='github')
@@ -615,8 +605,7 @@ def test_get_provider_specific_service():
 class TestRPHandlerTier2(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self, httpserver):
-        self.rph = RPHandler(base_url=BASE_URL, client_configs=CLIENT_CONFIG,
-                             keyjar=CLI_KEY)
+        self.rph = RPHandler(BASE_URL, CLIENT_CONFIG, keyjar=CLI_KEY)
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -800,8 +789,7 @@ class TestRPHandlerWithMockOP(object):
     def rphandler_setup(self):
         self.issuer = 'https://github.com/login/oauth/authorize'
         self.mock_op = MockOP(issuer=self.issuer)
-        self.rph = RPHandler(
-            base_url=BASE_URL, client_configs=CLIENT_CONFIG,
+        self.rph = RPHandler(BASE_URL, CLIENT_CONFIG,
             http_lib=self.mock_op, keyjar=KeyJar())
 
     def test_finalize(self):

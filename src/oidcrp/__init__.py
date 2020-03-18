@@ -4,6 +4,7 @@ import sys
 import traceback
 
 from cryptojwt.key_bundle import keybundle_from_local_file
+from cryptojwt.key_jar import init_key_jar
 from cryptojwt.utils import as_bytes
 from cryptojwt.utils import as_unicode
 from oidcmsg.exception import MessageException
@@ -53,6 +54,53 @@ def token_secret_key(sid):
 
 SERVICE_NAME = "OIC"
 CLIENT_CONFIG = {}
+
+DEFAULT_SEVICES = {
+    'web_finger': {'class': 'oidcservice.oidc.webfinger.WebFinger'},
+    'discovery': {'class': 'oidcservice.oidc.provider_info_discovery.ProviderInfoDiscovery'},
+    'registration': {'class': 'oidcservice.oidc.registration.Registration'},
+    'authorization': {'class': 'oidcservice.oidc.authorization.Authorization'},
+    'access_token': {'class': 'oidcservice.oidc.access_token.AccessToken'},
+    'refresh_access_token': {'class': 'oidcservice.oidc.refresh_access_token.RefreshAccessToken'},
+    'userinfo': {'class': 'oidcservice.oidc.userinfo.UserInfo'}
+}
+
+DEFAULT_CLIENT_PREFS = {
+    'application_type': 'web',
+    'application_name': 'rphandler',
+    'response_types': ['code', 'id_token', 'id_token token', 'code id_token', 'code id_token token',
+                       'code token'],
+    'scope': ['openid'],
+    'token_endpoint_auth_method': 'client_secret_basic'
+}
+
+# Using PKCE is default
+DEFAULT_CLIENT_CONFIGS = {
+    "": {
+        "client_preferences": DEFAULT_CLIENT_PREFS,
+        "add_ons": {
+            "pkce": {
+                "function": "oidcservice.oidc.add_on.pkce.add_pkce_support",
+                "kwargs": {
+                    "code_challenge_length": 64,
+                    "code_challenge_method": "S256"
+                }
+            }
+        }
+    }
+}
+
+DEFAULT_KEY_DEFS = [
+    {"type": "RSA", "use": ["sig"]},
+    {"type": "EC", "crv": "P-256", "use": ["sig"]},
+]
+
+DEFAULT_RP_KEY_DEFS = {
+    'private_path': 'private/jwks.json',
+    'key_defs': DEFAULT_KEY_DEFS,
+    'public_path': 'static/jwks.json',
+    'read_only': False
+}
 
 
 def add_path(url, path):
@@ -113,14 +161,30 @@ def dynamic_provider_info_discovery(client):
 
 
 class RPHandler(object):
-    def __init__(self, base_url='', hash_seed="", keyjar=None, verify_ssl=True,
-                 services=None, client_configs=None, client_authn_factory=None,
+    def __init__(self, base_url, client_configs=None, services=None, keyjar=None,
+                 hash_seed="", verify_ssl=True, client_authn_factory=None,
                  client_cls=None, state_db=None, http_lib=None, httpc_params=None,
                  **kwargs):
 
         self.base_url = base_url
-        self.hash_seed = as_bytes(hash_seed)
-        self.keyjar = keyjar
+        if hash_seed:
+            self.hash_seed = as_bytes(hash_seed)
+        else:
+            self.hash_seed = as_bytes(rndstr(32))
+
+        _jwks_path = kwargs.get('jwks_path')
+        if keyjar is None:
+            self.keyjar = init_key_jar(**DEFAULT_RP_KEY_DEFS, owner='')
+            self.keyjar.import_jwks_as_json(self.keyjar.export_jwks_as_json(True, ''), base_url)
+            if _jwks_path is None:
+                _jwks_path = DEFAULT_RP_KEY_DEFS['public_path']
+        else:
+            self.keyjar = keyjar
+
+        try:
+            self.jwks_uri = add_path(base_url, _jwks_path)
+        except KeyError:
+            self.jwks_uri = ""
 
         if state_db:
             self.state_db = state_db
@@ -129,22 +193,26 @@ class RPHandler(object):
 
         self.session_interface = StateInterface(self.state_db)
 
-        try:
-            self.jwks_uri = add_path(base_url, kwargs['jwks_path'])
-        except KeyError:
-            self.jwks_uri = ""
-
         self.extra = kwargs
 
         self.client_cls = client_cls or oidc.RP
-        self.services = services
+        if services is None:
+            self.services = DEFAULT_SEVICES
+        else:
+            self.services = services
+
         self.client_authn_factory = client_authn_factory
-        self.client_configs = client_configs
+
+        if client_configs is None:
+            self.client_configs = DEFAULT_CLIENT_CONFIGS
+        else:
+            self.client_configs = client_configs
 
         # keep track on which RP instance that serves with OP
         self.issuer2rp = {}
         self.hash2issuer = {}
         self.httplib = http_lib
+
         if not httpc_params:
             self.httpc_params = {'verify': verify_ssl}
         else:
@@ -193,7 +261,12 @@ class RPHandler(object):
         :param issuer: An issuer ID
         :return: A Client instance
         """
-        _cnf = self.pick_config(issuer)
+        try:
+            _cnf = self.pick_config(issuer)
+        except KeyError:
+            _cnf = self.pick_config('')
+            _cnf['issuer'] = issuer
+
         try:
             _services = _cnf['services']
         except KeyError:
@@ -310,6 +383,13 @@ class RPHandler(object):
         if not client.service_context.client_id:
             load_registration_response(client)
 
+    def add_callbacks(self, service_context):
+        _callbacks = self.create_callbacks(service_context.provider_info['issuer'])
+        service_context.redirect_uris = [
+            v for k, v in _callbacks.items() if not k.startswith('__')]
+        service_context.callbacks = _callbacks
+        return _callbacks
+
     def client_setup(self, iss_id='', user=''):
         """
         First if no issuer ID is given then the identifier for the user is
@@ -365,10 +445,7 @@ class RPHandler(object):
                 _sc.client_id = client.client_id = add_path(_fe.entity_id, iss_id)
                 self.hash2issuer[iss_id] = issuer
             else:
-                _callbacks = self.create_callbacks(_sc.provider_info['issuer'])
-                _sc.redirect_uris = [
-                    v for k, v in _callbacks.items() if not k.startswith('__')]
-                _sc.callbacks = _callbacks
+                _callbacks = self.add_callbacks(_sc)
                 _sc.client_id = client.client_id = add_path(_fe.entity_id, _callbacks['__hex'])
         else:  # explicit
             logger.debug("Do client registration")
