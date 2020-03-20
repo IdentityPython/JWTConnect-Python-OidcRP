@@ -789,7 +789,7 @@ class TestRPHandlerWithMockOP(object):
     def rphandler_setup(self):
         self.issuer = 'https://github.com/login/oauth/authorize'
         self.mock_op = MockOP(issuer=self.issuer)
-        self.rph = RPHandler(BASE_URL, CLIENT_CONFIG,
+        self.rph = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
             http_lib=self.mock_op, keyjar=KeyJar())
 
     def test_finalize(self):
