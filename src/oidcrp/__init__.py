@@ -185,8 +185,10 @@ class RPHandler(object):
             self.jwks_uri = add_path(base_url, _jwks_path)
         else:
             self.jwks_uri = ""
-            if self.keyjar:
+            if len(self.keyjar):
                 self.jwks = self.keyjar.export_jwks()
+            else:
+                self.jwks = {}
 
         if state_db:
             self.state_db = state_db
