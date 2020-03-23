@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from urllib.parse import urlsplit
 
 import pytest
+import responses
 from cryptojwt.key_jar import KeyJar
 from cryptojwt.key_jar import init_key_jar
 from oidcmsg.oidc import AccessTokenResponse
@@ -115,11 +116,11 @@ CLIENT_CONFIG = {
             },
             'access_token': {
                 'class': 'oidcservice.oidc.access_token.AccessToken',
-                'kwargs': {'conf':{'default_authn_method': ''}}
+                'kwargs': {'conf': {'default_authn_method': ''}}
             },
             'userinfo': {
                 'class': 'oidcservice.oidc.userinfo.UserInfo',
-                'kwargs': {'conf':{'default_authn_method': ''}}
+                'kwargs': {'conf': {'default_authn_method': ''}}
             }
         }
     },
@@ -150,7 +151,7 @@ CLIENT_CONFIG = {
             },
             'userinfo': {
                 'class': 'oidcservice.oidc.userinfo.UserInfo',
-                'kwargs': {'conf':{'default_authn_method': ''}}
+                'kwargs': {'conf': {'default_authn_method': ''}}
             },
             'refresh_access_token': {
                 'class': 'oidcservice.oidc.refresh_access_token'
@@ -386,7 +387,7 @@ class TestRPHandler(object):
                                                         'token_endpoint')
         assert authn_method == 'client_secret_post'
 
-    def test_get_access_token(self, httpserver):
+    def test_get_access_token(self):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -414,28 +415,71 @@ class TestRPHandler(object):
         }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json(),
-                                 headers={'Content-Type': 'application/json'})
-        client.service['accesstoken'].endpoint = httpserver.url
+        _url = "https://github.com/token"
+        with responses.RequestsMock() as rsps:
+            rsps.add("POST", _url, body=at.to_json(),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+            client.service['accesstoken'].endpoint = _url
 
-        auth_response = AuthorizationResponse(code='access_code',
+            auth_response = AuthorizationResponse(code='access_code',
+                                                  state=res['state'])
+            resp = self.rph.finalize_auth(client, _session['iss'],
+                                          auth_response.to_dict())
+
+            resp = self.rph.get_access_token(res['state'], client)
+            assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
+                                        'token_type', '__verified_id_token',
+                                        '__expires_at'}
+
+            atresp = client.service['accesstoken'].get_item(AccessTokenResponse,
+                                                            'token_response',
+                                                            res['state'])
+            assert set(atresp.keys()) == {'access_token', 'expires_in', 'id_token',
+                                          'token_type', '__verified_id_token',
+                                          '__expires_at'}
+
+    def test_access_and_id_token(self):
+        res = self.rph.begin(issuer_id='github')
+        _session = self.rph.get_session_information(res['state'])
+        client = self.rph.issuer2rp[_session['iss']]
+        _nonce = _session['auth_request']['nonce']
+        _iss = _session['iss']
+        _aud = client.client_id
+        idval = {
+            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
+            'aud': _aud
+        }
+
+        _github_id = iss_id('github')
+        client.service_context.keyjar.import_jwks(
+            GITHUB_KEY.export_jwks(issuer=_github_id), _github_id)
+
+        idts = IdToken(**idval)
+        _signed_jwt = idts.to_jwt(
+            key=GITHUB_KEY.get_signing_key('rsa', owner=_github_id),
+            algorithm="RS256", lifetime=300)
+
+        _info = {
+            "access_token": "accessTok", "id_token": _signed_jwt,
+            "token_type": "Bearer", "expires_in": 3600
+        }
+
+        at = AccessTokenResponse(**_info)
+        _url = "https://github.com/token"
+        with responses.RequestsMock() as rsps:
+            rsps.add("POST", _url, body=at.to_json(),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+            client.service['accesstoken'].endpoint = _url
+
+            _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
-        resp = self.rph.finalize_auth(client, _session['iss'],
-                                      auth_response.to_dict())
+            auth_response = self.rph.finalize_auth(client, _session['iss'],
+                                                   _response.to_dict())
+            resp = self.rph.get_access_and_id_token(auth_response, client=client)
+            assert resp['access_token'] == 'accessTok'
+            assert isinstance(resp['id_token'], IdToken)
 
-        resp = self.rph.get_access_token(res['state'], client)
-        assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
-                                    'token_type', '__verified_id_token',
-                                    '__expires_at'}
-
-        atresp = client.service['accesstoken'].get_item(AccessTokenResponse,
-                                                        'token_response',
-                                                        res['state'])
-        assert set(atresp.keys()) == {'access_token', 'expires_in', 'id_token',
-                                      'token_type', '__verified_id_token',
-                                      '__expires_at'}
-
-    def test_access_and_id_token(self, httpserver):
+    def test_access_and_id_token_by_reference(self):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -462,19 +506,21 @@ class TestRPHandler(object):
         }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json(),
-                                 headers={'Content-Type': 'application/json'})
-        client.service['accesstoken'].endpoint = httpserver.url
+        _url = "https://github.com/token"
+        with responses.RequestsMock() as rsps:
+            rsps.add("POST", _url, body=at.to_json(),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+            client.service['accesstoken'].endpoint = _url
 
-        _response = AuthorizationResponse(code='access_code',
-                                          state=res['state'])
-        auth_response = self.rph.finalize_auth(client, _session['iss'],
-                                               _response.to_dict())
-        resp = self.rph.get_access_and_id_token(auth_response, client=client)
-        assert resp['access_token'] == 'accessTok'
-        assert isinstance(resp['id_token'], IdToken)
+            _response = AuthorizationResponse(code='access_code',
+                                              state=res['state'])
+            _ = self.rph.finalize_auth(client, _session['iss'],
+                                       _response.to_dict())
+            resp = self.rph.get_access_and_id_token(state=res['state'])
+            assert resp['access_token'] == 'accessTok'
+            assert isinstance(resp['id_token'], IdToken)
 
-    def test_access_and_id_token_by_reference(self, httpserver):
+    def test_get_user_info(self):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -501,64 +547,29 @@ class TestRPHandler(object):
         }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json(),
-                                 headers={'Content-Type': 'application/json'})
-        client.service['accesstoken'].endpoint = httpserver.url
+        _url = "https://github.com/token"
+        with responses.RequestsMock() as rsps:
+            rsps.add("POST", _url, body=at.to_json(),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+            client.service['accesstoken'].endpoint = _url
 
-        _response = AuthorizationResponse(code='access_code',
-                                          state=res['state'])
-        auth_response = self.rph.finalize_auth(client, _session['iss'],
-                                               _response.to_dict())
-        resp = self.rph.get_access_and_id_token(state=res['state'])
-        assert resp['access_token'] == 'accessTok'
-        assert isinstance(resp['id_token'], IdToken)
+            _response = AuthorizationResponse(code='access_code',
+                                              state=res['state'])
+            auth_response = self.rph.finalize_auth(client, _session['iss'],
+                                                   _response.to_dict())
 
-    def test_get_user_info(self, httpserver):
-        res = self.rph.begin(issuer_id='github')
-        _session = self.rph.get_session_information(res['state'])
-        client = self.rph.issuer2rp[_session['iss']]
-        _nonce = _session['auth_request']['nonce']
-        _iss = _session['iss']
-        _aud = client.client_id
-        idval = {
-            'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
-            'aud': _aud
-        }
+            token_resp = self.rph.get_access_and_id_token(auth_response,
+                                                          client=client)
 
-        _github_id = iss_id('github')
-        client.service_context.keyjar.import_jwks(
-            GITHUB_KEY.export_jwks(issuer=_github_id), _github_id)
+        _url = "https://github.com/user_info"
+        with responses.RequestsMock() as rsps:
+            rsps.add("GET", _url, body='{"sub":"EndUserSubject"}',
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+            client.service['userinfo'].endpoint = _url
 
-        idts = IdToken(**idval)
-        _signed_jwt = idts.to_jwt(
-            key=GITHUB_KEY.get_signing_key('rsa', owner=_github_id),
-            algorithm="RS256", lifetime=300)
-
-        _info = {
-            "access_token": "accessTok", "id_token": _signed_jwt,
-            "token_type": "Bearer", "expires_in": 3600
-        }
-
-        at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json(),
-                                 headers={'Content-Type': 'application/json'})
-        client.service['accesstoken'].endpoint = httpserver.url
-
-        _response = AuthorizationResponse(code='access_code',
-                                          state=res['state'])
-        auth_response = self.rph.finalize_auth(client, _session['iss'],
-                                               _response.to_dict())
-
-        token_resp = self.rph.get_access_and_id_token(auth_response,
-                                                      client=client)
-
-        httpserver.serve_content('{"sub":"EndUserSubject"}',
-                                 headers={'Content-Type': 'application/json'})
-        client.service['userinfo'].endpoint = httpserver.url
-
-        userinfo_resp = self.rph.get_user_info(res['state'], client,
-                                               token_resp['access_token'])
-        assert userinfo_resp
+            userinfo_resp = self.rph.get_user_info(res['state'], client,
+                                                   token_resp['access_token'])
+            assert userinfo_resp
 
     def test_userinfo_in_id_token(self):
         res = self.rph.begin(issuer_id='github')
@@ -604,7 +615,7 @@ def test_get_provider_specific_service():
 
 class TestRPHandlerTier2(object):
     @pytest.fixture(autouse=True)
-    def rphandler_setup(self, httpserver):
+    def rphandler_setup(self):
         self.rph = RPHandler(BASE_URL, CLIENT_CONFIG, keyjar=CLI_KEY)
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
@@ -633,25 +644,30 @@ class TestRPHandlerTier2(object):
         }
 
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json(),
-                                 headers={'Content-Type': 'application/json'})
-        client.service['accesstoken'].endpoint = httpserver.url
+        _url = "https://github.com/token"
+        with responses.RequestsMock() as rsps:
+            rsps.add("POST", _url, body=at.to_json(),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
 
-        _response = AuthorizationResponse(code='access_code',
-                                          state=res['state'])
-        auth_response = self.rph.finalize_auth(client, _session['iss'],
-                                               _response.to_dict())
+            client.service['accesstoken'].endpoint = _url
 
-        token_resp = self.rph.get_access_and_id_token(auth_response,
-                                                      client=client)
+            _response = AuthorizationResponse(code='access_code',
+                                              state=res['state'])
+            auth_response = self.rph.finalize_auth(client, _session['iss'],
+                                                   _response.to_dict())
 
-        httpserver.serve_content('{"sub":"EndUserSubject"}',
-                                 headers={'Content-Type': 'application/json'})
-        client.service['userinfo'].endpoint = httpserver.url
+            token_resp = self.rph.get_access_and_id_token(auth_response,
+                                                          client=client)
 
-        self.rph.get_user_info(res['state'], client,
-                               token_resp['access_token'])
-        self.state = res['state']
+        _url = "https://github.com/token"
+        with responses.RequestsMock() as rsps:
+            rsps.add("GET", _url, body='{"sub":"EndUserSubject"}',
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+
+            client.service['userinfo'].endpoint = _url
+            self.rph.get_user_info(res['state'], client,
+                                   token_resp['access_token'])
+            self.state = res['state']
 
     def test_init_authorization(self):
         _session = self.rph.get_session_information(self.state)
@@ -662,7 +678,7 @@ class TestRPHandlerTier2(object):
         _qp = parse_qs(part.query)
         assert _qp['scope'] == ['openid email']
 
-    def test_refresh_access_token(self, httpserver):
+    def test_refresh_access_token(self):
         _session = self.rph.get_session_information(self.state)
         client = self.rph.issuer2rp[_session['iss']]
 
@@ -671,26 +687,28 @@ class TestRPHandlerTier2(object):
             "token_type": "Bearer", "expires_in": 3600
         }
         at = AccessTokenResponse(**_info)
-        httpserver.serve_content(at.to_json(),
-                                 headers={'Content-Type': 'application/json'})
-        client.service['refresh_token'].endpoint = httpserver.url
+        _url = "https://github.com/token"
+        with responses.RequestsMock() as rsps:
+            rsps.add("POST", _url, body=at.to_json(),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
 
-        res = self.rph.refresh_access_token(self.state, client,
-                                            'openid email')
-        assert res['access_token'] == '2nd_accessTok'
+            client.service['refresh_token'].endpoint = _url
+            res = self.rph.refresh_access_token(self.state, client, 'openid email')
+            assert res['access_token'] == '2nd_accessTok'
 
-    def test_get_user_info(self, httpserver):
+    def test_get_user_info(self):
         _session = self.rph.get_session_information(self.state)
         client = self.rph.issuer2rp[_session['iss']]
 
-        httpserver.serve_content(
-            '{"sub":"EndUserSubject", "mail":"foo@example.com"}',
-            headers={'Content-Type': 'application/json'})
-        client.service['userinfo'].endpoint = httpserver.url
+        _url = "https://github.com/userinfo"
+        with responses.RequestsMock() as rsps:
+            rsps.add("GET", _url, body='{"sub":"EndUserSubject", "mail":"foo@example.com"}',
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+            client.service['userinfo'].endpoint = _url
 
-        resp = self.rph.get_user_info(self.state, client)
-        assert set(resp.keys()) == {'sub', 'mail'}
-        assert resp['mail'] == 'foo@example.com'
+            resp = self.rph.get_user_info(self.state, client)
+            assert set(resp.keys()) == {'sub', 'mail'}
+            assert resp['mail'] == 'foo@example.com'
 
     def test_has_active_authentication(self):
         assert self.rph.has_active_authentication(self.state)
@@ -790,7 +808,7 @@ class TestRPHandlerWithMockOP(object):
         self.issuer = 'https://github.com/login/oauth/authorize'
         self.mock_op = MockOP(issuer=self.issuer)
         self.rph = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
-            http_lib=self.mock_op, keyjar=KeyJar())
+                             http_lib=self.mock_op, keyjar=KeyJar())
 
     def test_finalize(self):
         auth_query = self.rph.begin(issuer_id='github')

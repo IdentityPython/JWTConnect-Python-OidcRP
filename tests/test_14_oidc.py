@@ -4,6 +4,7 @@ import sys
 import time
 
 import pytest
+import responses
 from cryptojwt.jwk.rsa import import_private_rsa_key_from_file
 from cryptojwt.key_bundle import KeyBundle
 from oidcmsg.oauth2 import AccessTokenRequest
@@ -158,9 +159,8 @@ class TestClient(object):
         assert _info['headers'] == {'Authorization': 'Bearer access'}
         assert _info['url'] == 'https://example.com/userinfo'
 
-    def test_fetch_distributed_claims_1(self, httpserver):
-        _url = httpserver.url
-
+    def test_fetch_distributed_claims_1(self):
+        _url = "https://example.com/claims.json"
         # split the example in 5.6.2.2 into two
         uinfo = OpenIDSchema(**{
             "sub": 'jane_doe',
@@ -182,7 +182,7 @@ class TestClient(object):
         })
 
         # Wrong set of claims. Actually extra claim
-        httpserver.serve_content(json.dumps({
+        _info = {
             "shipping_address": {
                 "street_address": "1234 Hollywood Blvd.",
                 "locality": "Los Angeles",
@@ -192,16 +192,20 @@ class TestClient(object):
             },
             "payment_info": "Some_Card 1234 5678 9012 3456",
             "phone_number": "+1 (310) 123-4567"
-        }))
+        }
 
-        res = self.client.fetch_distributed_claims(uinfo)
+        with responses.RequestsMock() as rsps:
+            rsps.add("GET", _url, body=json.dumps(_info),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+
+            res = self.client.fetch_distributed_claims(uinfo)
 
         assert 'payment_info' in res
         assert 'shipping_address' in res
         assert 'phone_number' not in res
 
-    def test_fetch_distributed_claims_2(self, httpserver):
-        _url = httpserver.url
+    def test_fetch_distributed_claims_2(self):
+        _url = "https://example.com/claims.json"
 
         uinfo = OpenIDSchema(**{
             "sub": 'jane_doe',
@@ -222,16 +226,20 @@ class TestClient(object):
             }
         })
 
-        httpserver.serve_content(json.dumps({
+        _claims = {
             "credit_score": 650
-        }))
+        }
 
-        res = self.client.fetch_distributed_claims(uinfo)
+        with responses.RequestsMock() as rsps:
+            rsps.add("GET", _url, body=json.dumps(_claims),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+
+            res = self.client.fetch_distributed_claims(uinfo)
 
         assert 'credit_score' in res
 
     def test_fetch_distributed_claims_3(self, httpserver):
-        _url = httpserver.url
+        _url = "https://example.com/claims.json"
 
         uinfo = OpenIDSchema(**{
             "sub": 'jane_doe',
@@ -251,11 +259,13 @@ class TestClient(object):
             }
         })
 
-        httpserver.serve_content(json.dumps({
-            "credit_score": 650
-        }))
+        _claims = {"credit_score": 650}
 
-        res = self.client.fetch_distributed_claims(
-            uinfo, callback=access_token_callback)
+        with responses.RequestsMock() as rsps:
+            rsps.add("GET", _url, body=json.dumps(_claims),
+                     adding_headers={"Content-Type": "application/json"}, status=200)
+
+            res = self.client.fetch_distributed_claims(
+                uinfo, callback=access_token_callback)
 
         assert 'credit_score' in res
