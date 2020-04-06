@@ -266,11 +266,57 @@ RP configuration
 As you may have guessed by now a lot of the work you have to do to use this
 packages lies in the RP configuration.
 
-The configuration parameters fall into 2 groups, one about the RP/client and
-the other about the OP/AS
+The configuration parameters fall into 2 groups, one general that is the
+same for all RP/clients and one which is specific for a specific
+OP/AS
 
-RP configuration parameters
----------------------------
+General RP configuration parameters
+-----------------------------------
+
+Among the general parameters you have to define:
+
+port
+    Which port the RP is listening on
+
+domain
+    The domain the RP belongs to
+
+these 2 together then defines the base_url. which is normally defined as::
+
+    base_url: "https://{domain}:{port}"
+
+
+logging
+    How the process should log
+
+http_params
+    Defines how the process performs HTTP requests to other entities.
+    Parameters here are typically **verify** which controls whether the http
+    client will verify the server TLS certificate or not.
+    Other parameters are **client_cert**/**client_key** which are needed only
+    if you expect the TLS server to ask for the clients TLS certificate.
+    Something that happens if you run in an environment where mutual TLS is
+    expected.
+
+rp_keys
+    Definition of the private keys that all RPs are going to use in the OIDC
+    protocol exchange.
+
+jwks_uri
+    Where the OP/AS can find the RPs public keys
+
+There might be other parameters that you need dependent on which web framework
+you chose to use.
+
+OP/AS specific configuration parameters
+---------------------------------------
+
+The client configuration is keyed to an OP/AS name. This name should
+be something human readable it does not have to in anyway be linked to the
+issuer ID of the OP/AS.
+
+The key **""** (the empty string) is chosen to represent all OP/ASs that
+are dynamically discovered.
 
 Disregarding if doing everything dynamically or statically you **MUST**
 define which services the RP/Client should be able to use.
@@ -291,29 +337,10 @@ redirect_uris
     A set of URLs from which the RP can chose one to be added to the
     authorization request. The expectation is that the OP/AS will redirect
     the use back to this URL after the authorization/authentication has
-    completed.
-
-behavior
-    Information about how the RP should behave towards the OP/AS
-
-keys
-    If the OP doesn't support dynamic provider discovery it may still want to
-    have a way of distributing keys that allows it to rotate them at anytime.
-    To accomplish this some providers have choosen to publish a URL to where
-    you can find their OPs key material in the form of a JWKS.
-
-    Usage example::
-
-        'keys': {'url': {<issuer_id> : <jwks_url>}}
-
-
-If the provider info discovery is done dynamically you need this
+    completed. These URLs should be OP/AS specific.
 
 client_preferences
     How the RP should prefer to behave against the OP/AS
-
-OP configuration parameters
----------------------------
 
 issuer
     The Issuer ID of the OP.

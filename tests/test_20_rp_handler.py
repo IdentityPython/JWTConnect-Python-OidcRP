@@ -29,7 +29,8 @@ CLIENT_PREFS = {
     "response_types": ["code", "id_token", "id_token token", "code id_token",
                        "code id_token token", "code token"],
     "scope": ["openid", "profile", "email", "address", "phone"],
-    "token_endpoint_auth_method": "client_secret_basic"
+    "token_endpoint_auth_method": "client_secret_basic",
+    "verify_args": {"allow_sign_alg_none": True}
 }
 
 CLIENT_CONFIG = {
@@ -132,7 +133,8 @@ CLIENT_CONFIG = {
         "behaviour": {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
-            "token_endpoint_auth_method": ''
+            "token_endpoint_auth_method": '',
+            "verify_args": {"allow_sign_alg_none": True}
         },
         "provider_info": {
             "authorization_endpoint":
@@ -238,7 +240,8 @@ class TestRPHandler(object):
         assert _context.behaviour == {
             "response_types": ["code"],
             "scope": ["user", "public_repo"],
-            "token_endpoint_auth_method": ''
+            "token_endpoint_auth_method": '',
+            'verify_args': {'allow_sign_alg_none': True}
         }
 
         _github_id = iss_id('github')
