@@ -60,7 +60,7 @@ class Configuration:
                 #     continue
 
                 for uri in ['redirect_uris', 'post_logout_redirect_uris', 'frontchannel_logout_uri',
-                            'backchannel_logout_uri']:
+                            'backchannel_logout_uri', 'issuer']:
                     replace(spec, uri, **format_args)
 
             setattr(self, "clients", _clients)
