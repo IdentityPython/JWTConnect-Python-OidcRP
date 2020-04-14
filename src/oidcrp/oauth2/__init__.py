@@ -128,16 +128,17 @@ class Client(object):
         if 300 <= resp.status_code < 400:
             return {'http_response': resp}
 
-        if "keyjar" not in kwargs:
-            kwargs["keyjar"] = service.service_context.keyjar
-        if not response_body_type:
-            response_body_type = service.response_body_type
+        if resp.status_code < 300:
+            if "keyjar" not in kwargs:
+                kwargs["keyjar"] = service.service_context.keyjar
+            if not response_body_type:
+                response_body_type = service.response_body_type
 
-        if response_body_type == 'html':
-            return resp.text
+            if response_body_type == 'html':
+                return resp.text
 
-        if body:
-            kwargs['request_body'] = body
+            if body:
+                kwargs['request_body'] = body
 
         return self.parse_request_response(service, resp,
                                            response_body_type, **kwargs)
