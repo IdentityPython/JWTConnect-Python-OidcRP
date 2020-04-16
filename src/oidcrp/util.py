@@ -2,6 +2,7 @@ import importlib
 import io
 import json
 import logging
+import os
 import ssl
 import sys
 from http.cookiejar import Cookie
@@ -341,12 +342,19 @@ def set_param(instance, config, param, **kwargs):
 def create_context(dir_path, config, **kwargs):
     _fname = lower_or_upper(config, "server_cert")
     if _fname:
-        _cert_file = "{}/{}".format(dir_path, _fname)
+        if _fname.startswith("/"):
+            _cert_file = _fname
+        else:
+            _cert_file = os.path.join(dir_path, _fname)
     else:
         return None
+
     _fname = lower_or_upper(config, "server_key")
     if _fname:
-        _key_file = "{}/{}".format(dir_path, _fname)
+        if _fname.startswith("/"):
+            _key_file = _fname
+        else:
+            _key_file = os.path.join(dir_path, _fname)
     else:
         return None
 
