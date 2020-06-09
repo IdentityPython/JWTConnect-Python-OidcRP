@@ -22,7 +22,6 @@ from oidcmsg.time_util import time_sans_frac
 from oidcservice import rndstr
 from oidcservice.exception import OidcServiceError
 from oidcservice.state_interface import InMemoryStateDataBase
-from oidcservice.state_interface import StateInterface
 
 from oidcrp import oauth2
 from oidcrp import oidc
