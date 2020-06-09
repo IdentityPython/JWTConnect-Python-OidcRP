@@ -151,7 +151,7 @@ def make_cookie(name, load, seed, expire=0, domain="", path="", timestamp="",
     if not timestamp:
         timestamp = str(int(time.time()))
 
-    bytes_load = load.encode("utf-8")
+    bytes_load = as_bytes(load)
     bytes_timestamp = timestamp.encode("utf-8")
 
     if enc_key:

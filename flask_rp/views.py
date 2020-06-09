@@ -96,8 +96,7 @@ def finalize(op_hash, request_args):
         logger.error(rp.response[0].decode())
         return rp.response[0], rp.status_code
 
-    session['client_id'] = rp.service_context.registration_response. \
-        get('client_id', rp.service_context.client_id)
+    session['client_id'] = rp.service_context.get('client_id')
 
     session['state'] = request_args.get('state')
 
@@ -120,7 +119,7 @@ def finalize(op_hash, request_args):
 
     if 'userinfo' in res:
         endpoints = {}
-        for k, v in rp.service_context.provider_info.items():
+        for k, v in rp.service_context.get('provider_info').items():
             if k.endswith('_endpoint'):
                 endp = k.replace('_', ' ')
                 endp = endp.capitalize()
@@ -132,7 +131,7 @@ def finalize(op_hash, request_args):
         _status_check_info = rp.service_context.add_on.get('status_check')
         if _status_check_info:
             # Does the OP support session status checking ?
-            _chk_iframe = rp.service_context.provider_info.get('check_session_iframe')
+            _chk_iframe = rp.service_context.get('provider_info').get('check_session_iframe')
             if _chk_iframe:
                 kwargs['check_session_iframe'] = _chk_iframe
                 kwargs["status_check_iframe"] = _status_check_info['rp_iframe_path']
@@ -215,7 +214,7 @@ def session_change():
 def session_logout(op_hash):
     _rp = get_rp(op_hash)
     logger.debug('post_logout')
-    return "Post logout from {}".format(_rp.service_context.issuer)
+    return "Post logout from {}".format(_rp.service_context.get('issuer'))
 
 
 # RP initiated logout
@@ -245,7 +244,7 @@ def frontchannel_logout(op_hash):
     _rp = get_rp(op_hash)
     sid = request.args['sid']
     _iss = request.args['iss']
-    if _iss != _rp.service_context.issuer:
+    if _iss != _rp.service_context.get('issuer'):
         return 'Bad request', 400
     _state = _rp.session_interface.get_state_by_sid(sid)
     _rp.session_interface.remove_state(_state)

@@ -124,7 +124,7 @@ def load_registration_response(client):
 
     :param client: A :py:class:`oidcservice.oidc.Client` instance
     """
-    if not client.service_context.client_id:
+    if not client.service_context.get('client_id'):
         try:
             response = client.do_request('registration')
         except KeyError:
@@ -150,8 +150,9 @@ def dynamic_provider_info_discovery(client):
             'Can not do dynamic provider info discovery')
     else:
         try:
-            client.service_context.issuer = client.service_context.config[
-                'srv_discovery_url']
+            client.service_context.set(
+                'issuer',
+                client.service_context.config['srv_discovery_url'])
         except KeyError:
             pass
 
@@ -174,7 +175,7 @@ class RPHandler(object):
 
         _jwks_path = kwargs.get('jwks_path')
         if keyjar is None:
-            self.keyjar = init_key_jar(**DEFAULT_RP_KEY_DEFS, owner='')
+            self.keyjar = init_key_jar(**DEFAULT_RP_KEY_DEFS, issuer_id='')
             self.keyjar.import_jwks_as_json(self.keyjar.export_jwks_as_json(True, ''), base_url)
             if _jwks_path is None:
                 _jwks_path = DEFAULT_RP_KEY_DEFS['public_path']
@@ -195,7 +196,7 @@ class RPHandler(object):
         else:
             self.state_db = InMemoryStateDataBase()
 
-        self.session_interface = StateInterface(self.state_db)
+        # self.session_interface = StateInterface(self.state_db)
 
         self.extra = kwargs
 
@@ -234,7 +235,15 @@ class RPHandler(object):
         :param state: The state value
         :return: An Issuer ID
         """
-        return self.session_interface.get_iss(state)
+        for _rp in self.issuer2rp.values():
+            try:
+                _iss = _rp.session_interface.get_iss(state)
+            except KeyError:
+                continue
+            else:
+                if _iss:
+                    return _iss
+        return None
 
     def pick_config(self, issuer):
         """
@@ -246,7 +255,7 @@ class RPHandler(object):
         """
         return self.client_configs[issuer]
 
-    def get_session_information(self, key):
+    def get_session_information(self, key, client=None):
         """
         This is the second of the methods users of this class should know about.
         It will return the complete session information as an
@@ -255,7 +264,10 @@ class RPHandler(object):
         :param key: The session key (state)
         :return: A State instance
         """
-        return self.session_interface.get_state(key)
+        if not client:
+            client = self.get_client_from_session_key(key)
+
+        return client.session_interface.get_state(key)
 
     def init_client(self, issuer):
         """
@@ -278,7 +290,7 @@ class RPHandler(object):
 
         try:
             client = self.client_cls(
-                state_db=self.state_db, client_authn_factory=self.client_authn_factory,
+                client_authn_factory=self.client_authn_factory,
                 services=_services, config=_cnf, httplib=self.httplib,
                 httpc_params=self.httpc_params)
         except Exception as err:
@@ -287,7 +299,10 @@ class RPHandler(object):
             logger.error(message)
             raise
 
-        client.service_context.keyjar = self.keyjar.copy()
+        # If non persistent
+        client.service_context.keyjar.load(self.keyjar.dump())
+        # If persistent nothings has to be copied
+
         client.service_context.base_url = self.base_url
         client.service_context.jwks_uri = self.jwks_uri
         return client
@@ -309,11 +324,11 @@ class RPHandler(object):
             else:
                 raise ValueError('Missing state/session key')
 
-        if not client.service_context.provider_info:
+        if not client.service_context.get('provider_info'):
             dynamic_provider_info_discovery(client)
-            return client.service_context.provider_info['issuer']
+            return client.service_context.get('provider_info')['issuer']
         else:
-            _pi = client.service_context.provider_info
+            _pi = client.service_context.get('provider_info')
             for key, val in _pi.items():
                 # All service endpoint parameters in the provider info has
                 # a name ending in '_endpoint' so I can look specifically
@@ -336,16 +351,16 @@ class RPHandler(object):
                         for kty, _name in _spec.items():
                             if kty == 'jwks':
                                 _kj.import_jwks_from_file(_name,
-                                                          client.service_context.issuer)
+                                                          client.service_context.get('issuer'))
                             elif kty == 'rsa':  # PEM file
                                 _kb = keybundle_from_local_file(_name, "der", ["sig"])
-                                _kj.add_kb(client.service_context.issuer, _kb)
+                                _kj.add_kb(client.service_context.get('issuer'), _kb)
                     else:
                         raise ValueError('Unknown provider JWKS type: {}'.format(typ))
             try:
-                return client.service_context.provider_info['issuer']
+                return client.service_context.get('provider_info')['issuer']
             except KeyError:
-                return client.service_context.issuer
+                return client.service_context.get('issuer')
 
     def do_client_registration(self, client=None, iss_id='', state=''):
         """
@@ -362,36 +377,31 @@ class RPHandler(object):
             else:
                 raise ValueError('Missing state/session key')
 
-        _iss = client.service_context.issuer
-        if not client.service_context.redirect_uris:
+        _iss = client.service_context.get('issuer')
+        if not client.service_context.get('redirect_uris'):
             # Create the necessary callback URLs
             # as a side effect self.hash2issuer is set
             callbacks = self.create_callbacks(_iss)
 
-            client.service_context.redirect_uris = [
-                v for k, v in callbacks.items() if not k.startswith('__')]
-            client.service_context.callbacks = callbacks
+            client.service_context.set('redirect_uris', [
+                v for k, v in callbacks.items() if not k.startswith('__')])
+            client.service_context.set('callbacks', callbacks)
         else:
             self.hash2issuer[iss_id] = _iss
 
         # This should only be interesting if the client supports Single Log Out
-        try:
-            client.service_context.post_logout_redirect_uris
-        except AttributeError:
-            client.service_context.post_logout_redirect_uris = [self.base_url]
-        else:
-            if not client.service_context.post_logout_redirect_uris:
-                client.service_context.post_logout_redirect_uris = [
-                    self.base_url]
 
-        if not client.service_context.client_id:
+        if client.service_context.get('post_logout_redirect_uris') is not None:
+            client.service_context.set('post_logout_redirect_uris', [self.base_url])
+
+        if not client.service_context.get('client_id'):
             load_registration_response(client)
 
     def add_callbacks(self, service_context):
-        _callbacks = self.create_callbacks(service_context.provider_info['issuer'])
-        service_context.redirect_uris = [
-            v for k, v in _callbacks.items() if not k.startswith('__')]
-        service_context.callbacks = _callbacks
+        _callbacks = self.create_callbacks(service_context.get('provider_info')['issuer'])
+        service_context.set('redirect_uris', [
+            v for k, v in _callbacks.items() if not k.startswith('__')])
+        service_context.set('callbacks', _callbacks)
         return _callbacks
 
     def client_setup(self, iss_id='', user=''):
@@ -433,27 +443,9 @@ class RPHandler(object):
 
         logger.debug("Get provider info")
         issuer = self.do_provider_info(client)
-        _sc = client.service_context
-        try:
-            _fe = _sc.federation_entity
-        except AttributeError:
-            _fe = None
-            registration_type = 'explicit'
-        else:
-            registration_type = _fe.registration_type
 
-        if registration_type == 'automatic':
-            _redirect_uris = _sc.config.get("redirect_uris")
-            if _redirect_uris:
-                _sc.redirect_uris = _redirect_uris
-                _sc.client_id = client.client_id = add_path(_fe.entity_id, iss_id)
-                self.hash2issuer[iss_id] = issuer
-            else:
-                _callbacks = self.add_callbacks(_sc)
-                _sc.client_id = client.client_id = add_path(_fe.entity_id, _callbacks['__hex'])
-        else:  # explicit
-            logger.debug("Do client registration")
-            self.do_client_registration(client, iss_id)
+        logger.debug("Do client registration")
+        self.do_client_registration(client, iss_id)
 
         self.issuer2rp[issuer] = client
         return client
@@ -500,9 +492,9 @@ class RPHandler(object):
 
         _nonce = rndstr(24)
         request_args = {
-            'redirect_uri': service_context.redirect_uris[0],
-            'scope': service_context.behaviour['scope'],
-            'response_type': service_context.behaviour['response_types'][0],
+            'redirect_uri': service_context.get('redirect_uris')[0],
+            'scope': service_context.get('behaviour')['scope'],
+            'response_type': service_context.get('behaviour')['response_types'][0],
             'nonce': _nonce
         }
 
@@ -516,9 +508,9 @@ class RPHandler(object):
             request_args.update(req_args)
 
         # Need a new state for a new authorization request
-        _state = self.session_interface.create_state(service_context.issuer)
+        _state = client.session_interface.create_state(service_context.get('issuer'))
         request_args['state'] = _state
-        self.session_interface.store_nonce2state(_nonce, _state)
+        client.session_interface.store_nonce2state(_nonce, _state)
 
         logger.debug('Authorization request args: {}'.format(request_args))
 
@@ -568,7 +560,7 @@ class RPHandler(object):
         :param client: A Client instance
         :return: The response_type
         """
-        return client.service_context.behaviour['response_types'][0]
+        return client.service_context.get('behaviour')['response_types'][0]
 
     @staticmethod
     def get_client_authn_method(client, endpoint):
@@ -582,8 +574,7 @@ class RPHandler(object):
         """
         if endpoint == 'token_endpoint':
             try:
-                am = client.service_context.behaviour[
-                    'token_endpoint_auth_method']
+                am = client.service_context.get('behaviour')['token_endpoint_auth_method']
             except KeyError:
                 return ''
             else:
@@ -607,9 +598,9 @@ class RPHandler(object):
         if client is None:
             client = self.get_client_from_session_key(state)
 
-        authorization_response = self.session_interface.get_item(
+        authorization_response = client.session_interface.get_item(
             AuthorizationResponse, 'auth_response', state)
-        authorization_request = self.session_interface.get_item(
+        authorization_request = client.session_interface.get_item(
             AuthorizationRequest, 'auth_request', state)
 
         req_args = {
@@ -617,8 +608,8 @@ class RPHandler(object):
             'state': state,
             'redirect_uri': authorization_request['redirect_uri'],
             'grant_type': 'authorization_code',
-            'client_id': client.service_context.client_id,
-            'client_secret': client.service_context.client_secret
+            'client_id': client.service_context.get('client_id'),
+            'client_secret': client.service_context.get('client_secret')
         }
         logger.debug('request_args: {}'.format(req_args))
         try:
@@ -686,15 +677,15 @@ class RPHandler(object):
         :param kwargs: Extra keyword arguments
         :return: A :py:class:`oidcmsg.oidc.OpenIDSchema` instance
         """
+        if client is None:
+            client = self.get_client_from_session_key(state)
+
         if not access_token:
-            _arg = self.session_interface.multiple_extend_request_args(
+            _arg = client.session_interface.multiple_extend_request_args(
                 {}, state, ['access_token'],
                 ['auth_response', 'token_response', 'refresh_token_response'])
 
         request_args = {'access_token': access_token}
-
-        if client is None:
-            client = self.get_client_from_session_key(state)
 
         resp = client.do_request('userinfo', state=state,
                                  request_args=request_args, **kwargs)
@@ -744,8 +735,7 @@ class RPHandler(object):
             return authorization_response
 
         try:
-            _iss = self.session_interface.get_iss(
-                authorization_response['state'])
+            _iss = client.session_interface.get_iss(authorization_response['state'])
         except KeyError:
             raise KeyError('Unknown state value')
 
@@ -754,10 +744,9 @@ class RPHandler(object):
             # got it from the wrong bloke
             raise ValueError('Impersonator {}'.format(issuer))
 
-        _srv.update_service_context(authorization_response,
-                                    state=authorization_response['state'])
-        self.session_interface.store_item(authorization_response, "auth_response",
-                                          authorization_response['state'])
+        _srv.update_service_context(authorization_response, key=authorization_response['state'])
+        client.session_interface.store_item(authorization_response, "auth_response",
+                                            authorization_response['state'])
         return authorization_response
 
     def get_access_and_id_token(self, authorization_response=None, state='',
@@ -774,9 +763,13 @@ class RPHandler(object):
             token as value and **id_token** with a verified ID Token if one
             was returned otherwise None.
         """
+
+        if client is None:
+            client = self.get_client_from_session_key(state)
+
         if authorization_response is None:
             if state:
-                authorization_response = self.session_interface.get_item(
+                authorization_response = client.session_interface.get_item(
                     AuthorizationResponse, 'auth_response', state)
             else:
                 raise ValueError(
@@ -785,7 +778,7 @@ class RPHandler(object):
         if not state:
             state = authorization_response['state']
 
-        authreq = self.session_interface.get_item(
+        authreq = client.session_interface.get_item(
             AuthorizationRequest, 'auth_request', state)
         _resp_type = set(authreq['response_type'])
 
@@ -799,9 +792,6 @@ class RPHandler(object):
                           {'code', 'id_token', 'token'}]:
             access_token = authorization_response["access_token"]
         elif _resp_type in [{'code'}, {'code', 'id_token'}]:
-
-            if client is None:
-                client = self.get_client_from_session_key(state)
 
             # get the access token
             token_resp = self.get_access_token(state, client=client)
@@ -867,11 +857,11 @@ class RPHandler(object):
         logger.debug("UserInfo: %s", inforesp)
 
         try:
-            _sid_support = client.service_context.provider_info[
+            _sid_support = client.service_context.get('provider_info')[
                 'backchannel_logout_session_supported']
         except KeyError:
             try:
-                _sid_support = client.service_context.provider_info[
+                _sid_support = client.service_context.get('provider_info')[
                     'frontchannel_logout_session_supported']
             except:
                 _sid_support = False
@@ -884,8 +874,7 @@ class RPHandler(object):
             else:
                 client.session_interface.store_sid2state(sid, _state)
 
-        client.session_interface.store_sub2state(token['id_token']['sub'],
-                                                 _state)
+        client.session_interface.store_sub2state(token['id_token']['sub'], _state)
 
         return {
             'userinfo': inforesp,
@@ -902,8 +891,10 @@ class RPHandler(object):
         :return: True/False
         """
 
+        client = self.get_client_from_session_key(state)
+
         # Look for Id Token in all the places where it can be
-        _arg = self.session_interface.multiple_extend_request_args(
+        _arg = client.session_interface.multiple_extend_request_args(
             {}, state, ['__verified_id_token'],
             ['auth_response', 'token_response', 'refresh_token_response'])
 
@@ -928,11 +919,13 @@ class RPHandler(object):
         indefinite = []
         now = time_sans_frac()
 
+        client = self.get_client_from_session_key(state)
+
         for cls, typ in [(AccessTokenResponse, 'refresh_token_response'),
                          (AccessTokenResponse, 'token_response'),
                          (AuthorizationResponse, 'auth_response')]:
             try:
-                response = self.session_interface.get_item(cls, typ, state)
+                response = client.session_interface.get_item(cls, typ, state)
             except KeyError:
                 pass
             else:
@@ -1004,10 +997,10 @@ def backchannel_logout(client, request='', request_args=None):
         req = BackChannelLogoutRequest(**request_args)
 
     kwargs = {
-        'aud': client.service_context.client_id,
-        'iss': client.service_context.issuer,
+        'aud': client.service_context.get('client_id'),
+        'iss': client.service_context.get('issuer'),
         'keyjar': client.service_context.keyjar,
-        'allowed_sign_alg': client.service_context.registration_response.get(
+        'allowed_sign_alg': client.service_context.get('registration_response').get(
             "id_token_signed_response_alg", "RS256")
     }
 

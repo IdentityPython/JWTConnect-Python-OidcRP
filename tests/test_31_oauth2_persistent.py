@@ -47,9 +47,26 @@ class TestClient(object):
     def create_client(self):
         self.redirect_uri = "http://example.com/redirect"
         conf = {
+            'issuer': 'https://op.example.com',
             'redirect_uris': ['https://example.com/cli/authz_cb'],
             'client_id': 'client_1',
-            'client_secret': 'abcdefghijklmnop'
+            'client_secret': 'abcdefghijklmnop',
+            'db_conf': {
+                'abstract_storage_cls': 'abstorage.extension.LabeledAbstractStorage',
+                'keyjar': {
+                    'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+                    'fdir': 'db/keyjar',
+                    'key_conv': 'abstorage.converter.QPKey',
+                    'value_conv': 'cryptojwt.serialize.item.KeyIssuer',
+                    'label': 'keyjar'
+                },
+                'default': {
+                    'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+                    'fdir': 'db',
+                    'key_conv': 'abstorage.converter.QPKey',
+                    'value_conv': 'abstorage.converter.JSON'
+                }
+            }
         }
         self.client = Client(config=conf)
 

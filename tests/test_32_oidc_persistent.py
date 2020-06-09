@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import sys
 import time
 
@@ -42,11 +43,33 @@ def access_token_callback(endpoint):
 class TestClient(object):
     @pytest.fixture(autouse=True)
     def create_client(self):
+        try:
+            shutil.rmtree('db')
+        except FileNotFoundError:
+            pass
+
         self.redirect_uri = "http://example.com/redirect"
         conf = {
+            'issuer': 'https://op.example.com',
             'redirect_uris': ['https://example.com/cli/authz_cb'],
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
+            'db_conf': {
+                'abstract_storage_cls': 'abstorage.extension.LabeledAbstractStorage',
+                'keyjar': {
+                    'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+                    'fdir': 'db/keyjar',
+                    'key_conv': 'abstorage.converter.QPKey',
+                    'value_conv': 'cryptojwt.serialize.item.KeyIssuer',
+                    'label': 'keyjar'
+                },
+                'default': {
+                    'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+                    'fdir': 'db',
+                    'key_conv': 'abstorage.converter.QPKey',
+                    'value_conv': 'abstorage.converter.JSON'
+                }
+            }
         }
         self.client = RP(config=conf)
 

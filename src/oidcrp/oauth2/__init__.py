@@ -12,14 +12,13 @@ from oidcservice.service import SUCCESSFUL
 from oidcservice.service import init_services
 from oidcservice.service_context import ServiceContext
 from oidcservice.state_interface import StateInterface
+from oidcservice.util import importer
 
 from oidcrp.http import HTTPLib
 from oidcrp.util import do_add_ons
 from oidcrp.util import get_deserialization_method
 
 __author__ = 'Roland Hedberg'
-
-from oidcrp.util import has_method
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +33,7 @@ class ExpiredToken(Exception):
 
 
 class Client(object):
-    def __init__(self, state_db, client_authn_factory=None,
-                 keyjar=None, verify_ssl=True, config=None,
+    def __init__(self, client_authn_factory=None, keyjar=None, verify_ssl=True, config=None,
                  httplib=None, services=None, jwks_uri='', httpc_params=None):
         """
 
@@ -52,30 +50,36 @@ class Client(object):
         :return: Client instance
         """
 
-        self.session_interface = StateInterface(state_db)
-
         if httpc_params is None:
             httpc_params = {"verify": True}
 
         self.http = httplib or HTTPLib(httpc_params)
 
-        if not keyjar:
-            keyjar = KeyJar()
-            keyjar.verify_ssl = verify_ssl
+        # db_conf = config.get('db_conf')
+        # if db_conf:
+        #     _storage_cls_name = db_conf.get('abstract_storage_cls')
+        #     self._storage_cls = importer(_storage_cls_name)
+        #     self.db = self._storage_cls(db_conf.get('default'))
+        #     if not keyjar:
+        #         key_db_conf = db_conf.get('keyjar', db_conf.get('default'))
+        #         keyjar = KeyJar(abstract_storage_cls=self._storage_cls, storage_conf=key_db_conf)
+        #         keyjar.verify_ssl = verify_ssl
 
         self.events = None
         self.service_context = ServiceContext(keyjar, config=config,
                                               jwks_uri=jwks_uri,
                                               httpc_params=httpc_params)
-        if self.service_context.client_id:
-            self.client_id = self.service_context.client_id
+
+        self.session_interface = StateInterface(self.service_context.state_db)
+
+        if self.service_context.get('client_id'):
+            self.client_id = self.service_context.get('client_id')
 
         _cam = client_authn_factory or ca_factory
 
         _srvs = services or DEFAULT_SERVICES
 
-        self.service = init_services(_srvs, self.service_context, state_db,
-                                     _cam)
+        self.service = init_services(_srvs, self.service_context, _cam)
 
         if 'add_ons' in config:
             do_add_ons(config['add_ons'], self.service)
@@ -105,7 +109,7 @@ class Client(object):
 
     def set_client_id(self, client_id):
         self.client_id = client_id
-        self.service_context.client_id = client_id
+        self.service_context.set('client_id', client_id)
 
     def get_response(self, service, url, method="GET", body=None, response_body_type="",
                      headers=None, **kwargs):
@@ -252,7 +256,7 @@ class Client(object):
                 else:
                     raise OidcServiceError("HTTP ERROR: %s [%s] on %s" % (
                         reqresp.text, reqresp.status_code, reqresp.url))
-            except JSONDecodeError: # So it's not JSON assume text then
+            except JSONDecodeError:  # So it's not JSON assume text then
                 err_resp = {'error': reqresp.text}
 
             err_resp['status_code'] = reqresp.status_code

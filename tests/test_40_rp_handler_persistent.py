@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 from urllib.parse import urlsplit
@@ -32,6 +33,25 @@ CLIENT_PREFS = {
     "token_endpoint_auth_method": "client_secret_basic",
     "verify_args": {"allow_sign_alg_none": True}
 }
+
+
+DB_CONF = {
+    'abstract_storage_cls': 'abstorage.extension.LabeledAbstractStorage',
+    'keyjar': {
+        'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+        'fdir': 'db/{}/keyjar',
+        'key_conv': 'abstorage.converter.QPKey',
+        'value_conv': 'cryptojwt.serialize.item.KeyIssuer',
+        'label': 'keyjar'
+    },
+    'default': {
+        'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+        'fdir': 'db/{}',
+        'key_conv': 'abstorage.converter.QPKey',
+        'value_conv': 'abstorage.converter.JSON'
+    }
+}
+
 
 CLIENT_CONFIG = {
     "": {
@@ -91,7 +111,8 @@ CLIENT_CONFIG = {
             'userinfo': {
                 'class': 'oidcrp.provider.linkedin.UserInfo'
             }
-        }
+        },
+        'db_conf': DB_CONF
     },
     "facebook": {
         "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
@@ -123,7 +144,8 @@ CLIENT_CONFIG = {
                 'class': 'oidcservice.oidc.userinfo.UserInfo',
                 'kwargs': {'conf': {'default_authn_method': ''}}
             }
-        }
+        },
+        'db_conf': DB_CONF
     },
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
@@ -159,7 +181,8 @@ CLIENT_CONFIG = {
                 'class': 'oidcservice.oidc.refresh_access_token'
                          '.RefreshAccessToken'
             }
-        }
+        },
+        'db_conf': DB_CONF
     }
 }
 
@@ -205,6 +228,11 @@ def iss_id(iss):
 class TestRPHandler(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
+        try:
+            shutil.rmtree('db')
+        except FileNotFoundError:
+            pass
+
         self.rph = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
                              keyjar=CLI_KEY, module_dirs=['oidc'])
 
@@ -590,7 +618,6 @@ class TestRPHandler(object):
                                         'occupation'}
 
 
-
 def test_get_provider_specific_service():
     service_context = ServiceContext()
     srv_desc = {
@@ -906,3 +933,6 @@ class TestRPHandlerWithMockOP(object):
 
         auth_query = self.rph.begin(user_id=user_id)
         assert auth_query
+        client = self.rph.issuer2rp["https://server.example.com"]
+        assert len(client.service_context.keyjar.owners()) == 3
+        assert 'client1' in client.service_context.keyjar

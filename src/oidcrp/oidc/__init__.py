@@ -61,13 +61,13 @@ class FetchException(Exception):
 
 
 class RP(oauth2.Client):
-    def __init__(self, state_db, client_authn_factory=None,
+    def __init__(self, client_authn_factory=None,
                  keyjar=None, verify_ssl=True, config=None,
                  httplib=None, services=None, httpc_params=None):
 
         _srvs = services or DEFAULT_SERVICES
 
-        oauth2.Client.__init__(self, state_db, client_authn_factory=client_authn_factory,
+        oauth2.Client.__init__(self, client_authn_factory=client_authn_factory,
                                keyjar=keyjar, verify_ssl=verify_ssl, config=config,
                                httplib=httplib, services=_srvs, httpc_params=httpc_params)
 
