@@ -24,7 +24,8 @@ def init_oidc_rp_handler(app):
         _path = ''
     _kj.httpc_params = _rp_conf.httpc_params
 
-    rph = RPHandler(_rp_conf.base_url, _rp_conf.clients, services=_rp_conf.services,
+    rph = RPHandler(_rp_conf.base_url,
+                    client_configs=_rp_conf.clients, services=_rp_conf.services,
                     hash_seed=_rp_conf.hash_seed, keyjar=_kj, jwks_path=_path,
                     httpc_params=_rp_conf.httpc_params)
 
