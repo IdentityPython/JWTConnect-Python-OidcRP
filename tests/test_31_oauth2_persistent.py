@@ -52,19 +52,19 @@ class TestClient(object):
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
             'db_conf': {
-                'abstract_storage_cls': 'abstorage.extension.LabeledAbstractStorage',
+                'abstract_storage_cls': 'oidcmsg.storage.extension.LabeledAbstractStorage',
                 'keyjar': {
-                    'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+                    'handler': 'oidcmsg.storage.abfile.AbstractFileSystem',
                     'fdir': 'db/keyjar',
-                    'key_conv': 'abstorage.converter.QPKey',
+                    'key_conv': 'oidcmsg.storage.converter.QPKey',
                     'value_conv': 'cryptojwt.serialize.item.KeyIssuer',
                     'label': 'keyjar'
                 },
                 'default': {
-                    'handler': 'abstorage.storages.abfile.AbstractFileSystem',
+                    'handler': 'oidcmsg.storage.abfile.AbstractFileSystem',
                     'fdir': 'db',
-                    'key_conv': 'abstorage.converter.QPKey',
-                    'value_conv': 'abstorage.converter.JSON'
+                    'key_conv': 'oidcmsg.storage.converter.QPKey',
+                    'value_conv': 'oidcmsg.storage.converter.JSON'
                 }
             }
         }
