@@ -26,7 +26,7 @@ port: &port 8090
 domain: &domain 127.0.0.1
 base_url: "https://{domain}:{port}"
 
-http_params:
+httpc_params:
   # This is just for testing an local usage. In all other cases it MUST be True
   verify: false
   # Client side
