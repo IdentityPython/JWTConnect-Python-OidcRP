@@ -64,7 +64,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries :: Python Modules"],
     install_requires=[
-        'oidcservice>=1.0.0',
+        'oidcservice>=1.1.0',
         'pyyaml'
     ],
     tests_require=[

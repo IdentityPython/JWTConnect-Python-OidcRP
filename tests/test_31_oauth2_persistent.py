@@ -52,9 +52,8 @@ class TestClient(object):
             'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
             'db_conf': {
-                'abstract_storage_cls': 'oidcmsg.storage.extension.LabeledAbstractStorage',
                 'keyjar': {
-                    'handler': 'oidcmsg.storage.abfile.AbstractFileSystem',
+                    'handler': 'oidcmsg.storage.abfile.LabeledAbstractFileSystem',
                     'fdir': 'db/keyjar',
                     'key_conv': 'oidcmsg.storage.converter.QPKey',
                     'value_conv': 'cryptojwt.serialize.item.KeyIssuer',
