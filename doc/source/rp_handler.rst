@@ -28,7 +28,7 @@ and OAuth2 Authorization Server instead. There are some differences
 in the details between the two sets but overall the entities work much the same
 way.
 
-OAuth2 and thereby OpenID Connect (OIDC) are build on a request-response paradigm.
+OAuth2 and thereby OpenID Connect (OIDC) are built on a request-response paradigm.
 The RP issues a request and the OP returns a response.
 
 The OIDC core standard defines a set of such request-responses.
@@ -43,12 +43,12 @@ occur:
 6. User info
 
 When a user accessing the web service for some reason needs to be authenticate
-or the service needs a access token that allows it to access some resources
+or the service needs an access token that allows it to access some resources
 at a resource service on behalf of the user a number of things will happen:
 
 Find out which OP to talk to.
     If the RP handler is configured to only communicate to a defined set of OPs
-    then the user is probable presented a list to chose from.
+    then the user is probable presented a list to choose from.
     If the OP the user wants to authenticated at is unknown to the RP Handler
     it will use some discovery service to, given some information provided by
     the user, find out where to learn more about the OP.
@@ -62,7 +62,7 @@ Gather information about the OP
     provider info discovery service provided by OIDC.
 
 Register the client with the OP
-    Again this can be done beforehand or it can be done on-the-fly when needed.
+    Again, this can be done beforehand or it can be done on-the-fly when needed.
     If it's done before you will have to use a registration service provided by
     the organization responsible for the OP.
     If it's to be done on-the-fly you will have to use the dynamic client
@@ -103,8 +103,8 @@ Microsoft
     done manual. What it comes down to is that you will only need services
     2 and 4.
 
-Github
-    Now, to begin with Github is not running an OP they basically have an
+GitHub
+    Now, to begin with GitHub is not running an OP they basically have an
     Oauth2 AS with some additions. It doesn't support dynamic provider info
     discovery or client registration. If expects response_type to be *code*
     so services 4,5 and 6 are needed.
@@ -124,7 +124,7 @@ authorization/authentication for one user starting with the authorization reques
 Tier 1 API
 ----------
 
-The high level methods you have access to (in the order they are to be
+The high-level methods you have access to (in the order they are to be
 used) are:
 
 :py:meth:`oidcrp.RPHandler.begin`
@@ -150,7 +150,7 @@ like this::
 
     state=Oh3w3gKlvoM2ehFqlxI3HIK5&scope=openid&code=Z0FBQUFBQmFkdFFjUVpFWE81SHU5N1N4N01&iss=https%3A%2F%2Fexample.org%2Fop&client_id=zls2qhN1jO6A
 
-After the RP has recieved this response the processing continues with:
+After the RP has received this response the processing continues with:
 
 :py:meth:`oidcrp.RPHandler.get_session_information`
     In the authorization response there MUST be a state parameter. The value
@@ -173,8 +173,8 @@ After the RP has recieved this response the processing continues with:
 Tier 2 API
 ----------
 
-The tier 1 API is good for getting you started with authenticating an user and
-getting user information but if you're look at a long term engagement you need
+The tier 1 API is good for getting you started with authenticating a user and
+getting user information but if you're look at a long-term engagement you need
 a finer grained set of methods. These I call the tier 2 API:
 
 :py:meth:`oidcrp.RPHandler.do_provider_info`
@@ -239,15 +239,15 @@ authorization request and accepted by the user.
     response will be True or False depending in the state of the authentication.
 
 :py:meth:`oidcrp.RPHandler.get_valid_access_token`
-    When you are issued a access token they normally comes with a life time.
+    When you are issued a access token it normally comes with a life time.
     After that time you are expected to use the refresh token to get a new
-    access token. There are 2 ways of finding out if the access token you have
-    passed their life time. You can use this method or you can just try using
+    access token. There are 2 ways of finding out if the access token you have is
+    past its life time. You can use this method or you can just try using
     the access token and see what happens.
 
-    Now, if you use this method and it tells you you have an access token
-    that should still be usable. That is no guarantee that that is the case.
-    things may have happened on the OPs side that makes the access token
+    Now, if you use this method and it tells you that you have an access token
+    that should still be usable, that is no guarantee it is still usable.
+    Things may have happened on the OPs side that makes the access token
     invalid. So if this method only returns a hint as to the usability of the
     access token.
 
@@ -339,6 +339,22 @@ redirect_uris
     the use back to this URL after the authorization/authentication has
     completed. These URLs should be OP/AS specific.
 
+behavior
+    Information about how the RP should behave towards the OP/AS
+
+rp_keys
+    If the OP doesn't support dynamic provider discovery it may still want to
+    have a way of distributing keys that allows it to rotate them at anytime.
+    To accomplish this some providers have chosen to publish a URL to where
+    you can find their OPs key material in the form of a JWKS.
+
+    Usage example::
+
+        'keys': {'url': {<issuer_id> : <jwks_url>}}
+
+
+If the provider info discovery is done dynamically you need this
+
 client_preferences
     How the RP should prefer to behave against the OP/AS
 
@@ -420,7 +436,6 @@ return the user info at the userinfo endpoint::
         }
 
 
-
 ----------------------------
 RP configuration - Microsoft
 ----------------------------
@@ -490,10 +505,10 @@ there. And in this case this is it. All the user info will be included in the
 
 
 -------------------------
-RP configuration - Github
+RP configuration - GitHub
 -------------------------
 
-As mentioned before Github runs an OAuth2 AS not an OP.
+As mentioned before GitHub runs an OAuth2 AS not an OP.
 Still we can talk to it using this configuration::
 
     {
@@ -522,15 +537,15 @@ Still we can talk to it using this configuration::
     }
 
 Part by part.
-Like with Google and Microsoft, Github expects you to register your client in
-advance. You register teh redirect_uris and in return will get *client_id* and
+Like with Google and Microsoft, GitHub expects you to register your client in
+advance. You register the redirect_uris and in return will get *client_id* and
 *client_secret*::
 
         'client_id': 'eeeeeeeee',
         'client_secret': 'aaaaaaaaaaaaa',
         "redirect_uris": ["{}/authz_cb/github".format(BASEURL)],
 
-Since Github doesn't support dynamic provder info discovery you have to enter
+Since GitHub doesn't support dynamic provder info discovery you have to enter
 that information in the configuration::
 
         "issuer": "https://github.com/login/oauth/authorize",
@@ -543,7 +558,7 @@ that information in the configuration::
                 "https://api.github.com/user"
         },
 
-Regarding the client behaviour the Github AS expects response_type *code*.
+Regarding the client behaviour the GitHub AS expects response_type *code*.
 The number of scope values is rather large I've just chose 2 here.
 No client authentication at the token endpoint is expected::
 
@@ -556,9 +571,9 @@ No client authentication at the token endpoint is expected::
 And about services, *Authorization* as always, *AccessToken* to convert the
 received *code* in the authorization response into an access token which later
 can be used to access user info at the userinfo endpoint.
-Github deviates from the standard in a number of way. First the Oauth2
+GitHub deviates from the standard in a number of way. First the Oauth2
 standard doesn't mention anything like an userinfo endpoint, that is OIDC.
-So Github has implemented something that is inbetween OAuth2 and OIDC.
+So GitHub has implemented something that is in between OAuth2 and OIDC.
 What's more disturbing is that the accesstoken response by default is not
 encoded as a JSON document which the standard say but instead it's
 urlencoded. Lucky for us, we can deal with both these things by configuration
