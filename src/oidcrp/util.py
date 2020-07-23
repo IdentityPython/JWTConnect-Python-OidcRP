@@ -312,6 +312,8 @@ def replace(config, param, **kwargs):
                 for _re in res:
                     if "{{{}}}".format(_key) in _re:
                         _lst.append(_re.format(**kwargs))
+                    else:
+                        _lst.append(_re)
                 config[lc_param] = _lst
             else:
                 if "{{{}}}".format(_key) in res:
