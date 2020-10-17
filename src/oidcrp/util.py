@@ -201,10 +201,14 @@ def get_deserialization_method(reqresp):
     logger.debug("resp.headers: %s" % (sanitize(reqresp.headers),))
     logger.debug("resp.txt: %s" % (sanitize(reqresp.text),))
 
-    try:
-        _ctype = reqresp.headers["content-type"]
-    except KeyError:
-        return 'urlencoded'  # reasonable default ??
+    _ctype = reqresp.headers.get("content-type")
+    if not _ctype:
+        # let's try to detect the format
+        try:
+            content = reqresp.json()
+            return 'json'
+        except:
+            return 'urlencoded'  # reasonable default ??
 
     if match_to_("application/json", _ctype) or match_to_(
             'application/jrd+json', _ctype):
