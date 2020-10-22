@@ -65,6 +65,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"],
     install_requires=[
         'oidcservice>=1.1.0',
+        'oidcmsg>=1.1.2',
         'pyyaml'
     ],
     tests_require=[
