@@ -1,6 +1,9 @@
 """Configuration management for RP"""
-
+import os
 from typing import Dict
+from typing import Optional
+
+from oidcmsg import add_base_path
 
 from oidcrp.logging import configure_logging
 from oidcrp.util import get_http_params
@@ -15,10 +18,35 @@ except ImportError:
     from oidcendpoint import rndstr as rnd_token
 
 
+DEFAULT_ITEM_PATHS = {
+    "webserver": ['server_key', 'server_cert'],
+    "rp_keys": ["public_path", "private_path"],
+    "oidc_keys": ["public_path", "private_path"],
+    "httpc_params": ["client_cert", "client_key"],
+    "db_conf": {
+        "keyjar": ["fdir"],
+        "default": ["fdir"],
+        "state": ["fdir"]
+    },
+    "logging": {
+        "handlers": {
+            "file": ["filename"]
+        }
+    }
+}
+
+
 class Configuration:
     """RP Configuration"""
 
-    def __init__(self, conf: Dict) -> None:
+    def __init__(self, conf: Dict, base_path: str = '', item_paths: Optional[dict] = None) -> None:
+        if item_paths is None:
+            item_paths = DEFAULT_ITEM_PATHS
+
+        if base_path and item_paths:
+            # this adds a base path to all paths in the configuration
+            add_base_path(conf, item_paths, base_path)
+
         self.logger = configure_logging(config=conf.get('logging')).getChild(__name__)
 
         # server info
@@ -49,6 +77,7 @@ class Configuration:
         rp_keys_conf = lower_or_upper(conf, 'rp_keys')
         if rp_keys_conf is None:
             rp_keys_conf = lower_or_upper(conf, 'oidc_keys')
+
         setattr(self, "rp_keys", rp_keys_conf)
 
         _clients = lower_or_upper(conf, "clients")
@@ -75,6 +104,6 @@ class Configuration:
         pass
 
     @classmethod
-    def create_from_config_file(cls, filename: str):
+    def create_from_config_file(cls, filename: str, base_path: str = ''):
         """Load configuration as YAML"""
-        return cls(load_yaml_config(filename))
+        return cls(load_yaml_config(filename), base_path)
