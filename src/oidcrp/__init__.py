@@ -824,7 +824,7 @@ class RPHandler(object):
             **userinfo** The collected user information
         """
 
-        client = self.issuer2rp[issuer]
+        client = self.client_setup(issuer)
 
         authorization_response = self.finalize_auth(client, issuer, response)
         if is_error_message(authorization_response):
