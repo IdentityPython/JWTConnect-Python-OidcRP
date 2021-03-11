@@ -1,5 +1,5 @@
 """Configuration management for RP"""
-import os
+import logging
 from typing import Dict
 from typing import Optional
 
@@ -16,7 +16,6 @@ try:
     from secrets import token_urlsafe as rnd_token
 except ImportError:
     from oidcendpoint import rndstr as rnd_token
-
 
 DEFAULT_ITEM_PATHS = {
     "webserver": ['server_key', 'server_cert'],
@@ -47,7 +46,11 @@ class Configuration:
             # this adds a base path to all paths in the configuration
             add_base_path(conf, item_paths, base_path)
 
-        self.logger = configure_logging(config=conf.get('logging')).getChild(__name__)
+        log_conf = conf.get('logging')
+        if log_conf:
+            self.logger = configure_logging(config=log_conf).getChild(__name__)
+        else:
+            self.logger = logging.getLogger('oidcrp')
 
         # server info
         self.domain = lower_or_upper(conf, "domain")
