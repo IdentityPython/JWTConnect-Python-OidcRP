@@ -54,14 +54,16 @@ setup(
     author="Roland Hedberg",
     author_email="roland@catalogix.se",
     license="Apache 2.0",
-    url='https://github.com/IdentityPython/oicmsg/',
+    url='https://github.com/IdentityPython/oicrp/',
     packages=["oidcrp", "oidcrp/provider", "oidcrp/oidc", "oidcrp/oauth2"],
     package_dir={"": "src"},
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Software Development :: Libraries :: Python Modules"],
     install_requires=[
         'oidcservice>=1.1.0',
