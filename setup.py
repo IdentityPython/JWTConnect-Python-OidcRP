@@ -68,7 +68,8 @@ setup(
     install_requires=[
         'oidcservice>=1.1.0',
         'oidcmsg>=1.1.3',
-        'pyyaml'
+        'pyyaml',
+        'responses'
     ],
     tests_require=[
         'pytest',
