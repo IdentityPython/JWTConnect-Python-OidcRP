@@ -42,7 +42,6 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 ./src/cms --count --exit-zero --statistics
 
-    - name: Test with Django tests
-      working-directory: ./example
+    - name: Unit tests
       run: |
         py.test tests/
