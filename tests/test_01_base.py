@@ -1,5 +1,5 @@
-from oidcrp import add_path
-from oidcrp import load_registration_response
+from oidcrp.util import add_path
+from oidcrp.util import load_registration_response
 from oidcrp.oidc import RP
 
 

@@ -1,8 +1,7 @@
 import json
 import logging
 
-from oidcservice.client_auth import BearerHeader
-from oidcservice.oidc import DEFAULT_SERVICES
+from oidcrp.client_auth import BearerHeader
 
 try:
     from json import JSONDecodeError
@@ -18,6 +17,46 @@ __author__ = 'Roland Hedberg'
 logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
+#
+
+DEFAULT_SERVICES = {
+    "discovery": {
+        'class': 'oidcrp.oidc.provider_info_discovery'
+                 '.ProviderInfoDiscovery'
+    },
+    'registration': {
+        'class': 'oidcrp.oidc.registration.Registration'
+    },
+    'authorization': {
+        'class': 'oidcrp.oidc.authorization.Authorization'
+    },
+    'access_token': {
+        'class': 'oidcrp.oidc.access_token.AccessToken'
+    },
+    'refresh_access_token': {
+        'class': 'oidcrp.oidc.refresh_access_token.RefreshAccessToken'
+    },
+    'userinfo': {
+        'class': 'oidcrp.oidc.userinfo.UserInfo'
+    }
+}
+
+WF_URL = "https://{}/.well-known/webfinger"
+OIC_ISSUER = "http://openid.net/specs/connect/1.0/issuer"
+
+IDT2REG = {
+    'sigalg': 'id_token_signed_response_alg',
+    'encalg': 'id_token_encrypted_response_alg',
+    'encenc': 'id_token_encrypted_response_enc'
+}
+
+ENDPOINT2SERVICE = {
+    'authorization': ['authorization'],
+    'token': ['accesstoken', 'refresh_token'],
+    'userinfo': ['userinfo'],
+    'registration': ['registration'],
+    'end_sesssion': ['end_session']
+}
 
 # This should probably be part of the configuration
 MAX_AUTHENTICATION_AGE = 86400
@@ -89,7 +128,7 @@ class RP(oauth2.Client):
                     if "access_token" in spec:
                         cauth = BearerHeader()
                         httpc_params = cauth.construct(
-                            service=self.service['userinfo'],
+                            service=self.get_service('userinfo'),
                             access_token=spec['access_token'])
                         _resp = self.http.send(spec["endpoint"], 'GET',
                                                **httpc_params)
@@ -98,7 +137,7 @@ class RP(oauth2.Client):
                             token = callback(spec['endpoint'])
                             cauth = BearerHeader()
                             httpc_params = cauth.construct(
-                                service=self.service['userinfo'],
+                                service=self.get_service('userinfo'),
                                 access_token=token)
                             _resp = self.http.send(
                                 spec["endpoint"], 'GET', **httpc_params)

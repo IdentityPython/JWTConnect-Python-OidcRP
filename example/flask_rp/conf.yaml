@@ -67,22 +67,22 @@ client_preferences: &id001
 
 services: &id002
   discovery: &disc
-    class: oidcservice.oidc.provider_info_discovery.ProviderInfoDiscovery
+    class: oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery
     kwargs: {}
   registration: &regist
-    class: oidcservice.oidc.registration.Registration
+    class: oidcrp.oidc.registration.Registration
     kwargs: {}
   authorization: &authz
-    class: oidcservice.oidc.authorization.Authorization
+    class: oidcrp.oidc.authorization.Authorization
     kwargs: {}
   accesstoken: &acctok
-    class: oidcservice.oidc.access_token.AccessToken
+    class: oidcrp.oidc.access_token.AccessToken
     kwargs: {}
   userinfo: &userinfo
-    class: oidcservice.oidc.userinfo.UserInfo
+    class: oidcrp.oidc.userinfo.UserInfo
     kwargs: {}
   end_session: &sess
-    class: oidcservice.oidc.end_session.EndSession
+    class: oidcrp.oidc.end_session.EndSession
     kwargs: {}
 
 clients:
@@ -110,12 +110,12 @@ clients:
       end_session: *sess
     add_ons:
       pkce:
-        function: oidcservice.oidc.add_on.pkce.add_pkce_support
+        function: oidcrp.oauth2.add_on.pkce.add_support
         kwargs:
           code_challenge_length: 64
           code_challenge_method: S256
 #      status_check:
-#        function: oidcservice.oidc.add_on.status_check.add_status_check_support
+#        function: oidcrp.oauth2.add_on.status_check.add_status_check_support
 #        kwargs:
 #          rp_iframe_path: "templates/rp_iframe.html"
   bobcat:

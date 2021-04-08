@@ -3,8 +3,6 @@ import os
 import sys
 import time
 
-import pytest
-import responses
 from cryptojwt.jwk.rsa import import_private_rsa_key_from_file
 from cryptojwt.key_bundle import KeyBundle
 from oidcmsg.oauth2 import AccessTokenRequest
@@ -15,6 +13,8 @@ from oidcmsg.oauth2 import RefreshAccessTokenRequest
 from oidcmsg.oidc import IdToken
 from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.time_util import utc_time_sans_frac
+import pytest
+import responses
 
 from oidcrp.oidc import RP
 
@@ -38,7 +38,6 @@ def access_token_callback(endpoint):
         return 'access_token'
 
 
-
 class TestClient(object):
     @pytest.fixture(autouse=True)
     def create_client(self):
@@ -54,65 +53,66 @@ class TestClient(object):
         req_args = {
             'state': 'ABCDE',
             'redirect_uri': 'https://example.com/auth_cb',
-            'response_type': ['code']
+            'response_type': ['code'],
+            'nonce': 'nonce'
         }
 
-        self.client.session_interface.create_state('issuer', 'ABCDE')
+        self.client.get_service_context().state.create_state('issuer', 'ABCDE')
 
-        msg = self.client.service['authorization'].construct(
+        msg = self.client.get_service('authorization').construct(
             request_args=req_args)
         assert isinstance(msg, AuthorizationRequest)
         assert msg['redirect_uri'] == 'https://example.com/auth_cb'
 
     def test_construct_accesstoken_request(self):
-        auth_request = AuthorizationRequest(
-            redirect_uri='https://example.com/cli/authz_cb',
-            state='ABCDE'
-        )
+        _context = self.client.get_service_context()
+        auth_request = AuthorizationRequest(redirect_uri='https://example.com/cli/authz_cb')
 
-        self.client.session_interface.store_item(auth_request,
-                                                 'auth_request', 'ABCDE')
+        _state = _context.state.create_state('issuer')
+        auth_request["state"] = _state
+
+        _context.state.store_item(auth_request, 'auth_request', _state)
 
         auth_response = AuthorizationResponse(code='access_code')
 
-        self.client.session_interface.store_item(auth_response,
-                                                 'auth_response', 'ABCDE')
+        _context.state.store_item(auth_response, 'auth_response', _state)
 
         # Bind access code to state
         req_args = {}
-        msg = self.client.service['accesstoken'].construct(
-            request_args=req_args, state='ABCDE')
+        msg = self.client.get_service('accesstoken').construct(request_args=req_args, state=_state)
         assert isinstance(msg, AccessTokenRequest)
         assert msg.to_dict() == {
-            'client_id': 'client_1', 'code': 'access_code',
+            'client_id': 'client_1',
             'client_secret': 'abcdefghijklmnop',
             'grant_type': 'authorization_code',
-            'redirect_uri': 'https://example.com/cli/authz_cb',
-            'state': 'ABCDE'
+            'state': _state,
+            'code': 'access_code',
+            'redirect_uri': 'https://example.com/cli/authz_cb'
         }
 
     def test_construct_refresh_token_request(self):
-        self.client.session_interface.create_state('issuer', 'ABCDE')
+        _context = self.client.get_service_context()
+        _context.state.create_state('issuer', 'ABCDE')
 
         auth_request = AuthorizationRequest(
             redirect_uri='https://example.com/cli/authz_cb',
             state='state'
         )
 
-        self.client.session_interface.store_item(auth_request,
+        _context.state.store_item(auth_request,
                                                  'auth_request', 'ABCDE')
 
         auth_response = AuthorizationResponse(code='access_code')
-        self.client.session_interface.store_item(auth_response,
+        _context.state.store_item(auth_response,
                                                  'auth_response', 'ABCDE')
 
         token_response = AccessTokenResponse(refresh_token="refresh_with_me",
                                              access_token="access")
-        self.client.session_interface.store_item(token_response,
+        _context.state.store_item(token_response,
                                                  'token_response', 'ABCDE')
 
         req_args = {}
-        msg = self.client.service['refresh_token'].construct(
+        msg = self.client.get_service('refresh_token').construct(
             request_args=req_args, state='ABCDE')
         assert isinstance(msg, RefreshAccessTokenRequest)
         assert msg.to_dict() == {
@@ -123,26 +123,27 @@ class TestClient(object):
         }
 
     def test_do_userinfo_request_init(self):
-        self.client.session_interface.create_state('issuer', 'ABCDE')
+        _context = self.client.get_service_context()
+        _context.state.create_state('issuer', 'ABCDE')
 
         auth_request = AuthorizationRequest(
             redirect_uri='https://example.com/cli/authz_cb',
             state='state'
         )
 
-        self.client.session_interface.store_item(auth_request,
+        _context.state.store_item(auth_request,
                                                  'auth_request', 'ABCDE')
 
         auth_response = AuthorizationResponse(code='access_code')
-        self.client.session_interface.store_item(auth_response,
+        _context.state.store_item(auth_response,
                                                  'auth_response', 'ABCDE')
 
         token_response = AccessTokenResponse(refresh_token="refresh_with_me",
                                              access_token="access")
-        self.client.session_interface.store_item(token_response,
+        _context.state.store_item(token_response,
                                                  'token_response', 'ABCDE')
 
-        _srv = self.client.service['userinfo']
+        _srv = self.client.get_service('userinfo')
         _srv.endpoint = "https://example.com/userinfo"
         _info = _srv.get_request_parameters(state='ABCDE')
         assert _info

@@ -10,7 +10,7 @@ from flask import request
 from flask import session
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
-from oidcservice.exception import OidcServiceError
+from oidcrp.exception import OidcServiceError
 
 import oidcrp
 

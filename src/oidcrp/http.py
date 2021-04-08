@@ -1,14 +1,13 @@
 import copy
-import logging
-import requests
-
 from http.cookiejar import FileCookieJar
 from http.cookies import CookieError
 from http.cookies import SimpleCookie
+import logging
 
-from oidcservice import sanitize
-from oidcservice.exception import NonFatalException
+import requests
 
+from oidcrp.exception import NonFatalException
+from oidcrp.util import sanitize
 from oidcrp.util import set_cookie
 
 __author__ = 'roland'

@@ -7,8 +7,8 @@ from cryptojwt.key_jar import build_keyjar
 from oidcmsg.oidc import ProviderConfigurationResponse
 from oidcmsg.oidc import RegistrationResponse
 
-from oidcrp import DEFAULT_KEY_DEFS
-from oidcrp import RPHandler
+from oidcrp.defaults import DEFAULT_KEY_DEFS
+from oidcrp.rp_handler import RPHandler
 
 BASE_URL = "https://example.com"
 
@@ -24,11 +24,11 @@ class TestRPHandler(object):
 
     def test_init_client(self):
         client = self.rph.init_client('')
-        assert set(client.service.keys()) == {
+        assert set(client.get_services().keys()) == {
             'registration', 'provider_info', 'webfinger',
             'authorization', 'accesstoken', 'userinfo', 'refresh_token'}
 
-        _context = client.service_context
+        _context = client.get_service_context()
 
         assert _context.config['client_preferences'] == {
             'application_type': 'web',
@@ -69,12 +69,14 @@ class TestRPHandler(object):
 
             issuer = self.rph.do_provider_info(client)
 
+        _context = client.get_service_context()
+
         # Calculating request so I can build a reasonable response
-        self.rph.add_callbacks(client.service_context)
-        _req = client.service['registration'].construct_request()
+        self.rph.add_callbacks(_context)
+        _req = client.get_service('registration').construct_request()
 
         with responses.RequestsMock() as rsps:
-            request_uri = client.service_context.get('provider_info')["registration_endpoint"]
+            request_uri = _context.get('provider_info')["registration_endpoint"]
             _jws = RegistrationResponse(
                 client_id="client uno", client_secret="VerySecretAndLongEnough", **_req.to_dict()
             ).to_json()
@@ -83,12 +85,12 @@ class TestRPHandler(object):
 
         self.rph.issuer2rp[issuer] = client
 
-        assert set(client.service_context.get('behaviour').keys()) == {
+        assert set(_context.get('behaviour').keys()) == {
             'token_endpoint_auth_method', 'response_types', 'scope', 'application_type',
             'application_name'}
-        assert client.service_context.get('client_id') == "client uno"
-        assert client.service_context.get('client_secret') == "VerySecretAndLongEnough"
-        assert client.service_context.get('issuer') == ISS_ID
+        assert _context.get('client_id') == "client uno"
+        assert _context.get('client_secret') == "VerySecretAndLongEnough"
+        assert _context.get('issuer') == ISS_ID
 
         res = self.rph.init_authorization(client)
         assert set(res.keys()) == {'url', 'state'}
@@ -125,20 +127,21 @@ class TestRPHandler(object):
 
             issuer = self.rph.do_provider_info(client)
 
+        _context = client.get_service_context()
         # Calculating request so I can build a reasonable response
-        self.rph.add_callbacks(client.service_context)
+        self.rph.add_callbacks(_context)
         # Publishing a JWKS instead of a JWKS_URI
-        client.service_context.jwks_uri = ''
-        client.service_context.jwks = client.service_context.keyjar.export_jwks()
+        _context.jwks_uri = ''
+        _context.jwks = _context.keyjar.export_jwks()
 
-        _req = client.service['registration'].construct_request()
+        _req = client.get_service('registration').construct_request()
 
         with responses.RequestsMock() as rsps:
-            request_uri = client.service_context.get('provider_info')["registration_endpoint"]
+            request_uri = _context.get('provider_info')["registration_endpoint"]
             _jws = RegistrationResponse(
                 client_id="client uno", client_secret="VerySecretAndLongEnough", **_req.to_dict()
             ).to_json()
             rsps.add("POST", request_uri, body=_jws, status=200)
             self.rph.do_client_registration(client, ISS_ID)
 
-        assert 'jwks' in client.service_context.get('registration_response')
+        assert 'jwks' in _context.get('registration_response')
