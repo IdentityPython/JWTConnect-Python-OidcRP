@@ -92,7 +92,7 @@ class ClientSecretBasic(ClientAuthnMethod):
             try:
                 passwd = request["client_secret"]
             except KeyError:
-                passwd = service.entity_get("service_context").client_secret
+                passwd = service.client_get("service_context").client_secret
         return passwd
 
     @staticmethod
@@ -100,7 +100,7 @@ class ClientSecretBasic(ClientAuthnMethod):
         try:
             user = kwargs["user"]
         except KeyError:
-            user = service.entity_get("service_context").client_id
+            user = service.client_get("service_context").client_id
         return user
 
     def _get_authentication_token(self, request, service, **kwargs):
@@ -133,7 +133,7 @@ class ClientSecretBasic(ClientAuthnMethod):
             'grant_type'] == 'authorization_code':
             if 'client_id' not in request:
                 try:
-                    request['client_id'] = service.entity_get("service_context").client_id
+                    request['client_id'] = service.client_get("service_context").client_id
                 except AttributeError:
                     pass
         else:
@@ -210,7 +210,7 @@ class ClientSecretPost(ClientSecretBasic):
         :param request: The request
         :param service: The service that is using this authentication method
         """
-        _context = service.entity_get("service_context")
+        _context = service.client_get("service_context")
         if "client_secret" not in request:
             try:
                 request["client_secret"] = kwargs["client_secret"]
@@ -268,7 +268,7 @@ def find_token(request, token_type, service, **kwargs):
     except KeyError:
         # I should pick the latest acquired token, this should be the right
         # order for that.
-        _arg = service.entity_get("service_context").state.multiple_extend_request_args(
+        _arg = service.client_get("service_context").state.multiple_extend_request_args(
             {}, kwargs['key'], ['access_token'],
             ['auth_response', 'token_response', 'refresh_token_response'])
         return _arg['access_token']
@@ -481,7 +481,7 @@ class JWSAuthnMethod(ClientAuthnMethod):
         return audience, algorithm
 
     def _construct_client_assertion(self, service, **kwargs):
-        _context = service.entity_get("service_context")
+        _context = service.client_get("service_context")
 
         audience, algorithm = self._get_audience_and_algorithm(_context, **kwargs)
 

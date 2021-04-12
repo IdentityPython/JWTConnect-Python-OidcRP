@@ -24,15 +24,15 @@ class AccessToken(Service):
     request_body_type = 'urlencoded'
     response_body_type = 'json'
 
-    def __init__(self, entity_get, client_authn_factory=None, conf=None):
-        Service.__init__(self, entity_get,
+    def __init__(self, client_get, client_authn_factory=None, conf=None):
+        Service.__init__(self, client_get,
                          client_authn_factory=client_authn_factory, conf=conf)
         self.pre_construct.append(self.oauth_pre_construct)
 
     def update_service_context(self, resp, key='', **kwargs):
         if 'expires_in' in resp:
             resp['__expires_at'] = time_sans_frac() + int(resp['expires_in'])
-        self.entity_get("service_context").state.store_item(resp, 'token_response', key)
+        self.client_get("service_context").state.store_item(resp, 'token_response', key)
 
     def oauth_pre_construct(self, request_args=None, post_args=None, **kwargs):
         """
@@ -44,7 +44,7 @@ class AccessToken(Service):
         _state = get_state_parameter(request_args, kwargs)
         parameters = list(self.msg_type.c_param.keys())
 
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         _args = _context.state.extend_request_args({}, oauth2.AuthorizationRequest,
                                                    'auth_request', _state, parameters)
 

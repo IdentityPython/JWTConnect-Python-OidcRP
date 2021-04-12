@@ -59,10 +59,10 @@ class Service(ImpExp):
         'response_cls': object
     }
 
-    init_args = ["entity_get"]
+    init_args = ["client_get"]
 
     def __init__(self,
-                 entity_get: Callable,
+                 client_get: Callable,
                  conf: Optional[Union[dict, Configuration]] = None,
                  client_authn_factory: Optional[Callable] = None,
                  **kwargs):
@@ -72,7 +72,7 @@ class Service(ImpExp):
         else:
             self.client_authn_factory = client_authn_factory
 
-        self.entity_get = entity_get
+        self.client_get = client_get
         self.default_request_args = {}
         if conf:
             self.conf = conf
@@ -100,7 +100,7 @@ class Service(ImpExp):
         """
         ar_args = kwargs.copy()
 
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         # Go through the list of claims defined for the message class
         # there are a couple of places where informtation can be found
         # access them in the order of priority
@@ -272,7 +272,7 @@ class Service(ImpExp):
         if self.endpoint:
             return self.endpoint
 
-        return self.entity_get("service_context").provider_info[self.endpoint_name]
+        return self.client_get("service_context").provider_info[self.endpoint_name]
 
     def get_authn_header(self,
                          request: Union[dict, Message],
@@ -329,7 +329,7 @@ class Service(ImpExp):
                                          **kwargs)
 
         for meth in self.construct_extra_headers:
-            _headers = meth(self.entity_get("service_context"),
+            _headers = meth(self.client_get("service_context"),
                             headers=_headers,
                             request=request,
                             authn_method=authn_method,
@@ -374,7 +374,7 @@ class Service(ImpExp):
         _info = {'method': method, "request": request}
 
         _args = kwargs.copy()
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         if _context.issuer:
             _args['iss'] = _context.issuer
 
@@ -447,7 +447,7 @@ class Service(ImpExp):
         :return: dictionary with arguments to the verify call
         """
 
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         kwargs = {
             'iss': _context.issuer,
             'keyjar': _context.keyjar,
@@ -465,7 +465,7 @@ class Service(ImpExp):
         return kwargs
 
     def _do_jwt(self, info):
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         args = {'allowed_sign_algs': _context.get_sign_alg(self.service_name)}
         enc_algs = _context.get_enc_alg_enc(self.service_name)
         args['allowed_enc_algs'] = enc_algs['alg']
@@ -475,7 +475,7 @@ class Service(ImpExp):
         return _jwt.unpack(info)
 
     def _do_response(self, info, sformat, **kwargs):
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
 
         try:
             resp = self.response_cls().deserialize(
@@ -601,12 +601,12 @@ def gather_constructors(service_methods, construct):
                 construct.append(util.importer(func))
 
 
-def init_services(service_definitions, entity_get, client_authn_factory=None):
+def init_services(service_definitions, client_get, client_authn_factory=None):
     """
     Initiates a set of services
 
     :param service_definitions: A dictionary containing service definitions
-    :param entity_get: A function that returns different things from the base entity.
+    :param client_get: A function that returns different things from the base entity.
     :param client_authn_factory: A list of methods the services can use to
         authenticate the client to a service.
     :return: A dictionary, with service name as key and the service instance as
@@ -620,7 +620,7 @@ def init_services(service_definitions, entity_get, client_authn_factory=None):
             kwargs = {}
 
         kwargs.update({
-            'entity_get': entity_get,
+            'client_get': client_get,
             'client_authn_factory': client_authn_factory
         })
 

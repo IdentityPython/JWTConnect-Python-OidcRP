@@ -222,10 +222,10 @@ class TestRPHandler(object):
 
     def test_init_client(self):
         client = self.rph.init_client('github')
-        assert set(client.entity_get("services").keys()) == {'authorization', 'accesstoken',
+        assert set(client.client_get("services").keys()) == {'authorization', 'accesstoken',
                                                              'userinfo', 'refresh_token'}
 
-        _context = client.entity_get("service_context")
+        _context = client.client_get("service_context")
 
         assert _context.get('client_id') == 'eeeeeeeee'
         assert _context.get('client_secret') == 'aaaaaaaaaaaaaaaaaaaa'
@@ -265,8 +265,8 @@ class TestRPHandler(object):
         # Make sure the service endpoints are set
 
         for service_type in ['authorization', 'accesstoken', 'userinfo']:
-            _srv = client.entity_get("service",service_type)
-            _endp = client.entity_get("service_context").get('provider_info')[_srv.endpoint_name]
+            _srv = client.client_get("service",service_type)
+            _endp = client.client_get("service_context").get('provider_info')[_srv.endpoint_name]
             assert _srv.endpoint == _endp
 
     def test_do_client_registration(self):
@@ -277,12 +277,12 @@ class TestRPHandler(object):
         # only 2 things should have happened
 
         assert self.rph.hash2issuer['github'] == issuer
-        assert client.entity_get("service_context").post_logout_redirect_uris == []
+        assert client.client_get("service_context").post_logout_redirect_uris == []
 
     def test_do_client_setup(self):
         client = self.rph.client_setup('github')
         _github_id = iss_id('github')
-        _context = client.entity_get("service_context")
+        _context = client.client_get("service_context")
 
         assert _context.get('client_id') == 'eeeeeeeee'
         assert _context.get('client_secret') == 'aaaaaaaaaaaaaaaaaaaa'
@@ -296,8 +296,8 @@ class TestRPHandler(object):
         assert len(keys) == 2
 
         for service_type in ['authorization', 'accesstoken', 'userinfo']:
-            _srv = client.entity_get("service",service_type)
-            _endp = _srv.entity_get("service_context").get('provider_info')[_srv.endpoint_name]
+            _srv = client.client_get("service",service_type)
+            _endp = _srv.client_get("service_context").get('provider_info')[_srv.endpoint_name]
             assert _srv.endpoint == _endp
 
         assert self.rph.hash2issuer['github'] == _context.get('issuer')
@@ -323,7 +323,7 @@ class TestRPHandler(object):
 
         client = self.rph.issuer2rp[_github_id]
 
-        assert client.entity_get("service_context").issuer == _github_id
+        assert client.client_get("service_context").issuer == _github_id
 
         part = urlsplit(res['url'])
         assert part.scheme == 'https'
@@ -355,7 +355,7 @@ class TestRPHandler(object):
         # redo
         self.rph.do_provider_info(state=res['state'])
         # get new redirect_uris
-        cli2.entity_get("service_context").redirect_uris = []
+        cli2.client_get("service_context").redirect_uris = []
         self.rph.do_client_registration(state=res['state'])
 
     def test_finalize_auth(self):
@@ -367,7 +367,7 @@ class TestRPHandler(object):
                                               state=res['state'])
         resp = self.rph.finalize_auth(client, _session['iss'], auth_response.to_dict())
         assert set(resp.keys()) == {'state', 'code'}
-        aresp = client.entity_get("service_context").state.get_item(AuthorizationResponse, 'auth_response',
+        aresp = client.client_get("service_context").state.get_item(AuthorizationResponse, 'auth_response',
                                                             res['state'])
         assert set(aresp.keys()) == {'state', 'code'}
 
@@ -391,7 +391,7 @@ class TestRPHandler(object):
         client = self.rph.issuer2rp[_session['iss']]
 
         _github_id = iss_id('github')
-        client.entity_get("service_context").keyjar.import_jwks(
+        client.client_get("service_context").keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         _nonce = _session['auth_request']['nonce']
@@ -417,7 +417,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.entity_get("service",'accesstoken').endpoint = _url
+            client.client_get("service",'accesstoken').endpoint = _url
 
             auth_response = AuthorizationResponse(code='access_code',
                                                   state=res['state'])
@@ -429,7 +429,7 @@ class TestRPHandler(object):
                                         'token_type', '__verified_id_token',
                                         '__expires_at'}
 
-            atresp = client.entity_get("service_context").state.get_item(
+            atresp = client.client_get("service_context").state.get_item(
                 AccessTokenResponse, 'token_response', res['state'])
             assert set(atresp.keys()) == {'access_token', 'expires_in', 'id_token',
                                           'token_type', '__verified_id_token',
@@ -448,7 +448,7 @@ class TestRPHandler(object):
         }
 
         _github_id = iss_id('github')
-        client.entity_get("service_context").keyjar.import_jwks(
+        client.client_get("service_context").keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
@@ -466,7 +466,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.entity_get("service",'accesstoken').endpoint = _url
+            client.client_get("service",'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -489,7 +489,7 @@ class TestRPHandler(object):
         }
 
         _github_id = iss_id('github')
-        client.entity_get("service_context").keyjar.import_jwks(
+        client.client_get("service_context").keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
@@ -507,7 +507,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.entity_get("service",'accesstoken').endpoint = _url
+            client.client_get("service",'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -530,7 +530,7 @@ class TestRPHandler(object):
         }
 
         _github_id = iss_id('github')
-        client.entity_get("service_context").keyjar.import_jwks(
+        client.client_get("service_context").keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
@@ -548,7 +548,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.entity_get("service",'accesstoken').endpoint = _url
+            client.client_get("service",'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -562,7 +562,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("GET", _url, body='{"sub":"EndUserSubject"}',
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.entity_get("service",'userinfo').endpoint = _url
+            client.client_get("service",'userinfo').endpoint = _url
 
             userinfo_resp = self.rph.get_user_info(res['state'], client,
                                                    token_resp['access_token'])
@@ -595,7 +595,7 @@ def test_get_provider_specific_service():
         }
     }
     entity = Entity(services=srv_desc)
-    assert entity.entity_get("service",'accesstoken').response_body_type == 'urlencoded'
+    assert entity.client_get("service",'accesstoken').response_body_type == 'urlencoded'
 
 
 class TestRPHandlerTier2(object):
@@ -614,7 +614,7 @@ class TestRPHandlerTier2(object):
         }
 
         _github_id = iss_id('github')
-        client.entity_get("service_context").keyjar.import_jwks(
+        client.client_get("service_context").keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
@@ -634,7 +634,7 @@ class TestRPHandlerTier2(object):
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
 
-            client.entity_get("service",'accesstoken').endpoint = _url
+            client.client_get("service",'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -649,7 +649,7 @@ class TestRPHandlerTier2(object):
             rsps.add("GET", _url, body='{"sub":"EndUserSubject"}',
                      adding_headers={"Content-Type": "application/json"}, status=200)
 
-            client.entity_get("service",'userinfo').endpoint = _url
+            client.client_get("service",'userinfo').endpoint = _url
             self.rph.get_user_info(res['state'], client,
                                    token_resp['access_token'])
             self.state = res['state']
@@ -677,7 +677,7 @@ class TestRPHandlerTier2(object):
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
 
-            client.entity_get("service",'refresh_token').endpoint = _url
+            client.client_get("service",'refresh_token').endpoint = _url
             res = self.rph.refresh_access_token(self.state, client, 'openid email')
             assert res['access_token'] == '2nd_accessTok'
 
@@ -689,7 +689,7 @@ class TestRPHandlerTier2(object):
         with responses.RequestsMock() as rsps:
             rsps.add("GET", _url, body='{"sub":"EndUserSubject", "mail":"foo@example.com"}',
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.entity_get("service",'userinfo').endpoint = _url
+            client.client_get("service",'userinfo').endpoint = _url
 
             resp = self.rph.get_user_info(self.state, client)
             assert set(resp.keys()) == {'sub', 'mail'}
@@ -838,7 +838,7 @@ class TestRPHandlerWithMockOP(object):
             p.path, _info.to_json(), 200, {'content-type': "application/json"})
 
         _github_id = iss_id('github')
-        client.entity_get("service_context").keyjar.import_jwks(GITHUB_KEY.export_jwks(
+        client.client_get("service_context").keyjar.import_jwks(GITHUB_KEY.export_jwks(
             issuer_id=_github_id), _github_id)
 
         # do the rest (= get access token and user info)

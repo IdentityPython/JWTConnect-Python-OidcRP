@@ -47,7 +47,7 @@ class TestDummyService(object):
         }
 
         entity = Entity(config=config, services=service)
-        self.service = DummyService(entity_get=entity.entity_get, conf={})
+        self.service = DummyService(client_get=entity.client_get, conf={})
 
     def test_construct(self):
         req_args = {'foo': 'bar'}

@@ -37,8 +37,8 @@ class UserInfo(Service):
     default_authn_method = 'bearer_header'
     http_method = 'GET'
 
-    def __init__(self, entity_get, client_authn_factory=None, conf=None):
-        Service.__init__(self, entity_get,
+    def __init__(self, client_get, client_authn_factory=None, conf=None):
+        Service.__init__(self, client_get,
                          client_authn_factory=client_authn_factory,
                          conf=conf)
         self.pre_construct = [self.oidc_pre_construct, carry_state]
@@ -50,7 +50,7 @@ class UserInfo(Service):
         if "access_token" in request_args:
             pass
         else:
-            request_args = self.entity_get("service_context").state.multiple_extend_request_args(
+            request_args = self.client_get("service_context").state.multiple_extend_request_args(
                 request_args, kwargs['state'], ['access_token'],
                 ['auth_response', 'token_response', 'refresh_token_response']
             )
@@ -58,7 +58,7 @@ class UserInfo(Service):
         return request_args, {}
 
     def post_parse_response(self, response, **kwargs):
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         _state_interface = _context.state
         _args = _state_interface.multiple_extend_request_args(
             {}, kwargs['state'], ['id_token'],
@@ -114,7 +114,7 @@ class UserInfo(Service):
 
         :return: dictionary with arguments to the verify call
         """
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         kwargs = {
             'client_id': _context.client_id,
             'iss': _context.issuer,

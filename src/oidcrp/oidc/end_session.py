@@ -21,8 +21,8 @@ class EndSession(Service):
     service_name = 'end_session'
     response_body_type = 'html'
 
-    def __init__(self, entity_get, client_authn_factory=None, conf=None):
-        Service.__init__(self, entity_get,
+    def __init__(self, client_get, client_authn_factory=None, conf=None):
+        Service.__init__(self, client_get,
                          client_authn_factory=client_authn_factory,
                          conf=conf)
         self.pre_construct = [self.get_id_token_hint,
@@ -37,7 +37,7 @@ class EndSession(Service):
         :param kwargs:
         :return:
         """
-        request_args = self.entity_get("service_context").state.multiple_extend_request_args(
+        request_args = self.client_get("service_context").state.multiple_extend_request_args(
             request_args, kwargs['state'], ['id_token'],
             ['auth_response', 'token_response', 'refresh_token_response'],
             orig=True
@@ -57,7 +57,7 @@ class EndSession(Service):
             try:
                 request_args[
                     'post_logout_redirect_uri'
-                ] = self.entity_get("service_context").register_args[
+                ] = self.client_get("service_context").register_args[
                     'post_logout_redirect_uris'][0]
             except KeyError:
                 pass
@@ -69,7 +69,7 @@ class EndSession(Service):
             request_args['state'] = rndstr(32)
 
         # As a side effect bind logout state to session state
-        self.entity_get("service_context").state.store_logout_state2state(request_args['state'],
+        self.client_get("service_context").state.store_logout_state2state(request_args['state'],
                                                                           kwargs['state'])
 
         return request_args, {}

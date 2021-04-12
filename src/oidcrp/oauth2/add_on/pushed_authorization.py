@@ -15,7 +15,7 @@ def push_authorization(request_args, service, **kwargs):
     :param kwargs: Extra keyword arguments.
     """
 
-    _context = service.entity_get("service_context")
+    _context = service.client_get("service_context")
     method_args = _context.add_on["pushed_authorization"]
 
     # construct the message body
@@ -64,7 +64,7 @@ def add_support(services, body_format="jws", signing_algorithm="RS256",
         http_client = requests
 
     _service = services["authorization"]
-    _service.entity_get("service_context").add_on['pushed_authorization'] = {
+    _service.client_get("service_context").add_on['pushed_authorization'] = {
         "body_format": body_format,
         "signing_algorithm": signing_algorithm,
         "http_client": http_client,

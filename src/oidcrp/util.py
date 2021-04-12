@@ -544,7 +544,7 @@ def load_registration_response(client):
 
     :param client: A :py:class:`oidcrp.oidc.Client` instance
     """
-    if not client.entity_get("service_context").get('client_id'):
+    if not client.client_get("service_context").get('client_id'):
         try:
             response = client.do_request('registration')
         except KeyError:
@@ -569,7 +569,7 @@ def dynamic_provider_info_discovery(client):
         raise ConfigurationError(
             'Can not do dynamic provider info discovery')
     else:
-        _context = client.entity_get("service_context")
+        _context = client.client_get("service_context")
         try:
             _context.set('issuer', _context.config['srv_discovery_url'])
         except KeyError:

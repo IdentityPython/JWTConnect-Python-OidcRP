@@ -156,7 +156,7 @@ def add_support(services, signing_algorithms: Optional[list] = None):
     """
 
     _service = services["accesstoken"]
-    _service.entity_get("service_context").add_on['dpop'] = {
+    _service.client_get("service_context").add_on['dpop'] = {
         # "key": key_by_alg(signing_algorithm),
         "sign_algs": signing_algorithms
     }

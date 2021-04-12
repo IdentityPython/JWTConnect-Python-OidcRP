@@ -63,7 +63,7 @@ def test_quote():
 
 class TestClientSecretBasic(object):
     def test_construct(self, entity):
-        _token_service = entity.entity_get("service", "accesstoken")
+        _token_service = entity.client_get("service", "accesstoken")
         request = _token_service.construct(redirect_uri="http://example.com",
                                                      state='ABCDE')
 
@@ -100,7 +100,7 @@ class TestBearerHeader(object):
         request = ResourceRequest(access_token="Sesame")
         bh = BearerHeader()
         http_args = bh.construct(request,
-                                 service=entity.entity_get("service", "accesstoken"))
+                                 service=entity.client_get("service", "accesstoken"))
 
         assert http_args == {"headers": {"Authorization": "Bearer Sesame"}}
 
@@ -109,7 +109,7 @@ class TestBearerHeader(object):
         bh = BearerHeader()
         # Any HTTP args should just be passed on
         http_args = bh.construct(request,
-                                 service=entity.entity_get("service", "accesstoken"),
+                                 service=entity.client_get("service", "accesstoken"),
                                  http_args={"foo": "bar"})
 
         assert _eq(http_args.keys(), ["foo", "headers"])
@@ -120,7 +120,7 @@ class TestBearerHeader(object):
 
         bh = BearerHeader()
         http_args = bh.construct(request,
-                                 service=entity.entity_get("service", "accesstoken"),
+                                 service=entity.client_get("service", "accesstoken"),
                                  http_args={"headers": {"x-foo": "bar"}})
 
         assert _eq(http_args.keys(), ["headers"])
@@ -132,14 +132,14 @@ class TestBearerHeader(object):
         request = ResourceRequest(access_token="Sesame")
 
         http_args = bh.construct(request,
-                                 service=entity.entity_get("service", "accesstoken"))
+                                 service=entity.client_get("service", "accesstoken"))
 
         assert "access_token" not in request
         assert http_args == {"headers": {"Authorization": "Bearer Sesame"}}
 
     def test_construct_with_token(self, entity):
-        authz_service = entity.entity_get("service", 'authorization')
-        srv_cntx = authz_service.entity_get("service_context")
+        authz_service = entity.client_get("service", 'authorization')
+        srv_cntx = authz_service.client_get("service_context")
         _state = srv_cntx.state.create_state('Issuer')
         req = AuthorizationRequest(state=_state, response_type='code',
                                    redirect_uri='https://example.com',
@@ -156,7 +156,7 @@ class TestBearerHeader(object):
         resp2 = AccessTokenResponse(access_token="token1",
                                     token_type="Bearer", expires_in=0,
                                     state=_state)
-        _token_service = entity.entity_get("service", 'accesstoken')
+        _token_service = entity.client_get("service", 'accesstoken')
         response = _token_service.parse_response(
             resp2.to_urlencoded(), "urlencoded")
 
@@ -171,7 +171,7 @@ class TestBearerHeader(object):
 
 class TestBearerBody(object):
     def test_construct(self, entity):
-        _token_service = entity.entity_get("service", 'accesstoken')
+        _token_service = entity.client_get("service", 'accesstoken')
         request = ResourceRequest(access_token="Sesame")
         http_args = BearerBody().construct(request, service=_token_service)
 
@@ -179,8 +179,8 @@ class TestBearerBody(object):
         assert http_args is None
 
     def test_construct_with_state(self, entity):
-        _auth_service = entity.entity_get("service", 'authorization')
-        _cntx = _auth_service.entity_get("service_context")
+        _auth_service = entity.client_get("service", 'authorization')
+        _cntx = _auth_service.client_get("service_context")
         _key = _cntx.state.create_state(iss='Issuer')
 
         resp = AuthorizationResponse(code="code", state=_key)
@@ -199,8 +199,8 @@ class TestBearerBody(object):
         assert http_args is None
 
     def test_construct_with_request(self, entity):
-        authz_service = entity.entity_get("service", 'authorization')
-        _cntx = authz_service.entity_get("service_context")
+        authz_service = entity.client_get("service", 'authorization')
+        _cntx = authz_service.client_get("service_context")
 
         _key = _cntx.state.create_state(iss='Issuer')
         resp1 = AuthorizationResponse(code="auth_grant", state=_key)
@@ -211,7 +211,7 @@ class TestBearerBody(object):
         resp2 = AccessTokenResponse(access_token="token1",
                                     token_type="Bearer", expires_in=0,
                                     state=_key)
-        _token_service = entity.entity_get("service", 'accesstoken')
+        _token_service = entity.client_get("service", 'accesstoken')
         response = _token_service.parse_response(resp2.to_urlencoded(), "urlencoded")
         _token_service.update_service_context(response, key=_key)
 
@@ -224,7 +224,7 @@ class TestBearerBody(object):
 
 class TestClientSecretPost(object):
     def test_construct(self, entity):
-        _token_service = entity.entity_get("service", 'accesstoken')
+        _token_service = entity.client_get("service", 'accesstoken')
         request = _token_service.construct(redirect_uri="http://example.com",
                                            state='ABCDE')
         csp = ClientSecretPost()
@@ -243,7 +243,7 @@ class TestClientSecretPost(object):
         assert http_args is None
 
     def test_modify_1(self, entity):
-        token_service = entity.entity_get("service", 'accesstoken')
+        token_service = entity.client_get("service", 'accesstoken')
         request = token_service.construct(redirect_uri="http://example.com",
                                           state='ABCDE')
         csp = ClientSecretPost()
@@ -253,13 +253,13 @@ class TestClientSecretPost(object):
         assert "client_secret" in request
 
     def test_modify_2(self, entity):
-        token_service = entity.entity_get("service", 'accesstoken')
+        token_service = entity.client_get("service", 'accesstoken')
         request = token_service.construct(redirect_uri="http://example.com",
                                           state='ABCDE')
         csp = ClientSecretPost()
         # client secret not in request or kwargs
         del request["client_secret"]
-        token_service.entity_get("service_context").client_secret = ""
+        token_service.client_get("service_context").client_secret = ""
         # this will fail
         with pytest.raises(AuthnFailure):
             http_args = csp.construct(request, service=token_service)
@@ -267,14 +267,14 @@ class TestClientSecretPost(object):
 
 class TestPrivateKeyJWT(object):
     def test_construct(self, entity):
-        token_service = entity.entity_get("service", 'accesstoken')
+        token_service = entity.client_get("service", 'accesstoken')
         kb_rsa = KeyBundle(source='file://{}'.format(
             os.path.join(BASE_PATH, "data/keys/rsa.key")), fileformat='der')
 
         for key in kb_rsa:
             key.add_kid()
 
-        _context = token_service.entity_get("service_context")
+        _context = token_service.client_get("service_context")
         _context.keyjar.add_kb('', kb_rsa)
         _context.provider_info = {
             'issuer': 'https://example.com/',
@@ -297,7 +297,7 @@ class TestPrivateKeyJWT(object):
         assert jso['aud'] == [_context.provider_info['token_endpoint']]
 
     def test_construct_client_assertion(self, entity):
-        token_service = entity.entity_get("service", 'accesstoken')
+        token_service = entity.client_get("service", 'accesstoken')
 
         kb_rsa = KeyBundle(source='file://{}'.format(
             os.path.join(BASE_PATH, "data/keys/rsa.key")), fileformat='der')
@@ -305,7 +305,7 @@ class TestPrivateKeyJWT(object):
         request = AccessTokenRequest()
         pkj = PrivateKeyJWT()
         _ca = assertion_jwt(
-            token_service.entity_get("service_context").client_id, kb_rsa.get('RSA'),
+            token_service.client_get("service_context").client_id, kb_rsa.get('RSA'),
             "https://example.com/token", 'RS256')
         http_args = pkj.construct(request, client_assertion=_ca)
         assert http_args == {}
@@ -315,7 +315,7 @@ class TestPrivateKeyJWT(object):
 
 class TestClientSecretJWT_TE(object):
     def test_client_secret_jwt(self, entity):
-        _service_context = entity.entity_get("service_context")
+        _service_context = entity.client_get("service_context")
         _service_context.token_endpoint = "https://example.com/token"
 
         _service_context.provider_info = {
@@ -329,7 +329,7 @@ class TestClientSecretJWT_TE(object):
         request = AccessTokenRequest()
 
         csj.construct(request,
-                      service=entity.entity_get("service", 'accesstoken'),
+                      service=entity.client_get("service", 'accesstoken'),
                       authn_endpoint='token_endpoint')
         assert request["client_assertion_type"] == JWT_BEARER
         assert "client_assertion" in request
@@ -348,7 +348,7 @@ class TestClientSecretJWT_TE(object):
         assert info['aud'] == [_service_context.provider_info['token_endpoint']]
 
     def test_get_key_by_kid(self, entity):
-        _service_context = entity.entity_get("service_context")
+        _service_context = entity.client_get("service_context")
         _service_context.token_endpoint = "https://example.com/token"
 
         _service_context.provider_info = {
@@ -364,14 +364,14 @@ class TestClientSecretJWT_TE(object):
         # get a kid
         _keys = _service_context.keyjar.get_issuer_keys("")
         kid = _keys[0].kid
-        token_service = entity.entity_get("service", 'accesstoken')
+        token_service = entity.client_get("service", 'accesstoken')
         csj.construct(request, service=token_service,
                       authn_endpoint='token_endpoint', kid=kid)
         assert "client_assertion" in request
 
     def test_get_key_by_kid_fail(self, entity):
-        token_service = entity.entity_get("service", 'accesstoken')
-        _service_context = token_service.entity_get("service_context")
+        token_service = entity.client_get("service", 'accesstoken')
+        _service_context = token_service.client_get("service_context")
         _service_context.token_endpoint = "https://example.com/token"
 
         _service_context.provider_info = {
@@ -391,7 +391,7 @@ class TestClientSecretJWT_TE(object):
                           authn_endpoint='token_endpoint', kid=kid)
 
     def test_get_audience_and_algorithm_default_alg(self, entity):
-        _service_context = entity.entity_get("service_context")
+        _service_context = entity.client_get("service_context")
         _service_context.token_endpoint = "https://example.com/token"
 
         _service_context.provider_info = {
@@ -406,7 +406,7 @@ class TestClientSecretJWT_TE(object):
 
         _service_context.registration_response = {}
 
-        token_service = entity.entity_get("service", 'accesstoken')
+        token_service = entity.client_get("service", 'accesstoken')
 
         # Add a RSA key to be able to handle default
         _kb = KeyBundle()
@@ -444,9 +444,9 @@ class TestClientSecretJWT_TE(object):
 
 class TestClientSecretJWT_UI(object):
     def test_client_secret_jwt(self, entity):
-        access_token_service = entity.entity_get("service", 'accesstoken')
+        access_token_service = entity.client_get("service", 'accesstoken')
 
-        _service_context = access_token_service.entity_get("service_context")
+        _service_context = access_token_service.client_get("service_context")
         _service_context.token_endpoint = "https://example.com/token"
         _service_context.provider_info = {'issuer': 'https://example.com/',
                                           'token_endpoint': "https://example.com/token"}
@@ -478,7 +478,7 @@ class TestClientSecretJWT_UI(object):
 
 class TestValidClientInfo(object):
     def test_valid_service_context(self, entity):
-        _service_context = entity.entity_get("service_context")
+        _service_context = entity.client_get("service_context")
 
         _now = 123456  # At some time
         # Expiration time missing or 0, client_secret never expires

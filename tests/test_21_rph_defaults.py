@@ -24,11 +24,11 @@ class TestRPHandler(object):
 
     def test_init_client(self):
         client = self.rph.init_client('')
-        assert set(client.entity_get("services").keys()) == {
+        assert set(client.client_get("services").keys()) == {
             'registration', 'provider_info', 'webfinger',
             'authorization', 'accesstoken', 'userinfo', 'refresh_token'}
 
-        _context = client.entity_get("service_context")
+        _context = client.client_get("service_context")
 
         assert _context.config['client_preferences'] == {
             'application_type': 'web',
@@ -69,11 +69,11 @@ class TestRPHandler(object):
 
             issuer = self.rph.do_provider_info(client)
 
-        _context = client.entity_get("service_context")
+        _context = client.client_get("service_context")
 
         # Calculating request so I can build a reasonable response
         self.rph.add_callbacks(_context)
-        _req = client.entity_get("service",'registration').construct_request()
+        _req = client.client_get("service",'registration').construct_request()
 
         with responses.RequestsMock() as rsps:
             request_uri = _context.get('provider_info')["registration_endpoint"]
@@ -127,14 +127,14 @@ class TestRPHandler(object):
 
             issuer = self.rph.do_provider_info(client)
 
-        _context = client.entity_get("service_context")
+        _context = client.client_get("service_context")
         # Calculating request so I can build a reasonable response
         self.rph.add_callbacks(_context)
         # Publishing a JWKS instead of a JWKS_URI
         _context.jwks_uri = ''
         _context.jwks = _context.keyjar.export_jwks()
 
-        _req = client.entity_get("service",'registration').construct_request()
+        _req = client.client_get("service",'registration').construct_request()
 
         with responses.RequestsMock() as rsps:
             request_uri = _context.get('provider_info')["registration_endpoint"]

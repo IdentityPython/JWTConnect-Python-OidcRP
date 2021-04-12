@@ -44,8 +44,8 @@ class TestRegistrationRead(object):
 
         self.entity = Entity(config=client_config, services=services)
 
-        self.reg_service = self.entity.entity_get("service",'registration')
-        self.read_service = self.entity.entity_get("service",'registration_read')
+        self.reg_service = self.entity.client_get("service",'registration')
+        self.read_service = self.entity.client_get("service",'registration_read')
 
     def test_construct(self):
         self.reg_service.endpoint = "{}/registration".format(ISS)

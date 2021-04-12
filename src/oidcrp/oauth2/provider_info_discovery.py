@@ -21,8 +21,8 @@ class ProviderInfoDiscovery(Service):
     service_name = 'provider_info'
     http_method = 'GET'
 
-    def __init__(self, entity_get, client_authn_factory=None, conf=None):
-        Service.__init__(self, entity_get,
+    def __init__(self, client_get, client_authn_factory=None, conf=None):
+        Service.__init__(self, client_get,
                          client_authn_factory=client_authn_factory, conf=conf)
 
     def get_endpoint(self):
@@ -32,7 +32,7 @@ class ProviderInfoDiscovery(Service):
         :return: Service endpoint
         """
         try:
-            _iss = self.entity_get("service_context").issuer
+            _iss = self.client_get("service_context").issuer
         except AttributeError:
             _iss = self.endpoint
 
@@ -67,7 +67,7 @@ class ProviderInfoDiscovery(Service):
         # In some cases we can live with the two URLs not being
         # the same. But this is an excepted that has to be explicit
         try:
-            self.entity_get("service_context").allow['issuer_mismatch']
+            self.client_get("service_context").allow['issuer_mismatch']
         except KeyError:
             if _issuer != _pcr_issuer:
                 raise OidcServiceError(
@@ -84,7 +84,7 @@ class ProviderInfoDiscovery(Service):
             # a name ending in '_endpoint' so I can look specifically
             # for those
             if key.endswith("_endpoint"):
-                _srv = self.entity_get("service_by_endpoint_name", key)
+                _srv = self.client_get("service_by_endpoint_name", key)
                 if _srv:
                     _srv.endpoint = val
 
@@ -97,7 +97,7 @@ class ProviderInfoDiscovery(Service):
         :param service_context: Information collected/used by services
         """
 
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         # Verify that the issuer value received is the same as the
         # url that was used as service endpoint (without the .well-known part)
         if "issuer" in resp:

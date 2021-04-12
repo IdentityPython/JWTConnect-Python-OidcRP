@@ -20,10 +20,10 @@ class AccessToken(access_token.AccessToken):
     error_msg = oidc.ResponseMessage
 
     def __init__(self,
-                 entity_get,
+                 client_get,
                  client_authn_factory=None,
                  conf: Optional[dict]=None):
-        access_token.AccessToken.__init__(self, entity_get,
+        access_token.AccessToken.__init__(self, client_get,
                                           client_authn_factory=client_authn_factory, conf=conf)
 
     def gather_verify_arguments(self):
@@ -32,7 +32,7 @@ class AccessToken(access_token.AccessToken):
 
         :return: dictionary with arguments to the verify call
         """
-        _context = self.entity_get("service_context")
+        _context = self.client_get("service_context")
         # Default is RS256
 
         kwargs = {
@@ -64,7 +64,7 @@ class AccessToken(access_token.AccessToken):
         return kwargs
 
     def update_service_context(self, resp, key='', **kwargs):
-        _state_interface = self.entity_get("service_context").state
+        _state_interface = self.client_get("service_context").state
         try:
             _idt = resp[verified_claim_name('id_token')]
         except KeyError:
@@ -86,6 +86,6 @@ class AccessToken(access_token.AccessToken):
 
     def get_authn_method(self):
         try:
-            return self.entity_get("service_context").behaviour['token_endpoint_auth_method']
+            return self.client_get("service_context").behaviour['token_endpoint_auth_method']
         except KeyError:
             return self.default_authn_method

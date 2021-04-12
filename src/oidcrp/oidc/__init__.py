@@ -128,7 +128,7 @@ class RP(oauth2.Client):
                     if "access_token" in spec:
                         cauth = BearerHeader()
                         httpc_params = cauth.construct(
-                            service=self.entity_get("service", 'userinfo'),
+                            service=self.client_get("service", 'userinfo'),
                             access_token=spec['access_token'])
                         _resp = self.http.send(spec["endpoint"], 'GET',
                                                **httpc_params)
@@ -137,7 +137,7 @@ class RP(oauth2.Client):
                             token = callback(spec['endpoint'])
                             cauth = BearerHeader()
                             httpc_params = cauth.construct(
-                                service=self.entity_get("service",'userinfo'),
+                                service=self.client_get("service",'userinfo'),
                                 access_token=token)
                             _resp = self.http.send(
                                 spec["endpoint"], 'GET', **httpc_params)

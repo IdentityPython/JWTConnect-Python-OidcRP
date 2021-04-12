@@ -51,10 +51,10 @@ class Entity():
         _srvs = services or DEFAULT_SERVICES
 
         self._service = init_services(service_definitions=_srvs,
-                                      entity_get=self.entity_get,
+                                      client_get=self.client_get,
                                       client_authn_factory=_cam)
 
-    def entity_get(self, what, *arg):
+    def client_get(self, what, *arg):
         _func = getattr(self, "get_{}".format(what), None)
         if _func:
             return _func(*arg)
