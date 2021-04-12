@@ -35,9 +35,9 @@ class WebFinger(Service):
     http_method = 'GET'
     response_body_type = 'json'
 
-    def __init__(self, get_service_context, get_services, client_authn_factory=None,
+    def __init__(self, entity_get, client_authn_factory=None,
                  conf=None, rel='', **kwargs):
-        Service.__init__(self, get_service_context, get_services,
+        Service.__init__(self, entity_get,
                          client_authn_factory=client_authn_factory,
                          conf=conf, **kwargs)
 
@@ -62,7 +62,7 @@ class WebFinger(Service):
                         raise ValueError(
                             'http link not allowed ({})'.format(_href))
 
-                    self.get_service_context().issuer = link['href']
+                    self.entity_get("service_context").issuer = link['href']
                     break
         return resp
 
@@ -160,7 +160,7 @@ class WebFinger(Service):
                 _resource = kwargs['resource']
             except KeyError:
                 try:
-                    _resource = self.get_service_context().config['resource']
+                    _resource = self.entity_get("service_context").config['resource']
                 except KeyError:
                     raise MissingRequiredAttribute('resource')
 

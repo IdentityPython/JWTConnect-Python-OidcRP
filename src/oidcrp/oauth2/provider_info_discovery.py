@@ -21,8 +21,8 @@ class ProviderInfoDiscovery(Service):
     service_name = 'provider_info'
     http_method = 'GET'
 
-    def __init__(self, get_service_context, get_services, client_authn_factory=None, conf=None):
-        Service.__init__(self, get_service_context, get_services,
+    def __init__(self, entity_get, client_authn_factory=None, conf=None):
+        Service.__init__(self, entity_get,
                          client_authn_factory=client_authn_factory, conf=conf)
 
     def get_endpoint(self):
@@ -32,7 +32,7 @@ class ProviderInfoDiscovery(Service):
         :return: Service endpoint
         """
         try:
-            _iss = self.get_service_context().issuer
+            _iss = self.entity_get("service_context").issuer
         except AttributeError:
             _iss = self.endpoint
 
@@ -67,7 +67,7 @@ class ProviderInfoDiscovery(Service):
         # In some cases we can live with the two URLs not being
         # the same. But this is an excepted that has to be explicit
         try:
-            self.get_service_context().allow['issuer_mismatch']
+            self.entity_get("service_context").allow['issuer_mismatch']
         except KeyError:
             if _issuer != _pcr_issuer:
                 raise OidcServiceError(
@@ -75,32 +75,18 @@ class ProviderInfoDiscovery(Service):
                         _issuer, _pcr_issuer))
         return _issuer
 
-    @staticmethod
-    def _store_endpoint(srvs, key, val):
-        for _srv in srvs.values():
-            # Every service has an endpoint_name assigned
-            # when initiated. This name *MUST* match the
-            # endpoint names used in the provider info
-            if _srv.endpoint_name == key:
-                _srv.endpoint = val
-                break
-
     def _set_endpoints(self, resp):
         """
         If there are services defined set the service endpoint to be
         the URLs specified in the provider information."""
-        try:
-            _srvs = self.get_services()
-        except AttributeError:
-            pass
-        else:
-            if _srvs:
-                for key, val in resp.items():
-                    # All service endpoint parameters in the provider info has
-                    # a name ending in '_endpoint' so I can look specifically
-                    # for those
-                    if key.endswith("_endpoint"):
-                        self._store_endpoint(_srvs, key, val)
+        for key, val in resp.items():
+            # All service endpoint parameters in the provider info has
+            # a name ending in '_endpoint' so I can look specifically
+            # for those
+            if key.endswith("_endpoint"):
+                _srv = self.entity_get("service_by_endpoint_name", key)
+                if _srv:
+                    _srv.endpoint = val
 
     def _update_service_context(self, resp):
         """
@@ -111,7 +97,7 @@ class ProviderInfoDiscovery(Service):
         :param service_context: Information collected/used by services
         """
 
-        _context = self.get_service_context()
+        _context = self.entity_get("service_context")
         # Verify that the issuer value received is the same as the
         # url that was used as service endpoint (without the .well-known part)
         if "issuer" in resp:
@@ -119,8 +105,8 @@ class ProviderInfoDiscovery(Service):
         else:  # No prior knowledge
             _pcr_issuer = _context.issuer
 
-        _context.issuer= _pcr_issuer
-        _context.provider_info= resp
+        _context.issuer = _pcr_issuer
+        _context.provider_info = resp
 
         self._set_endpoints(resp)
 

@@ -27,17 +27,16 @@ class TestAuthorization(object):
     @pytest.fixture(autouse=True)
     def create_service(self):
         self.entity = Entity(config=CLIENT_CONF)
-        self.auth_service = self.entity.get_service('authorization')
+        self.auth_service = self.entity.entity_get("service",'authorization')
 
     def test_construct(self):
         req_args = {'foo': 'bar'}
         _req = self.auth_service.construct(request_args=req_args, state='state')
         assert isinstance(_req, AuthorizationRequest)
         assert set(_req.keys()) == {'client_id', 'redirect_uri', 'foo', 'state'}
-        assert self.entity.get_service_context().state.get_state('state')
-        _item = self.entity.get_service_context().state.get_item(AuthorizationRequest,
-                                                                 'auth_request',
-                                                                 'state')
+        _context = self.entity.entity_get("service_context")
+        assert _context.state.get_state('state')
+        _item = _context.state.get_item(AuthorizationRequest, 'auth_request', 'state')
         assert _item.to_dict() == {
             'foo': 'bar', 'redirect_uri': 'https://example.com/cli/authz_cb',
             'state': 'state', 'client_id': 'client_id'
@@ -78,13 +77,13 @@ class TestAuthorization(object):
         assert set(_info.keys()) == {'url', 'method', 'request'}
         msg = AuthorizationRequest().from_urlencoded(
             self.auth_service.get_urlinfo(_info['url']))
-        self.auth_service.get_service_context().state.store_item(msg, "auth_request", _state)
+        self.auth_service.entity_get("service_context").state.store_item(msg, "auth_request", _state)
 
         resp1 = AuthorizationResponse(code="auth_grant", state=_state)
         response = self.auth_service.parse_response(
             resp1.to_urlencoded(), "urlencoded", state=_state)
         self.auth_service.update_service_context(response, key=_state)
-        assert self.auth_service.get_service_context().state.get_state(_state)
+        assert self.auth_service.entity_get("service_context").state.get_state(_state)
 
 
 class TestAccessTokenRequest(object):
@@ -96,13 +95,13 @@ class TestAccessTokenRequest(object):
             'redirect_uris': ['https://example.com/cli/authz_cb']
         }
         entity = Entity(config=client_config)
-        self.token_service = entity.get_service("accesstoken")
+        self.token_service = entity.entity_get("service", "accesstoken")
         auth_request = AuthorizationRequest(
             redirect_uri='https://example.com/cli/authz_cb',
             state='state'
         )
         auth_response = AuthorizationResponse(code='access_code')
-        _state = self.token_service.get_service_context().state
+        _state = self.token_service.entity_get("service_context").state
         _state.store_item(auth_request, 'auth_request', 'state')
         _state.store_item(auth_response, 'auth_response', 'state')
 
@@ -189,7 +188,7 @@ class TestProviderInfo(object):
             'issuer': self._iss
         }
         entity = Entity(config=client_config)
-        self.auth_service = entity.get_service('provider_info')
+        self.auth_service = entity.entity_get("service",'provider_info')
         self.auth_service.endpoint = '{}/.well-known/openid-configuration'.format(self._iss)
 
     def test_construct(self):
@@ -213,11 +212,11 @@ class TestRefreshAccessTokenRequest(object):
             'redirect_uris': ['https://example.com/cli/authz_cb']
         }
         entity = Entity(config=client_config)
-        self.refresh_service = entity.get_service('refresh_token')
+        self.refresh_service = entity.entity_get("service",'refresh_token')
         auth_response = AuthorizationResponse(code='access_code')
         token_response = AccessTokenResponse(access_token='bearer_token',
                                              refresh_token='refresh')
-        _state = self.refresh_service.get_service_context().state
+        _state = self.refresh_service.entity_get("service_context").state
         _state.store_item(auth_response, 'auth_response', 'abcdef')
         _state.store_item(token_response, 'token_response', 'abcdef')
         self.refresh_service.endpoint = 'https://example.com/token'
@@ -241,10 +240,10 @@ def test_access_token_srv_conf():
         'redirect_uris': ['https://example.com/cli/authz_cb']
     }
     entity = Entity(config=client_config)
-    token_service = entity.get_service('accesstoken')
+    token_service = entity.entity_get("service",'accesstoken')
 
-    _state_interface = token_service.get_service_context().state
-    _state_val = _state_interface.create_state(token_service.get_service_context().issuer)
+    _state_interface = token_service.entity_get("service_context").state
+    _state_val = _state_interface.create_state(token_service.entity_get("service_context").issuer)
     auth_request = AuthorizationRequest(redirect_uri='https://example.com/cli/authz_cb',
                                         state=_state_val)
 

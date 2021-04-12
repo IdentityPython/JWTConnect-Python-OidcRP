@@ -51,15 +51,30 @@ class Entity():
         _srvs = services or DEFAULT_SERVICES
 
         self._service = init_services(service_definitions=_srvs,
-                                      get_service_context=self.get_service_context,
-                                      get_services=self.get_services,
+                                      entity_get=self.entity_get,
                                       client_authn_factory=_cam)
 
-    def get_services(self):
+    def entity_get(self, what, *arg):
+        _func = getattr(self, "get_{}".format(what), None)
+        if _func:
+            return _func(*arg)
+        return None
+
+    def get_services(self, *arg):
         return self._service
 
-    def get_service_context(self):
+    def get_service_context(self, *arg):
         return self._service_context
 
-    def get_service(self, service_name):
-        return self._service[service_name]
+    def get_service(self, service_name, *arg):
+        try:
+            return self._service[service_name]
+        except KeyError:
+            return None
+
+    def get_service_by_endpoint_name(self, endpoint_name, *arg):
+        for service in self._service.values():
+            if service.endpoint_name == endpoint_name:
+                return service
+
+        return None

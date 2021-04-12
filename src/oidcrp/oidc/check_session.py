@@ -18,14 +18,14 @@ class CheckSession(Service):
     synchronous = True
     service_name = 'check_session'
 
-    def __init__(self, get_service_context, get_services, client_authn_factory=None, conf=None):
-        Service.__init__(self, get_service_context, get_services,
+    def __init__(self, entity_get, client_authn_factory=None, conf=None):
+        Service.__init__(self, entity_get,
                          client_authn_factory=client_authn_factory,
                          conf=conf)
         self.pre_construct = [self.oidc_pre_construct]
 
     def oidc_pre_construct(self, request_args=None, **kwargs):
-        request_args = self.get_service_context().state.multiple_extend_request_args(
+        request_args = self.entity_get("service_context").state.multiple_extend_request_args(
             request_args, kwargs['state'], ['id_token'],
             ['auth_response', 'token_response', 'refresh_token_response'])
         return request_args, {}

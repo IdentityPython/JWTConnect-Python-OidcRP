@@ -16,7 +16,7 @@ def get_state_parameter(request_args, kwargs):
 
 def pick_redirect_uris(request_args=None, service=None, **kwargs):
     """Pick one redirect_uri base on response_mode out of a list of such."""
-    _context = service.get_service_context()
+    _context = service.entity_get("service_context")
 
     if 'redirect_uri' in request_args:
         return request_args, {}

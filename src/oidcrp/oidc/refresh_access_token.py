@@ -10,6 +10,6 @@ class RefreshAccessToken(refresh_access_token.RefreshAccessToken):
 
     def get_authn_method(self):
         try:
-            return self.get_service_context().behaviour['token_endpoint_auth_method']
+            return self.entity_get("service_context").behaviour['token_endpoint_auth_method']
         except KeyError:
             return self.default_authn_method

@@ -57,15 +57,15 @@ class TestClient(object):
             'nonce': 'nonce'
         }
 
-        self.client.get_service_context().state.create_state('issuer', 'ABCDE')
+        self.client.entity_get("service_context").state.create_state('issuer', 'ABCDE')
 
-        msg = self.client.get_service('authorization').construct(
+        msg = self.client.entity_get("service",'authorization').construct(
             request_args=req_args)
         assert isinstance(msg, AuthorizationRequest)
         assert msg['redirect_uri'] == 'https://example.com/auth_cb'
 
     def test_construct_accesstoken_request(self):
-        _context = self.client.get_service_context()
+        _context = self.client.entity_get("service_context")
         auth_request = AuthorizationRequest(redirect_uri='https://example.com/cli/authz_cb')
 
         _state = _context.state.create_state('issuer')
@@ -79,7 +79,7 @@ class TestClient(object):
 
         # Bind access code to state
         req_args = {}
-        msg = self.client.get_service('accesstoken').construct(request_args=req_args, state=_state)
+        msg = self.client.entity_get("service",'accesstoken').construct(request_args=req_args, state=_state)
         assert isinstance(msg, AccessTokenRequest)
         assert msg.to_dict() == {
             'client_id': 'client_1',
@@ -91,7 +91,7 @@ class TestClient(object):
         }
 
     def test_construct_refresh_token_request(self):
-        _context = self.client.get_service_context()
+        _context = self.client.entity_get("service_context")
         _context.state.create_state('issuer', 'ABCDE')
 
         auth_request = AuthorizationRequest(
@@ -112,7 +112,7 @@ class TestClient(object):
                                                  'token_response', 'ABCDE')
 
         req_args = {}
-        msg = self.client.get_service('refresh_token').construct(
+        msg = self.client.entity_get("service",'refresh_token').construct(
             request_args=req_args, state='ABCDE')
         assert isinstance(msg, RefreshAccessTokenRequest)
         assert msg.to_dict() == {
@@ -123,7 +123,7 @@ class TestClient(object):
         }
 
     def test_do_userinfo_request_init(self):
-        _context = self.client.get_service_context()
+        _context = self.client.entity_get("service_context")
         _context.state.create_state('issuer', 'ABCDE')
 
         auth_request = AuthorizationRequest(
@@ -143,7 +143,7 @@ class TestClient(object):
         _context.state.store_item(token_response,
                                                  'token_response', 'ABCDE')
 
-        _srv = self.client.get_service('userinfo')
+        _srv = self.client.entity_get("service",'userinfo')
         _srv.endpoint = "https://example.com/userinfo"
         _info = _srv.get_request_parameters(state='ABCDE')
         assert _info

@@ -38,7 +38,7 @@ def response_types_to_grant_types(response_types):
 
 
 def add_request_uri(request_args=None, service=None, **kwargs):
-    _context = service.get_service_context()
+    _context = service.entity_get("service_context")
     if _context.requests_dir:
         _pi = _context.provider_info
         if _pi:
@@ -60,7 +60,7 @@ def add_post_logout_redirect_uris(request_args=None, service=None, **kwargs):
     """
 
     if "post_logout_redirect_uris" not in request_args:
-        _uris = service.get_service_context().register_args.get("post_logout_redirect_uris")
+        _uris = service.entity_get("service_context").register_args.get("post_logout_redirect_uris")
         if _uris:
             request_args["post_logout_redirect_uris"] = _uris
 
@@ -76,13 +76,13 @@ def add_jwks_uri_or_jwks(request_args=None, service=None, **kwargs):
         return request_args, {}
 
     for attr in ['jwks_uri', 'jwks']:
-        _val = getattr(service.get_service_context(), attr, 0)
+        _val = getattr(service.entity_get("service_context"), attr, 0)
         if _val:
             request_args[attr] = _val
             break
         else:
             try:
-                _val = service.get_service_context().config[attr]
+                _val = service.entity_get("service_context").config[attr]
             except KeyError:
                 pass
             else:
@@ -102,8 +102,8 @@ class Registration(Service):
     request_body_type = 'json'
     http_method = 'POST'
 
-    def __init__(self, get_service_context, get_services, client_authn_factory=None, conf=None):
-        Service.__init__(self, get_service_context, get_services,
+    def __init__(self, entity_get, client_authn_factory=None, conf=None):
+        Service.__init__(self, entity_get,
                          client_authn_factory=client_authn_factory,
                          conf=conf)
         self.pre_construct = [self.add_client_behaviour_preference,
@@ -113,7 +113,7 @@ class Registration(Service):
         self.post_construct = [self.oidc_post_construct]
 
     def add_client_behaviour_preference(self, request_args=None, **kwargs):
-        _context = self.get_service_context()
+        _context = self.entity_get("service_context")
         for prop in self.msg_type.c_param.keys():
             if prop in request_args:
                 continue
@@ -145,7 +145,7 @@ class Registration(Service):
         if "token_endpoint_auth_method" not in resp:
             resp["token_endpoint_auth_method"] = "client_secret_basic"
 
-        _context = self.get_service_context()
+        _context = self.entity_get("service_context")
         _context.registration_response = resp
         _client_id = resp.get("client_id")
         if _client_id:

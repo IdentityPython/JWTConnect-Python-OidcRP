@@ -118,7 +118,7 @@ class Client(Entity):
 
         if resp.status_code < 300:
             if "keyjar" not in kwargs:
-                kwargs["keyjar"] = service.get_service_context().keyjar
+                kwargs["keyjar"] = service.entity_get("service_context").keyjar
             if not response_body_type:
                 response_body_type = service.response_body_type
 
