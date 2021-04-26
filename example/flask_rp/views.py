@@ -233,7 +233,7 @@ def logout():
 def backchannel_logout(op_hash):
     _rp = get_rp(op_hash)
     try:
-        _state = rp_handler.backchannel_logout(request.data, _rp)
+        _state = rp_handler.backchannel_logout(_rp, request.data)
     except Exception as err:
         logger.error('Exception: {}'.format(err))
         return 'System error!', 400
