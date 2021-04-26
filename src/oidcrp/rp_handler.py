@@ -839,7 +839,7 @@ class RPHandler(object):
             client = self.get_client_from_session_key(state)
 
         try:
-            srv = client._service['end_session']
+            srv = client.client_get('service', 'end_session')
         except KeyError:
             raise OidcServiceError("Does not know how to logout")
 
