@@ -173,7 +173,7 @@
         }
       }
     },
-    "local": {
+    "flask_provider": {
       "client_preferences": {
         "application_name": "rphandler",
         "application_type": "web",
@@ -205,6 +205,75 @@
       "frontchannel_logout_uri": "https://{domain}:{port}/fc_logout/local",
       "frontchannel_logout_session_required": true,
       "backchannel_logout_uri": "https://{domain}:{port}/bc_logout/local",
+      "backchannel_logout_session_required": true,
+      "services": {
+        "discovery": {
+          "class": "oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery",
+          "kwargs": {}
+        },
+        "registration": {
+          "class": "oidcrp.oidc.registration.Registration",
+          "kwargs": {}
+        },
+        "authorization": {
+          "class": "oidcrp.oidc.authorization.Authorization",
+          "kwargs": {}
+        },
+        "accesstoken": {
+          "class": "oidcrp.oidc.access_token.AccessToken",
+          "kwargs": {}
+        },
+        "userinfo": {
+          "class": "oidcrp.oidc.userinfo.UserInfo",
+          "kwargs": {}
+        },
+        "end_session": {
+          "class": "oidcrp.oidc.end_session.EndSession",
+          "kwargs": {}
+        }
+      },
+      "add_ons": {
+        "pkce": {
+          "function": "oidcrp.oauth2.add_on.pkce.add_support",
+          "kwargs": {
+            "code_challenge_length": 64,
+            "code_challenge_method": "S256"
+          }
+        }
+      }
+    },
+    "django_provider": {
+      "client_preferences": {
+        "application_name": "rphandler",
+        "application_type": "web",
+        "contacts": [
+          "ops@example.com"
+        ],
+        "response_types": [
+          "code"
+        ],
+        "scope": [
+          "openid",
+          "profile",
+          "email",
+          "address",
+          "phone"
+        ],
+        "token_endpoint_auth_method": [
+          "client_secret_basic",
+          "client_secret_post"
+        ]
+      },
+      "issuer": "https://127.0.0.1:8000/",
+      "redirect_uris": [
+        "https://{domain}:{port}/authz_cb/django"
+      ],
+      "post_logout_redirect_uris": [
+        "https://{domain}:{port}/session_logout/django"
+      ],
+      "frontchannel_logout_uri": "https://{domain}:{port}/fc_logout/django",
+      "frontchannel_logout_session_required": true,
+      "backchannel_logout_uri": "https://{domain}:{port}/bc_logout/django",
       "backchannel_logout_session_required": true,
       "services": {
         "discovery": {

@@ -1,4 +1,5 @@
 import logging
+import urllib
 from urllib.parse import parse_qs
 
 from flask import Blueprint
@@ -149,8 +150,21 @@ def finalize(op_hash, request_args):
         return make_response(res['error'], 400)
 
 
+def get_ophash_by_cb_uri(url:str):
+    uri = urllib.parse.splitquery(request.url)[0]
+    clients = current_app.rp_config.clients
+    for k,v in clients.items():
+        for endpoint in ("redirect_uris",
+                         "post_logout_redirect_uris",
+                         "frontchannel_logout_uri",
+                         "backchannel_logout_uri"):
+            if uri in clients[k].get(endpoint, []):
+                return k
+
+
 @oidc_rp_views.route('/authz_cb/<op_hash>')
 def authz_cb(op_hash):
+    op_hash = get_ophash_by_cb_uri(request.url)
     return finalize(op_hash, request.args)
 
 
@@ -215,6 +229,7 @@ def session_change():
 # post_logout_redirect_uri
 @oidc_rp_views.route('/session_logout/<op_hash>')
 def session_logout(op_hash):
+    op_hash = get_ophash_by_cb_uri(request.url)
     _rp = get_rp(op_hash)
     logger.debug('post_logout')
     return "Post logout from {}".format(_rp.client_get("service_context").issuer)
