@@ -839,7 +839,7 @@ class RPHandler(object):
             client = self.get_client_from_session_key(state)
 
         try:
-            srv = client.service['end_session']
+            srv = client.client_get('service', 'end_session')
         except KeyError:
             raise OidcServiceError("Does not know how to logout")
 
@@ -866,7 +866,6 @@ def backchannel_logout(client, request='', request_args=None):
     :param request: URL encoded logout request
     :return:
     """
-
     if request:
         req = BackChannelLogoutRequest().from_urlencoded(as_unicode(request))
     else:
@@ -887,17 +886,15 @@ def backchannel_logout(client, request='', request_args=None):
         raise MessageException('Bogus logout request: {}'.format(err))
 
     # Find the subject through 'sid' or 'sub'
+    sub = req[verified_claim_name('logout_token')].get('sub')
+    sid = None
+    if not sub:
+        sid = req[verified_claim_name('logout_token')].get('sid')
 
-    try:
-        sub = req[verified_claim_name('logout_token')]['sub']
-    except KeyError:
-        try:
-            sid = req[verified_claim_name('logout_token')]['sid']
-        except KeyError:
-            raise MessageException('Neither "sid" nor "sub"')
-        else:
-            _state = _context.state.get_state_by_sid(sid)
-    else:
+    if not sub and not sid:
+        raise MessageException('Neither "sid" nor "sub"')
+    elif sub:
         _state = _context.state.get_state_by_sub(sub)
-
+    elif sid:
+        _state = _context.state.get_state_by_sid(sid)
     return _state
