@@ -38,22 +38,6 @@
   "httpc_params": {
     "verify": false
   },
-  "keydefs": [
-    {
-      "type": "RSA",
-      "key": "",
-      "use": [
-        "sig"
-      ]
-    },
-    {
-      "type": "EC",
-      "crv": "P-256",
-      "use": [
-        "sig"
-      ]
-    }
-  ],
   "rp_keys": {
     "private_path": "private/jwks.json",
     "key_defs": [
@@ -74,27 +58,6 @@
     ],
     "public_path": "static/jwks.json",
     "read_only": false
-  },
-  "client_preferences": {
-    "application_name": "rphandler",
-    "application_type": "web",
-    "contacts": [
-      "ops@example.com"
-    ],
-    "response_types": [
-      "code"
-    ],
-    "scope": [
-      "openid",
-      "profile",
-      "email",
-      "address",
-      "phone"
-    ],
-    "token_endpoint_auth_method": [
-      "client_secret_basic",
-      "client_secret_post"
-    ]
   },
   "services": {
     "discovery": {

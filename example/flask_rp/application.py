@@ -5,7 +5,6 @@ from cryptojwt import KeyJar
 from cryptojwt.key_jar import init_key_jar
 from flask.app import Flask
 
-from oidcrp.configure import Configuration
 from oidcrp.rp_handler import RPHandler
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -14,9 +13,9 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 def init_oidc_rp_handler(app):
     _rp_conf = app.rp_config
 
-    if _rp_conf.rp_keys:
-        _kj = init_key_jar(**_rp_conf.rp_keys)
-        _path = _rp_conf.rp_keys['public_path']
+    if _rp_conf.keys:
+        _kj = init_key_jar(**_rp_conf.keys)
+        _path = _rp_conf.keys['public_path']
         # removes ./ and / from the begin of the string
         _path = re.sub('^(.)/', '', _path)
     else:
@@ -31,11 +30,11 @@ def init_oidc_rp_handler(app):
     return rph
 
 
-def oidc_provider_init_app(config_file, name=None, **kwargs):
+def oidc_provider_init_app(config, name=None, **kwargs):
     name = name or __name__
     app = Flask(name, static_url_path='', **kwargs)
 
-    app.rp_config = Configuration.create_from_config_file(config_file)
+    app.rp_config = config
 
     # Session key for the application session
     app.config['SECRET_KEY'] = os.urandom(12).hex()

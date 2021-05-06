@@ -73,7 +73,7 @@ setup(
     ],
     tests_require=[
         'pytest',
-        'pytest-localserver',
+        'pytest-localserver'
     ],
     zip_safe=False,
     cmdclass={'test': PyTest},
