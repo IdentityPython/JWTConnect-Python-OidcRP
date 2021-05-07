@@ -3,6 +3,7 @@ import importlib
 import json
 import logging
 import os
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -10,7 +11,6 @@ from typing import Optional
 from oidcrp.logging import configure_logging
 from oidcrp.util import load_yaml_config
 from oidcrp.util import lower_or_upper
-from oidcrp.util import replace
 
 try:
     from secrets import token_urlsafe as rnd_token
@@ -87,6 +87,7 @@ class RPConfiguration(Base):
     def __init__(self,
                  conf: Dict,
                  base_path: Optional[str] = '',
+                 entity_conf: Optional[List[dict]] = None,
                  domain: Optional[str] = "127.0.0.1",
                  port: Optional[int] = 80,
                  file_attributes: Optional[List[str]] = None,
@@ -100,19 +101,14 @@ class RPConfiguration(Base):
 
         self.keys = _keys_conf
 
+        if not domain:
+            domain = conf.get("domain", "127.0.0.1")
+
+        if not port:
+            port = conf.get("port", 80)
+
         conf = set_domain_and_port(conf, URIS, domain, port)
         self.clients = lower_or_upper(conf, "clients")
-        # if _clients:
-        #     format_args = {"domain": domain, "port": port}
-        #     for key, spec in _clients.items():
-        #         if key == "":
-        #             continue
-        #
-        #         for uri in ['redirect_uris', 'post_logout_redirect_uris', 'frontchannel_logout_uri',
-        #                     'backchannel_logout_uri', 'issuer']:
-        #             replace(spec, uri, **format_args)
-        #
-        #     self.clients = _clients
 
         hash_seed = lower_or_upper(conf, 'hash_seed')
         if not hash_seed:
@@ -129,13 +125,13 @@ class Configuration(Base):
 
     def __init__(self,
                  conf: Dict,
-                 entity_conf_class,
                  base_path: str = '',
+                 entity_conf: Optional[List[dict]] = None,
                  file_attributes: Optional[List[str]] = None,
                  domain: Optional[str] = "",
                  port: Optional[int] = 0,
                  ):
-        Base.__init__(self, conf, base_path, file_attributes)
+        Base.__init__(self, conf, base_path=base_path, file_attributes=file_attributes)
 
         log_conf = conf.get('logging')
         if log_conf:
@@ -152,37 +148,42 @@ class Configuration(Base):
         if not port:
             port = conf.get("port", 80)
 
-        self.rp = entity_conf_class(conf, base_path=base_path, file_attributes=file_attributes,
-                                        domain=domain, port=port)
+        if entity_conf:
+            for econf in entity_conf:
+                _path = econf.get("path")
+                _cnf = conf
+                if _path:
+                    for step in _path:
+                        _cnf = _cnf[step]
+                _attr = econf["attr"]
+                _cls = econf["class"]
+                setattr(self, _attr,
+                        _cls(_cnf, base_path=base_path, file_attributes=file_attributes,
+                             domain=domain, port=port))
 
 
 def create_from_config_file(cls,
-                            entity_conf_class,
                             filename: str,
-                            base_path: str = '',
+                            base_path: Optional[str] = '',
+                            entity_conf: Optional[List[dict]] = None,
                             file_attributes: Optional[List[str]] = None,
                             domain: Optional[str] = "",
                             port: Optional[int] = 0):
     if filename.endswith(".yaml"):
         """Load configuration as YAML"""
-        return cls(load_yaml_config(filename),
-                   entity_conf_class=entity_conf_class,
-                   base_path=base_path, file_attributes=file_attributes,
-                   domain=domain, port=port)
+        _cnf = load_yaml_config(filename)
     elif filename.endswith(".json"):
         _str = open(filename).read()
-        return cls(json.loads(_str),
-                   entity_conf_class=entity_conf_class,
-                   base_path=base_path, file_attributes=file_attributes, domain=domain, port=port)
+        _cnf = json.loads(_str)
     elif filename.endswith(".py"):
         head, tail = os.path.split(filename)
         tail = tail[:-3]
         module = importlib.import_module(tail)
         _cnf = getattr(module, "CONFIG")
+    else:
+        raise ValueError("Unknown file type")
 
-        # _str = open(filename).read()
-        # _cnf = ast.literal_eval(_str)
-        return cls(_cnf,
-                   entity_conf_class=entity_conf_class,
-                   base_path=base_path, file_attributes=file_attributes,
-                   domain=domain, port=port)
+    return cls(_cnf,
+               entity_conf=entity_conf,
+               base_path=base_path, file_attributes=file_attributes,
+               domain=domain, port=port)

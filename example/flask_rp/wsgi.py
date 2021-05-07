@@ -21,7 +21,7 @@ if __name__ == "__main__":
     template_dir = os.path.join(dir_path, 'templates')
 
     _config = create_from_config_file(Configuration,
-                                      entity_conf_class=RPConfiguration,
+                                      entity_conf=[{"class": RPConfiguration, "attr": "rp"}],
                                       filename=conf)
 
     app = application.oidc_provider_init_app(_config.rp, name, template_folder=template_dir)
