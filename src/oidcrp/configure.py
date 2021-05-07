@@ -3,7 +3,6 @@ import importlib
 import json
 import logging
 import os
-from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -76,6 +75,12 @@ class Base:
 
     def __contains__(self, item):
         return item in self.__dict__
+
+    def items(self):
+        for key in self.__dict__:
+            if key.startswith('__') and key.endswith('__'):
+                continue
+            yield key, getattr(self, key)
 
 
 URIS = [
