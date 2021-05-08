@@ -38,6 +38,9 @@ def add_base_path(conf: dict, base_path: str, file_attributes: List[str]):
 def set_domain_and_port(conf: dict, uris: List[str], domain: str, port: int):
     for key, val in conf.items():
         if key in uris:
+            if not val:
+                continue
+
             if isinstance(val, list):
                 _new = [v.format(domain=domain, port=port) for v in val]
             else:
@@ -82,6 +85,19 @@ class Base:
                 continue
             yield key, getattr(self, key)
 
+    def extend(self, entity_conf, conf, base_path, file_attributes, domain, port):
+        for econf in entity_conf:
+            _path = econf.get("path")
+            _cnf = conf
+            if _path:
+                for step in _path:
+                    _cnf = _cnf[step]
+            _attr = econf["attr"]
+            _cls = econf["class"]
+            setattr(self, _attr,
+                    _cls(_cnf, base_path=base_path, file_attributes=file_attributes,
+                         domain=domain, port=port))
+
 
 URIS = [
     "redirect_uris", 'post_logout_redirect_uris', 'frontchannel_logout_uri',
@@ -124,6 +140,10 @@ class RPConfiguration(Base):
         self.base_url = lower_or_upper(conf, "base_url")
         self.httpc_params = lower_or_upper(conf, "httpc_params", {"verify": True})
 
+        if entity_conf:
+            self.extend(entity_conf=entity_conf, conf=conf, base_path=base_path,
+                        file_attributes=file_attributes, domain=domain, port=port)
+
 
 class Configuration(Base):
     """RP Configuration"""
@@ -154,17 +174,8 @@ class Configuration(Base):
             port = conf.get("port", 80)
 
         if entity_conf:
-            for econf in entity_conf:
-                _path = econf.get("path")
-                _cnf = conf
-                if _path:
-                    for step in _path:
-                        _cnf = _cnf[step]
-                _attr = econf["attr"]
-                _cls = econf["class"]
-                setattr(self, _attr,
-                        _cls(_cnf, base_path=base_path, file_attributes=file_attributes,
-                             domain=domain, port=port))
+            self.extend(entity_conf=entity_conf, conf=conf, base_path=base_path,
+                        file_attributes=file_attributes, domain=domain, port=port)
 
 
 def create_from_config_file(cls,
