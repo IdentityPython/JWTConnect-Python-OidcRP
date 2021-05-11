@@ -26,19 +26,19 @@ PUBLIC_JWKS_PATH = 'static/jwks.json'
 SERVICES = ['ProviderInfoDiscovery', 'Registration', 'Authorization',
             'AccessToken', 'RefreshAccessToken', 'UserInfo']
 
-SERVICES_DICT = {'accesstoken': {'class': 'oidcservice.oidc.access_token.AccessToken',
+SERVICES_DICT = {'accesstoken': {'class': 'oidcrp.oidc.access_token.AccessToken',
                                  'kwargs': {}},
-                 'authorization': {'class': 'oidcservice.oidc.authorization.Authorization',
+                 'authorization': {'class': 'oidcrp.oidc.authorization.Authorization',
                                    'kwargs': {}},
-                 'discovery': {'class': 'oidcservice.oidc.provider_info_discovery.ProviderInfoDiscovery',
+                 'discovery': {'class': 'oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery',
                                'kwargs': {}},
-                 'end_session': {'class': 'oidcservice.oidc.end_session.EndSession',
+                 'end_session': {'class': 'oidcrp.oidc.end_session.EndSession',
                                  'kwargs': {}},
-                 'refresh_accesstoken': {'class': 'oidcservice.oidc.refresh_access_token.RefreshAccessToken',
+                 'refresh_accesstoken': {'class': 'oidcrp.oidc.refresh_access_token.RefreshAccessToken',
                                          'kwargs': {}},
-                 'registration': {'class': 'oidcservice.oidc.registration.Registration',
+                 'registration': {'class': 'oidcrp.oidc.registration.Registration',
                                    'kwargs': {}},
-                 'userinfo': {'class': 'oidcservice.oidc.userinfo.UserInfo', 'kwargs': {}}}
+                 'userinfo': {'class': 'oidcrp.oidc.userinfo.UserInfo', 'kwargs': {}}}
 
 CLIENT_PREFS = {
     "application_type": "web",

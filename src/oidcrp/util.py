@@ -1,25 +1,41 @@
+"""Utilities"""
+from http.cookiejar import Cookie
+from http.cookiejar import http2time
 import importlib
 import io
 import json
 import logging
 import os
 import ssl
+import string
 import sys
-from http.cookiejar import Cookie
-from http.cookiejar import http2time
+from urllib.parse import parse_qs
+from urllib.parse import urlsplit
+from urllib.parse import urlunsplit
 
+from oidcmsg.exception import UnSupported
+from oidcmsg.oauth2 import is_error_message
 import yaml
-from oidcservice import sanitize
-from oidcservice.exception import TimeFormatError
-from oidcservice.exception import WrongContentType
-from oidcservice.util import importer
+
+# Since SystemRandom is not available on all systems
+try:
+    import SystemRandom as rnd
+except ImportError:
+    import random as rnd
+
+from oidcrp.defaults import BASECHR
+from oidcrp.exception import ConfigurationError
+from oidcrp.exception import OidcServiceError
+from oidcrp.exception import TimeFormatError
+from oidcrp.exception import WrongContentType
+
+URL_ENCODED = 'application/x-www-form-urlencoded'
+JSON_ENCODED = "application/json"
+JOSE_ENCODED = "application/jose"
 
 logger = logging.getLogger(__name__)
 
 __author__ = 'roland'
-
-URL_ENCODED = 'application/x-www-form-urlencoded'
-JSON_ENCODED = "application/json"
 
 DEFAULT_POST_CONTENT_TYPE = URL_ENCODED
 
@@ -48,6 +64,115 @@ ATTRS = {
     "rest": "",
     "rfc2109": True
 }
+
+
+def token_secret_key(sid):
+    return "token_secret_%s" % sid
+
+
+def rndstr(size=16):
+    """
+    Returns a string of random ascii characters or digits
+
+    :param size: The length of the string
+    :return: string
+    """
+    chars = string.ascii_letters + string.digits
+    return "".join(rnd.choice(chars) for i in range(size))
+
+
+def unreserved(size=64):
+    """
+    Returns a string of random ascii characters, digits and unreserved
+    characters
+
+    :param size: The length of the string
+    :return: string
+    """
+
+    return "".join([rnd.choice(BASECHR) for _ in range(size)])
+
+
+def sanitize(str):
+    return str
+
+
+def get_http_url(url, req, method='GET'):
+    """
+    Add a query part representing the request to a url that may already contain
+    a query part. Only done if the HTTP method used is 'GET' or 'DELETE'.
+
+    :param url: The URL
+    :param req: The request as a :py:class:`oidcmsg.message.Message` instance
+    :param method: The HTTP method
+    :return: A possibly modified URL
+    """
+    if method in ["GET", "DELETE"]:
+        if req.keys():
+            _req = req.copy()
+            comp = urlsplit(str(url))
+            if comp.query:
+                _req.update(parse_qs(comp.query))
+
+            _query = str(_req.to_urlencoded())
+            return urlunsplit((comp.scheme, comp.netloc, comp.path,
+                               _query, comp.fragment))
+
+        return url
+
+    return url
+
+
+def get_http_body(req, content_type=URL_ENCODED):
+    """
+    Get the message into the format that should be places in the body part
+    of a HTTP request.
+
+    :param req: The service request as a  :py:class:`oidcmsg.message.Message`
+        instance
+    :param content_type: The format of the body part.
+    :return: The correctly formatet service request.
+    """
+    if URL_ENCODED in content_type:
+        return req.to_urlencoded()
+
+    if JSON_ENCODED in content_type:
+        return req.to_json()
+
+    if JOSE_ENCODED in content_type:
+        return req  # already packaged
+
+    raise UnSupported(
+        "Unsupported content type: '%s'" % content_type)
+
+
+def load_yaml_config(filename):
+    """Load a YAML configuration file."""
+    with open(filename, "rt", encoding='utf-8') as file:
+        config_dict = yaml.safe_load(file)
+    return config_dict
+
+
+def modsplit(name):
+    """Split importable"""
+    if ':' in name:
+        _part = name.split(':')
+        if len(_part) != 2:
+            raise ValueError("Syntax error: {s}")
+        return _part[0], _part[1]
+
+    _part = name.split('.')
+    if len(_part) < 2:
+        raise ValueError("Syntax error: {s}")
+
+    return '.'.join(_part[:-1]), _part[-1]
+
+
+def importer(name):
+    """Import by name"""
+    _part = modsplit(name)
+    module = importlib.import_module(_part[0])
+    return getattr(module, _part[1])
 
 
 def match_to_(val, vlist):
@@ -267,12 +392,6 @@ def load_json(file_name):
     return js
 
 
-def load_yaml_config(file_name):
-    with open(file_name) as fp:
-        c = yaml.safe_load(fp)
-    return c
-
-
 def yaml_to_py_stream(file_name):
     d = load_yaml_config(file_name)
     fstream = io.StringIO()
@@ -402,3 +521,60 @@ def get_http_params(config):
             params['cert'] = _cert
 
     return params
+
+
+def add_path(url, path):
+    if url.endswith('/'):
+        if path.startswith('/'):
+            return '{}{}'.format(url, path[1:])
+        else:
+            return '{}{}'.format(url, path)
+    else:
+        if path.startswith('/'):
+            return '{}{}'.format(url, path)
+        else:
+            return '{}/{}'.format(url, path)
+
+
+def load_registration_response(client):
+    """
+    If the client has been statically registered that information
+    must be provided during the configuration. If expected to be
+    done dynamically. This method will do dynamic client registration.
+
+    :param client: A :py:class:`oidcrp.oidc.Client` instance
+    """
+    if not client.client_get("service_context").get('client_id'):
+        try:
+            response = client.do_request('registration')
+        except KeyError:
+            raise ConfigurationError('No registration info')
+        except Exception as err:
+            logger.error(err)
+            raise
+        else:
+            if 'error' in response:
+                raise OidcServiceError(response.to_json())
+
+
+def dynamic_provider_info_discovery(client):
+    """
+    This is about performing dynamic Provider Info discovery
+
+    :param client: A :py:class:`oidcrp.oidc.Client` instance
+    """
+    try:
+        client.get_service('provider_info')
+    except KeyError:
+        raise ConfigurationError(
+            'Can not do dynamic provider info discovery')
+    else:
+        _context = client.client_get("service_context")
+        try:
+            _context.set('issuer', _context.config['srv_discovery_url'])
+        except KeyError:
+            pass
+
+        response = client.do_request('provider_info')
+        if is_error_message(response):
+            raise OidcServiceError(response['error'])

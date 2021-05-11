@@ -3,8 +3,8 @@ from oidcmsg.message import Message
 from oidcmsg.message import SINGLE_OPTIONAL_STRING
 from oidcmsg.message import SINGLE_REQUIRED_STRING
 from oidcmsg.oauth2 import ResponseMessage
-from oidcservice.oauth2 import access_token
-from oidcservice.oidc import userinfo
+from oidcrp.oauth2 import access_token
+from oidcrp.oidc import userinfo
 
 
 class AccessTokenResponse(Message):

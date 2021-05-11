@@ -13,8 +13,8 @@ from oidcmsg.oauth2 import RefreshAccessTokenRequest
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import IdToken
 from oidcmsg.time_util import utc_time_sans_frac
-from oidcservice.exception import OidcServiceError
-from oidcservice.exception import ParseError
+from oidcrp.exception import OidcServiceError
+from oidcrp.exception import ParseError
 
 from oidcrp.oauth2 import Client
 
@@ -32,6 +32,12 @@ IDTOKEN = IdToken(iss="http://oidc.example.org/", sub="sub",
                   nonce="N0nce",
                   iat=time.time())
 
+CONF = {
+    'issuer': 'https://op.example.com',
+    'redirect_uris': ['https://example.com/cli/authz_cb'],
+    'client_id': CLIENT_ID,
+    'client_secret': 'abcdefghijklmnop'
+}
 
 
 class MockResponse():
@@ -43,67 +49,30 @@ class MockResponse():
 
 
 class TestClient(object):
-    @pytest.fixture(autouse=True)
-    def create_client(self):
-        self.redirect_uri = "http://example.com/redirect"
-        conf = {
-            'issuer': 'https://op.example.com',
-            'redirect_uris': ['https://example.com/cli/authz_cb'],
-            'client_id': 'client_1',
-            'client_secret': 'abcdefghijklmnop',
-            'db_conf': {
-                'keyjar': {
-                    'handler': 'oidcmsg.storage.abfile.LabeledAbstractFileSystem',
-                    'fdir': 'db/keyjar',
-                    'key_conv': 'oidcmsg.storage.converter.QPKey',
-                    'value_conv': 'cryptojwt.serialize.item.KeyIssuer',
-                    'label': 'keyjar'
-                },
-                'default': {
-                    'handler': 'oidcmsg.storage.abfile.AbstractFileSystem',
-                    'fdir': 'db',
-                    'key_conv': 'oidcmsg.storage.converter.QPKey',
-                    'value_conv': 'oidcmsg.storage.converter.JSON'
-                }
-            }
-        }
-        self.client = Client(config=conf)
-
-    def test_construct_authorization_request(self):
-        req_args = {
-            'state': 'ABCDE',
-            'redirect_uri': 'https://example.com/auth_cb',
-            'response_type': ['code']
-        }
-
-        self.client.session_interface.create_state('issuer', key='ABCDE')
-        msg = self.client.service['authorization'].construct(
-            request_args=req_args)
-        assert isinstance(msg, AuthorizationRequest)
-        assert msg['client_id'] == 'client_1'
-        assert msg['redirect_uri'] == 'https://example.com/auth_cb'
-
     def test_construct_accesstoken_request(self):
-        # Bind access code to state
-        req_args = {}
-
-        self.client.session_interface.create_state('issuer', 'ABCDE')
+        # Client 1 starts the chain of event
+        client_1 = Client(config=CONF)
+        _context_1 = client_1.client_get("service_context")
+        _state = _context_1.state.create_state('issuer')
 
         auth_request = AuthorizationRequest(
             redirect_uri='https://example.com/cli/authz_cb',
-            state='ABCDE'
+            state=_state
         )
 
-        self.client.session_interface.store_item(auth_request, 'auth_request',
-                                                 'ABCDE')
+        _context_1.state.store_item(auth_request, 'auth_request', _state)
+
+        # Client 2 carries on
+        client_2 = Client(config=CONF)
+        _state_dump = _context_1.dump()
+
+        _context2 = client_2.client_get("service_context")
+        _context2.load(_state_dump)
 
         auth_response = AuthorizationResponse(code='access_code')
+        _context2.state.store_item(auth_response,'auth_response', _state)
 
-        self.client.session_interface.store_item(auth_response,
-                                                 'auth_response', 'ABCDE')
-
-        msg = self.client.service['accesstoken'].construct(
-            request_args=req_args, state='ABCDE')
+        msg = client_2.client_get("service",'accesstoken').construct(request_args={}, state=_state)
 
         assert isinstance(msg, AccessTokenRequest)
         assert msg.to_dict() == {
@@ -113,34 +82,40 @@ class TestClient(object):
             'grant_type': 'authorization_code',
             'redirect_uri':
                 'https://example.com/cli/authz_cb',
-            'state': 'ABCDE'
+            'state': _state
         }
 
     def test_construct_refresh_token_request(self):
-        self.client.session_interface.create_state('issuer', 'ABCDE')
+        # Client 1 starts the chain event
+        client_1 = Client(config=CONF)
+        _state = client_1.client_get("service_context").state.create_state('issuer')
 
         auth_request = AuthorizationRequest(
             redirect_uri='https://example.com/cli/authz_cb',
-            state='state'
+            state=_state
         )
 
-        self.client.session_interface.store_item(auth_request, 'auth_request',
-                                                 'ABCDE')
+        client_1.client_get("service_context").state.store_item(auth_request, 'auth_request', _state)
+
+        # Client 2 carries on
+        client_2 = Client(config=CONF)
+        _state_dump = client_1.client_get("service_context").dump()
+        client_2.client_get("service_context").load(_state_dump)
 
         auth_response = AuthorizationResponse(code='access_code')
-
-        self.client.session_interface.store_item(auth_response,
-                                                 'auth_response', 'ABCDE')
+        client_2.client_get("service_context").state.store_item(auth_response, 'auth_response', _state)
 
         token_response = AccessTokenResponse(refresh_token="refresh_with_me",
                                              access_token="access")
 
-        self.client.session_interface.store_item(token_response,
-                                                 'token_response', 'ABCDE')
+        client_2.client_get("service_context").state.store_item(token_response, 'token_response', _state)
+
+        # Next up is Client 1
+        _state_dump = client_2.client_get("service_context").dump()
+        client_1.client_get("service_context").load(_state_dump)
 
         req_args = {}
-        msg = self.client.service['refresh_token'].construct(
-            request_args=req_args, state='ABCDE')
+        msg = client_1.client_get("service",'refresh_token').construct(request_args=req_args, state=_state)
         assert isinstance(msg, RefreshAccessTokenRequest)
         assert msg.to_dict() == {
             'client_id': 'client_1',
@@ -148,29 +123,3 @@ class TestClient(object):
             'grant_type': 'refresh_token',
             'refresh_token': 'refresh_with_me'
         }
-
-    def test_error_response(self):
-        err = ResponseMessage(error='Illegal')
-        http_resp = MockResponse(400, err.to_urlencoded())
-        resp = self.client.parse_request_response(
-            self.client.service['authorization'], http_resp)
-
-        assert resp['error'] == 'Illegal'
-        assert resp['status_code'] == 400
-
-    def test_error_response_500(self):
-        err = ResponseMessage(error='Illegal')
-        http_resp = MockResponse(500, err.to_urlencoded())
-        with pytest.raises(ParseError):
-            self.client.parse_request_response(
-                self.client.service['authorization'], http_resp)
-
-    def test_error_response_2(self):
-        err = ResponseMessage(error='Illegal')
-        http_resp = MockResponse(
-            400, err.to_json(),
-            headers={'content-type': 'application/x-www-form-urlencoded'})
-
-        with pytest.raises(OidcServiceError):
-            self.client.parse_request_response(
-                self.client.service['authorization'], http_resp)

@@ -14,7 +14,8 @@ that some of the functions the service provides needs access to some user
 related resources on a resource server. That's when you need OpenID Connect
 (OIDC) or Oauth2.
 
-The RPHandler as implemented in :py:class:`oidcrp.RPHandler` is a service within
+The RPHandler as implemented in :py:class:`oidcrp.rp_handler.RPHandler` is a
+service within
 the web service that handles user authentication and access authorization on
 behalf of the web service.
 
@@ -127,7 +128,7 @@ Tier 1 API
 The high-level methods you have access to (in the order they are to be
 used) are:
 
-:py:meth:`oidcrp.RPHandler.begin`
+:py:meth:`oidcrp.rp_handler.RPHandler.begin`
     This method will initiate a RP/Client instance if none exists for the
     OP/AS in question. It will then run service 1 if needed, services 2 and 3
     according to configuration and finally will construct the authorization
@@ -152,7 +153,7 @@ like this::
 
 After the RP has received this response the processing continues with:
 
-:py:meth:`oidcrp.RPHandler.get_session_information`
+:py:meth:`oidcrp.rp_handler.RPHandler.get_session_information`
     In the authorization response there MUST be a state parameter. The value
     of that parameter is the key into a data store that will provide you
     with information about the session so far.
@@ -161,7 +162,7 @@ After the RP has received this response the processing continues with:
 
         session_info = rph.state_db_interface.get_state(kwargs['state'])
 
-:py:meth:`oidcrp.RPHandler.finalize`
+:py:meth:`oidcrp.rp_handler.RPHandler.finalize`
     Will parse the authorization response and depending on the configuration
     run the services 5 and 6.
 
@@ -177,14 +178,14 @@ The tier 1 API is good for getting you started with authenticating a user and
 getting user information but if you're look at a long-term engagement you need
 a finer grained set of methods. These I call the tier 2 API:
 
-:py:meth:`oidcrp.RPHandler.do_provider_info`
+:py:meth:`oidcrp.rp_handler.RPHandler.do_provider_info`
     Either get the provider info from configuration or through dynamic
     discovery. Will overwrite previously saved provider metadata.
 
-:py:meth:`oidcrp.RPHandler.do_client_registration`
+:py:meth:`oidcrp.rp_handler.RPHandler.do_client_registration`
     Do dynamic client registration is configured to do so and the OP supports it.
 
-:py:meth:`oidcrp.RPHandler.init_authorization`
+:py:meth:`oidcrp.rp_handler.RPHandler.init_authorization`
     Initialize an authorization/authentication event. If the user has a
     previous session stored this will not overwrite that but will create a new
     one.
@@ -197,7 +198,7 @@ a finer grained set of methods. These I call the tier 2 API:
 The state_key you see mentioned here and below is the value of the state
 parameter in the authorization request.
 
-:py:meth:`oidcrp.RPHandler.get_access_token`
+:py:meth:`oidcrp.rp_handler.RPHandler.get_access_token`
     Will use an access code received as the response to an
     authentication/authorization to get an access token from the OP/AS.
     Access codes can only be used once.
@@ -206,7 +207,7 @@ parameter in the authorization request.
 
         res = self.rph.get_access_token(state_key)
 
-:py:meth:`oidcrp.RPHandler.refresh_access_token`
+:py:meth:`oidcrp.rp_handler.RPHandler.refresh_access_token`
     If the client has received a refresh token this method can be used to get
     a new access token.
 
@@ -218,7 +219,7 @@ You may change the set of scopes that are bound to the new access token but
 that change can only be a downgrade from what was specified in the
 authorization request and accepted by the user.
 
-:py:meth:`oidcrp.RPHandler.get_user_info`
+:py:meth:`oidcrp.rp_handler.RPHandler.get_user_info`
     If the client is allowed to do so, it can refresh the user info by
     requesting user information from the userinfo endpoint.
 
@@ -226,7 +227,7 @@ authorization request and accepted by the user.
 
         resp = self.rph.get_user_info(state_key)
 
-:py:meth:`oidcrp.RPHandler.has_active_authentication`
+:py:meth:`oidcrp.rp_handler.RPHandler.has_active_authentication`
     After a while when the user returns after having been away for a while
     you may want to know if you should let her reauthenticate or not.
     This method will tell you if the last done authentication is still
@@ -238,7 +239,7 @@ authorization request and accepted by the user.
 
     response will be True or False depending in the state of the authentication.
 
-:py:meth:`oidcrp.RPHandler.get_valid_access_token`
+:py:meth:`oidcrp.rp_handler.RPHandler.get_valid_access_token`
     When you are issued a access token it normally comes with a life time.
     After that time you are expected to use the refresh token to get a new
     access token. There are 2 ways of finding out if the access token you have is
@@ -289,7 +290,7 @@ these 2 together then defines the base_url. which is normally defined as::
 logging
     How the process should log
 
-http_params
+httpc_params
     Defines how the process performs HTTP requests to other entities.
     Parameters here are typically **verify** which controls whether the http
     client will verify the server TLS certificate or not.
@@ -301,9 +302,6 @@ http_params
 rp_keys
     Definition of the private keys that all RPs are going to use in the OIDC
     protocol exchange.
-
-jwks_uri
-    Where the OP/AS can find the RPs public keys
 
 There might be other parameters that you need dependent on which web framework
 you chose to use.
@@ -339,8 +337,22 @@ redirect_uris
     the use back to this URL after the authorization/authentication has
     completed. These URLs should be OP/AS specific.
 
-behavior
-    Information about how the RP should behave towards the OP/AS
+behaviour
+    Information about how the RP should behave towards the OP/AS. This is
+    a set of attributes with values. The attributes taken from the
+    `client metadata`_ specification. *behaviour* is used when the client
+    has been registered statically and it is know what the client wants to
+    use and the OP supports.
+
+    Usage example::
+
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["openid", "profile", "email"],
+            "token_endpoint_auth_method": ["client_secret_basic",
+                                           'client_secret_post']
+        }
+
 
 rp_keys
     If the OP doesn't support dynamic provider discovery it may still want to
@@ -356,7 +368,11 @@ rp_keys
 If the provider info discovery is done dynamically you need this
 
 client_preferences
-    How the RP should prefer to behave against the OP/AS
+    How the RP should prefer to behave against the OP/AS. The content are the
+    same as for *behaviour*. The difference is that this is specified if the
+    RP is expected to do dynamic client registration which means that at the
+    point of writing the configuration it is only known what the RP can and
+    wants to do but unknown what the OP supports.
 
 issuer
     The Issuer ID of the OP.
@@ -367,6 +383,8 @@ allow
     Presently there is only one thing you can allow and that is the *issuer*
     in the provider info is not the same as the URL you used to fetch the
     information.
+
+.. _client metadata: https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
 
 -------------------------
 RP configuration - Google
@@ -380,7 +398,7 @@ with dummy values::
         "client_id": "xxxxxxxxx.apps.googleusercontent.com",
         "client_secret": "2222222222",
         "redirect_uris": ["{}/authz_cb/google".format(BASEURL)],
-        "client_prefs": {
+        "behaviour": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
             "token_endpoint_auth_method": ["client_secret_basic",
@@ -415,7 +433,7 @@ right now supports 2 variants both listed here. The RP will by default pick
 the first if a list of possible values. Which in this case means the RP will
 authenticate using the *client_secret_basic* if allowed by Google::
 
-        "client_prefs": {
+        "behaviour": {
             "response_types": ["code"],
             "scope": ["openid", "profile", "email"],
             "token_endpoint_auth_method": ["client_secret_basic",
@@ -447,7 +465,7 @@ Configuration that allows you to use a Microsoft OP as identity provider::
         'client_id': '242424242424',
         'client_secret': 'ipipipippipipippi',
         "redirect_uris": ["{}/authz_cb/microsoft".format(BASEURL)],
-        "client_prefs": {
+        "behaviour": {
             "response_types": ["id_token"],
             "scope": ["openid"],
             "token_endpoint_auth_method": ['client_secret_post'],
@@ -465,7 +483,7 @@ Configuration that allows you to use a Microsoft OP as identity provider::
 One piece at the time. Microsoft has something called a tenant. Either you
 specify your RP to only one tenant in which case the issuer returned
 as *iss* in the id_token will be the same as the *issuer*. If our RP
-is expected to work in a multi-tenant environment then the *iss* will never
+is expected to work in a multi-tenant environment then the *iss* will **never**
 match issuer. Let's assume our RP works in a single-tenant context::
 
         'issuer': 'https://login.microsoftonline.com/<tenant_id>/v2.0',
@@ -486,7 +504,7 @@ response not in the fragment of the redirect URL which is the default but
 instead using the response_mode *form_post*. *client_secret_post* is a
 client authentication that Microsoft supports at the token enpoint::
 
-        "client_prefs": {
+        "behaviour": {
             "response_types": ["id_token"],
             "scope": ["openid"],
             "token_endpoint_auth_method": ['client_secret_post'],
@@ -574,7 +592,7 @@ can be used to access user info at the userinfo endpoint.
 GitHub deviates from the standard in a number of way. First the Oauth2
 standard doesn't mention anything like an userinfo endpoint, that is OIDC.
 So GitHub has implemented something that is in between OAuth2 and OIDC.
-What's more disturbing is that the accesstoken response by default is not
+What's more disturbing is that the access token response by default is not
 encoded as a JSON document which the standard say but instead it's
 urlencoded. Lucky for us, we can deal with both these things by configuration
 rather then writing code.::
@@ -584,3 +602,4 @@ rather then writing code.::
             'AccessToken': {'response_body_type': 'urlencoded'},
             'UserInfo': {'default_authn_method': ''}
         }
+

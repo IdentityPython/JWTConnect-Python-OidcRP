@@ -3,6 +3,7 @@
 import os
 import logging
 from logging.config import dictConfig
+from typing import Optional
 
 import yaml
 
@@ -29,8 +30,9 @@ LOGGING_DEFAULT = {
 }
 
 
-def configure_logging(debug: bool = False, config: dict = None,
-                      filename: str = LOGGING_CONF) -> logging.Logger:
+def configure_logging(debug: Optional[bool] = False,
+                      config: Optional[dict] = None,
+                      filename: Optional[str] = LOGGING_CONF) -> logging.Logger:
     """Configure logging"""
 
     if config is not None:

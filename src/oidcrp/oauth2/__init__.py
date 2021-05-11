@@ -1,20 +1,14 @@
-import logging
 from json import JSONDecodeError
+import logging
 
-from cryptojwt.key_jar import KeyJar
 from oidcmsg.exception import FormatError
-from oidcservice.client_auth import factory as ca_factory
-from oidcservice.exception import OidcServiceError
-from oidcservice.exception import ParseError
-from oidcservice.oauth2 import DEFAULT_SERVICES
-from oidcservice.service import REQUEST_INFO
-from oidcservice.service import SUCCESSFUL
-from oidcservice.service import init_services
-from oidcservice.service_context import ServiceContext
-from oidcservice.state_interface import StateInterface
-from oidcservice.util import importer
 
+from oidcrp.entity import Entity
+from oidcrp.exception import OidcServiceError
+from oidcrp.exception import ParseError
 from oidcrp.http import HTTPLib
+from oidcrp.service import REQUEST_INFO
+from oidcrp.service import SUCCESSFUL
 from oidcrp.util import do_add_ons
 from oidcrp.util import get_deserialization_method
 
@@ -29,10 +23,26 @@ class ExpiredToken(Exception):
     pass
 
 
+DEFAULT_OAUTH2_SERVICES = {
+    "discovery": {
+        'class': 'oidcrp.oauth2.provider_info_discovery.ProviderInfoDiscovery'
+    },
+    'authorization': {
+        'class': 'oidcrp.oauth2.authorization.Authorization'
+    },
+    'access_token': {
+        'class': 'oidcrp.oauth2.access_token.AccessToken'
+    },
+    'refresh_access_token': {
+        'class': 'oidcrp.oauth2.refresh_access_token.RefreshAccessToken'
+    }
+}
+
+
 # =============================================================================
 
 
-class Client(object):
+class Client(Entity):
     def __init__(self, client_authn_factory=None, keyjar=None, verify_ssl=True, config=None,
                  httplib=None, services=None, jwks_uri='', httpc_params=None):
         """
@@ -41,7 +51,7 @@ class Client(object):
             initiate a client authentication class.
         :param keyjar: A py:class:`oidcmsg.key_jar.KeyJar` instance
         :param config: Configuration information passed on to the
-            :py:class:`oidcservice.service_context.ServiceContext`
+            :py:class:`oidcrp.service_context.ServiceContext`
             initialization
         :param httplib: A HTTP client to use
         :param services: A list of service definitions
@@ -50,48 +60,22 @@ class Client(object):
         :return: Client instance
         """
 
-        if httpc_params is None:
-            httpc_params = {"verify": True}
+        Entity.__init__(self, client_authn_factory=client_authn_factory, keyjar=keyjar,
+                        config=config, services=services, jwks_uri=jwks_uri,
+                        httpc_params=httpc_params)
 
         self.http = httplib or HTTPLib(httpc_params)
 
-        # db_conf = config.get('db_conf')
-        # if db_conf:
-        #     _storage_cls_name = db_conf.get('abstract_storage_cls')
-        #     self._storage_cls = importer(_storage_cls_name)
-        #     self.db = self._storage_cls(db_conf.get('default'))
-        #     if not keyjar:
-        #         key_db_conf = db_conf.get('keyjar', db_conf.get('default'))
-        #         keyjar = KeyJar(abstract_storage_cls=self._storage_cls, storage_conf=key_db_conf)
-        #         keyjar.verify_ssl = verify_ssl
-
-        self.events = None
-        self.service_context = ServiceContext(keyjar, config=config,
-                                              jwks_uri=jwks_uri,
-                                              httpc_params=httpc_params)
-
-        self.session_interface = StateInterface(self.service_context.state_db)
-
-        if self.service_context.get('client_id'):
-            self.client_id = self.service_context.get('client_id')
-
-        _cam = client_authn_factory or ca_factory
-
-        _srvs = services or DEFAULT_SERVICES
-
-        self.service = init_services(_srvs, self.service_context, _cam)
-
         if 'add_ons' in config:
-            do_add_ons(config['add_ons'], self.service)
+            do_add_ons(config['add_ons'], self._service)
 
-        self.service_context.service = self.service
         # just ignore verify_ssl until it goes away
-        self.verify_ssl = httpc_params.get("verify", True)
+        self.verify_ssl = self.httpc_params.get("verify", True)
 
     def do_request(self, request_type, response_body_type="", request_args=None,
                    **kwargs):
 
-        _srv = self.service[request_type]
+        _srv = self._service[request_type]
 
         _info = _srv.get_request_parameters(request_args=request_args, **kwargs)
 
@@ -109,7 +93,7 @@ class Client(object):
 
     def set_client_id(self, client_id):
         self.client_id = client_id
-        self.service_context.set('client_id', client_id)
+        self._service_context.set('client_id', client_id)
 
     def get_response(self, service, url, method="GET", body=None, response_body_type="",
                      headers=None, **kwargs):
@@ -134,7 +118,7 @@ class Client(object):
 
         if resp.status_code < 300:
             if "keyjar" not in kwargs:
-                kwargs["keyjar"] = service.service_context.keyjar
+                kwargs["keyjar"] = service.client_get("service_context").keyjar
             if not response_body_type:
                 response_body_type = service.response_body_type
 
@@ -197,7 +181,7 @@ class Client(object):
             - text (The text version of the response)
             - url (The calling URL)
 
-        :param service: A :py:class:`oidcservice.service.Service` instance
+        :param service: A :py:class:`oidcrp.service.Service` instance
         :param reqresp: The HTTP request response
         :param response_body_type: If response in body one of 'json', 'jwt' or
             'urlencoded'

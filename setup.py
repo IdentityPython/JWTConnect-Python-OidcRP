@@ -55,7 +55,8 @@ setup(
     author_email="roland@catalogix.se",
     license="Apache 2.0",
     url='https://github.com/IdentityPython/oicrp/',
-    packages=["oidcrp", "oidcrp/provider", "oidcrp/oidc", "oidcrp/oauth2"],
+    packages=["oidcrp", "oidcrp/provider", "oidcrp/oidc", "oidcrp/oauth2",
+              "oidcrp/oauth2/add_on", "oidcrp/oauth2/client_credentials"],
     package_dir={"": "src"},
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -66,14 +67,13 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Topic :: Software Development :: Libraries :: Python Modules"],
     install_requires=[
-        'oidcservice>=1.1.0',
-        'oidcmsg>=1.1.3',
+        'oidcmsg>=1.3.0',
         'pyyaml',
         'responses'
     ],
     tests_require=[
         'pytest',
-        'pytest-localserver',
+        'pytest-localserver'
     ],
     zip_safe=False,
     cmdclass={'test': PyTest},
