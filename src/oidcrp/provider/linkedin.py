@@ -5,8 +5,8 @@ from oidcmsg.message import SINGLE_OPTIONAL_STRING
 from oidcmsg.message import SINGLE_REQUIRED_INT
 from oidcmsg.message import SINGLE_REQUIRED_STRING
 
-from oidcservice.oauth2 import access_token
-from oidcservice.oidc import userinfo
+from oidcrp.oauth2 import access_token
+from oidcrp.oidc import userinfo
 
 
 class AccessTokenResponse(Message):

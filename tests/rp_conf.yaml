@@ -1,33 +1,9 @@
-logging:
-  version: 1
-  disable_existing_loggers: False
-  root:
-    handlers:
-      - console
-      - file
-    level: DEBUG
-  loggers:
-    idp:
-      level: DEBUG
-  handlers:
-    console:
-      class: logging.StreamHandler
-      stream: 'ext://sys.stdout'
-      formatter: default
-    file:
-      class: logging.FileHandler
-      filename: 'debug.log'
-      formatter: default
-  formatters:
-    default:
-      format: '%(asctime)s %(name)s %(levelname)s %(message)s'
-
 port: &port 8090
 domain: &domain 127.0.0.1
 base_url: "https://{domain}:{port}"
 
 httpc_params:
-  # This is just for testing an local usage. In all other cases it MUST be True
+  # This is just for testing a local usage. In all other cases it MUST be True
   verify: false
   # Client side
   #client_cert: "certs/client.crt"
@@ -134,16 +110,3 @@ clients:
           acr:
             essential:
               true
-
-
-webserver:
-  port: *port
-  domain: *domain
-  # If BASE is https these has to be specified
-  server_cert: "certs/cert.pem"
-  server_key: "certs/key.pem"
-  # If you want the clients cert to be verified
-  # verify_user: optional
-  # The you also need
-  # ca_bundle: ''
-  debug: true

@@ -1,28 +1,25 @@
 import base64
 import hashlib
 import hmac
+from http.cookies import SimpleCookie
 import logging
 import os
 import sys
 import time
 
-from http.cookies import SimpleCookie
-
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
-from cryptojwt.utils import as_bytes
-from cryptojwt.utils import as_unicode
 from cryptojwt.jwe.exception import JWEException
 from cryptojwt.jwe.utils import split_ctx_and_tag
-
-from oidcservice import rndstr
-from oidcservice.exception import ImproperlyConfigured
+from cryptojwt.utils import as_bytes
+from cryptojwt.utils import as_unicode
 from oidcmsg import time_util
+
+from oidcrp.exception import ImproperlyConfigured
+from oidcrp.util import rndstr
 
 __author__ = 'Roland Hedberg'
 
 logger = logging.getLogger(__name__)
-
 
 CORS_HEADERS = [
     ("Access-Control-Allow-Origin", "*"),
@@ -44,6 +41,7 @@ def safe_str_cmp(a, b):
     for c, d in zip(a, b):
         r |= ord(c) ^ ord(d)
     return r == 0
+
 
 def _expiration(timeout, time_format=None):
     """
@@ -161,7 +159,7 @@ def make_cookie(name, load, seed, expire=0, domain="", path="", timestamp="",
         # to the top level APIs.
         key = _make_hashed_key((enc_key, seed))
 
-        #key = AESGCM.generate_key(bit_length=128)
+        # key = AESGCM.generate_key(bit_length=128)
         aesgcm = AESGCM(key)
         iv = os.urandom(12)
 
@@ -279,6 +277,7 @@ class CookieDealer(object):
     Functionality that an entity that deals with cookies need to have
     access to.
     """
+
     def _get_server(self):
         return self._srv
 
