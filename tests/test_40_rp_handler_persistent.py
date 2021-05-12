@@ -314,11 +314,11 @@ class TestRPHandler(object):
                                      'redirect_uri', 'response_type', 'scope'}
 
         # nonce and state are created on the fly so can't check for those
-        assert query[b'client_id'] == ['eeeeeeeee']
-        assert query[b'redirect_uri'] == [
+        assert query['client_id'] == ['eeeeeeeee']
+        assert query['redirect_uri'] == [
             'https://example.com/rp/authz_cb/github']
-        assert query[b'response_type'] == ['code']
-        assert query[b'scope'] == ['user public_repo openid']
+        assert query['response_type'] == ['code']
+        assert query['scope'] == ['user public_repo openid']
 
     def test_get_session_information(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
