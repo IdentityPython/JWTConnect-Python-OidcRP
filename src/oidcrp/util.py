@@ -128,10 +128,9 @@ def get_http_body(req, content_type=URL_ENCODED):
     Get the message into the format that should be places in the body part
     of a HTTP request.
 
-    :param req: The service request as a  :py:class:`oidcmsg.message.Message`
-        instance
+    :param req: The service request as a :py:class:`oidcmsg.message.Message` instance
     :param content_type: The format of the body part.
-    :return: The correctly formatet service request.
+    :return: The correctly formatted service request.
     """
     if URL_ENCODED in content_type:
         return req.to_urlencoded()
@@ -142,8 +141,7 @@ def get_http_body(req, content_type=URL_ENCODED):
     if JOSE_ENCODED in content_type:
         return req  # already packaged
 
-    raise UnSupported(
-        "Unsupported content type: '%s'" % content_type)
+    raise UnSupported("Unsupported content type: '%s'" % content_type)
 
 
 def load_yaml_config(filename):

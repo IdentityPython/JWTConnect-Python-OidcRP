@@ -23,22 +23,6 @@ CLIENT_PREFS = {
     "verify_args": {"allow_sign_alg_none": True}
 }
 
-DB_CONF = {
-    'keyjar': {
-        'handler': 'oidcmsg.storage.abfile.LabeledAbstractFileSystem',
-        'fdir': 'db/{}/keyjar',
-        'key_conv': 'oidcmsg.storage.converter.QPKey',
-        'value_conv': 'cryptojwt.serialize.item.KeyIssuer',
-        'label': 'keyjar'
-    },
-    'default': {
-        'handler': 'oidcmsg.storage.abfile.AbstractFileSystem',
-        'fdir': 'db/{}',
-        'key_conv': 'oidcmsg.storage.converter.QPKey',
-        'value_conv': 'oidcmsg.storage.converter.JSON'
-    }
-}
-
 CLIENT_CONFIG = {
     "": {
         "client_preferences": CLIENT_PREFS,
@@ -97,8 +81,7 @@ CLIENT_CONFIG = {
             'userinfo': {
                 'class': 'oidcrp.provider.linkedin.UserInfo'
             }
-        },
-        'db_conf': DB_CONF
+        }
     },
     "facebook": {
         "issuer": "https://www.facebook.com/v2.11/dialog/oauth",
@@ -130,8 +113,7 @@ CLIENT_CONFIG = {
                 'class': 'oidcrp.oidc.userinfo.UserInfo',
                 'kwargs': {'conf': {'default_authn_method': ''}}
             }
-        },
-        'db_conf': DB_CONF
+        }
     },
     'github': {
         "issuer": "https://github.com/login/oauth/authorize",
@@ -167,8 +149,7 @@ CLIENT_CONFIG = {
                 'class': 'oidcrp.oidc.refresh_access_token'
                          '.RefreshAccessToken'
             }
-        },
-        'db_conf': DB_CONF
+        }
     }
 }
 
@@ -333,11 +314,11 @@ class TestRPHandler(object):
                                      'redirect_uri', 'response_type', 'scope'}
 
         # nonce and state are created on the fly so can't check for those
-        assert query['client_id'] == ['eeeeeeeee']
-        assert query['redirect_uri'] == [
+        assert query[b'client_id'] == ['eeeeeeeee']
+        assert query[b'redirect_uri'] == [
             'https://example.com/rp/authz_cb/github']
-        assert query['response_type'] == ['code']
-        assert query['scope'] == ['user public_repo openid']
+        assert query[b'response_type'] == ['code']
+        assert query[b'scope'] == ['user public_repo openid']
 
     def test_get_session_information(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
