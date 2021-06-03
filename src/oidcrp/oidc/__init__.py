@@ -21,8 +21,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SERVICES = {
     "discovery": {
-        'class': 'oidcrp.oidc.provider_info_discovery'
-                 '.ProviderInfoDiscovery'
+        'class': 'oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery'
     },
     'registration': {
         'class': 'oidcrp.oidc.registration.Registration'
@@ -38,6 +37,9 @@ DEFAULT_SERVICES = {
     },
     'userinfo': {
         'class': 'oidcrp.oidc.userinfo.UserInfo'
+    },
+    'end_session': {
+        'class': 'oidcrp.oidc.end_session.EndSession'
     }
 }
 
