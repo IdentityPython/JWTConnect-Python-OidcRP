@@ -1,0 +1,17 @@
+name: Release drafter
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  update_release_draft:
+    name: Update draft release
+    runs-on: ubuntu-latest
+    steps:
+    -
+      uses: release-drafter/release-drafter@v5
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
