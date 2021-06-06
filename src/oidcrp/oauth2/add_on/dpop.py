@@ -85,20 +85,16 @@ class DPoPProof(Message):
 
 
 def dpop_header(service_context: ServiceContext,
-                request: Union[dict, Message],
                 service_endpoint: str,
                 http_method: str,
                 headers: Optional[dict] = None,
-                authn_method: Optional[str] = "",
                 **kwargs) -> dict:
     """
 
     :param service_context:
-    :param request:
     :param service_endpoint:
     :param http_method:
     :param headers:
-    :param authn_method:
     :param kwargs:
     :return:
     """
@@ -156,7 +152,8 @@ def add_support(services, signing_algorithms: Optional[list] = None):
     """
 
     _service = services["accesstoken"]
-    _service.client_get("service_context").add_on['dpop'] = {
+    _context = _service.client_get("service_context")
+    _context.add_on['dpop'] = {
         # "key": key_by_alg(signing_algorithm),
         "sign_algs": signing_algorithms
     }

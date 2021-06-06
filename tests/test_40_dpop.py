@@ -1,15 +1,11 @@
 import os
 
-import pytest
 from cryptojwt.jws.jws import factory
 from cryptojwt.key_jar import init_key_jar
+import pytest
 
-from oidcrp.client_auth import factory as ca_factory
 from oidcrp.oauth2 import Client
 from oidcrp.oauth2 import DEFAULT_OAUTH2_SERVICES
-from oidcrp.oauth2.add_on import do_add_ons
-from oidcrp.service import init_services
-from oidcrp.service_context import ServiceContext
 
 _dirname = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,14 +39,14 @@ class TestDPoP:
 
         self.client = Client(keyjar=CLI_KEY, config=config, services=DEFAULT_OAUTH2_SERVICES)
 
-        self.client.client_get("service_context").provider_info= {
+        self.client.client_get("service_context").provider_info = {
             "authorization_endpoint": "https://example.com/auth",
             "token_endpoint": "https://example.com/token",
             "dpop_signing_alg_values_supported": ["RS256", "ES256"]
         }
 
     def test_add_header(self):
-        token_serv = self.client.client_get("service","accesstoken")
+        token_serv = self.client.client_get("service", "accesstoken")
         req_args = {
             "grant_type": "authorization_code",
             "code": "SplxlOBeZQQYbYS6WxSbIA",

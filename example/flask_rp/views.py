@@ -1,6 +1,6 @@
 import logging
-import urllib
 from urllib.parse import parse_qs
+from urllib.parse import splitquery
 
 from flask import Blueprint
 from flask import current_app
@@ -67,7 +67,8 @@ def rp():
         except Exception as err:
             return make_response('Something went wrong:{}'.format(err), 400)
         else:
-            return redirect(result['url'], 303)
+            response = redirect(result['url'], 303)
+            return response
     else:
         _providers = current_app.rp_config.clients.keys()
         return render_template('opbyuid.html', providers=_providers)
@@ -150,10 +151,10 @@ def finalize(op_hash, request_args):
         return make_response(res['error'], 400)
 
 
-def get_ophash_by_cb_uri(url:str):
-    uri = urllib.parse.splitquery(request.url)[0]
+def get_ophash_by_cb_uri(url: str):
+    uri = splitquery(url)[0]
     clients = current_app.rp_config.clients
-    for k,v in clients.items():
+    for k, v in clients.items():
         for endpoint in ("redirect_uris",
                          "post_logout_redirect_uris",
                          "frontchannel_logout_uri",
