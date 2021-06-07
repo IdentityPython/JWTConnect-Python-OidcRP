@@ -1,0 +1,218 @@
+{
+  "logging": {
+    "version": 1,
+    "disable_existing_loggers": false,
+    "root": {
+      "handlers": [
+        "file"
+      ],
+      "level": "DEBUG"
+    },
+    "loggers": {
+      "idp": {
+        "level": "DEBUG"
+      }
+    },
+    "handlers": {
+      "file": {
+        "class": "logging.FileHandler",
+        "filename": "dpoop_debug.log",
+        "formatter": "default"
+      }
+    },
+    "formatters": {
+      "default": {
+        "format": "%(asctime)s %(name)s %(levelname)s %(message)s"
+      }
+    }
+  },
+  "port": 8090,
+  "domain": "127.0.0.1",
+  "base_url": "https://{domain}:{port}",
+  "httpc_params": {
+    "verify": false
+  },
+  "rp_keys": {
+    "private_path": "private/jwks.json",
+    "key_defs": [
+      {
+        "type": "RSA",
+        "key": "",
+        "use": [
+          "sig"
+        ]
+      },
+      {
+        "type": "EC",
+        "crv": "P-256",
+        "use": [
+          "sig"
+        ]
+      }
+    ],
+    "public_path": "static/jwks.json",
+    "read_only": false
+  },
+  "services": {
+    "discovery": {
+      "class": "oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery",
+      "kwargs": {}
+    },
+    "registration": {
+      "class": "oidcrp.oidc.registration.Registration",
+      "kwargs": {}
+    },
+    "authorization": {
+      "class": "oidcrp.oidc.authorization.Authorization",
+      "kwargs": {}
+    },
+    "accesstoken": {
+      "class": "oidcrp.oidc.access_token.AccessToken",
+      "kwargs": {}
+    },
+    "userinfo": {
+      "class": "oidcrp.oidc.userinfo.UserInfo",
+      "kwargs": {}
+    },
+    "end_session": {
+      "class": "oidcrp.oidc.end_session.EndSession",
+      "kwargs": {}
+    }
+  },
+  "clients": {
+    "": {
+      "client_preferences": {
+        "application_name": "rphandler",
+        "application_type": "web",
+        "contacts": [
+          "ops@example.com"
+        ],
+        "response_types": [
+          "code"
+        ],
+        "scope": [
+          "openid",
+          "profile",
+          "email",
+          "address",
+          "phone"
+        ],
+        "token_endpoint_auth_method": [
+          "client_secret_basic",
+          "client_secret_post"
+        ]
+      },
+      "redirect_uris": [],
+      "services": {
+        "discovery": {
+          "class": "oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery",
+          "kwargs": {}
+        },
+        "registration": {
+          "class": "oidcrp.oidc.registration.Registration",
+          "kwargs": {}
+        },
+        "authorization": {
+          "class": "oidcrp.oidc.authorization.Authorization",
+          "kwargs": {}
+        },
+        "accesstoken": {
+          "class": "oidcrp.oidc.access_token.AccessToken",
+          "kwargs": {}
+        },
+        "userinfo": {
+          "class": "oidcrp.oidc.userinfo.UserInfo",
+          "kwargs": {}
+        },
+        "end_session": {
+          "class": "oidcrp.oidc.end_session.EndSession",
+          "kwargs": {}
+        }
+      }
+    },
+    "flask_provider": {
+      "client_preferences": {
+        "application_name": "rphandler",
+        "application_type": "web",
+        "contacts": [
+          "ops@example.com"
+        ],
+        "response_types": [
+          "code"
+        ],
+        "scope": [
+          "openid",
+          "profile",
+          "email",
+          "address",
+          "phone"
+        ],
+        "token_endpoint_auth_method": [
+          "client_secret_basic",
+          "client_secret_post"
+        ]
+      },
+      "issuer": "https://127.0.0.1:5000/",
+      "redirect_uris": [
+        "https://{domain}:{port}/authz_cb/local"
+      ],
+      "post_logout_redirect_uris": [
+        "https://{domain}:{port}/session_logout/local"
+      ],
+      "frontchannel_logout_uri": "https://{domain}:{port}/fc_logout/local",
+      "frontchannel_logout_session_required": true,
+      "backchannel_logout_uri": "https://{domain}:{port}/bc_logout/local",
+      "backchannel_logout_session_required": true,
+      "services": {
+        "discovery": {
+          "class": "oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery",
+          "kwargs": {}
+        },
+        "registration": {
+          "class": "oidcrp.oidc.registration.Registration",
+          "kwargs": {}
+        },
+        "authorization": {
+          "class": "oidcrp.oidc.authorization.Authorization",
+          "kwargs": {}
+        },
+        "accesstoken": {
+          "class": "oidcrp.oidc.access_token.AccessToken",
+          "kwargs": {}
+        },
+        "userinfo": {
+          "class": "oidcrp.oidc.userinfo.UserInfo",
+          "kwargs": {}
+        },
+        "end_session": {
+          "class": "oidcrp.oidc.end_session.EndSession",
+          "kwargs": {}
+        }
+      },
+      "add_ons": {
+        "pkce": {
+          "function": "oidcrp.oauth2.add_on.pkce.add_support",
+          "kwargs": {
+            "code_challenge_length": 64,
+            "code_challenge_method": "S256"
+          }
+        },
+        "dpop": {
+          "function": "oidcrp.oauth2.add_on.dpop.add_support",
+          "kwargs": {
+            "signing_algorithms": [
+              "ES256", "ES384", "ES512"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "webserver": {
+    "port": 8090,
+    "domain": "127.0.0.1",
+    "server_cert": "certs/cert.pem",
+    "server_key": "certs/key.pem",
+    "debug": true
+  }
+}

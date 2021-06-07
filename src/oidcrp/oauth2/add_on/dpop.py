@@ -151,10 +151,15 @@ def add_support(services, signing_algorithms: Optional[list] = None):
     :param signing_algorithms:
     """
 
+    # Access token request should use DPoP header
     _service = services["accesstoken"]
     _context = _service.client_get("service_context")
     _context.add_on['dpop'] = {
         # "key": key_by_alg(signing_algorithm),
         "sign_algs": signing_algorithms
     }
+    _service.construct_extra_headers.append(dpop_header)
+
+    # The same for userinfo requests
+    _service = services["userinfo"]
     _service.construct_extra_headers.append(dpop_header)
