@@ -108,7 +108,7 @@
           "client_secret_post"
         ]
       },
-      "redirect_uris": "None",
+      "redirect_uris": [],
       "services": {
         "discovery": {
           "class": "oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery",
