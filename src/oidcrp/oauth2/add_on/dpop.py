@@ -161,5 +161,6 @@ def add_support(services, signing_algorithms: Optional[list] = None):
     _service.construct_extra_headers.append(dpop_header)
 
     # The same for userinfo requests
-    _service = services["userinfo"]
-    _service.construct_extra_headers.append(dpop_header)
+    _userinfo_service = services.get("userinfo")
+    if _userinfo_service:
+        _userinfo_service.construct_extra_headers.append(dpop_header)
