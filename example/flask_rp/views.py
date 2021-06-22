@@ -80,13 +80,12 @@ def get_rp(op_identifier):
         except KeyError:
             logger.error('Unkown issuer: {} not among {}'.format(
                 op_identifier, list(current_app.rph.hash2issuer.keys())))
-            return make_response("Unknown hash: {}".format(op_identifier), 400)
+            return make_response(f"Unknown OP identifier: {op_identifier}", 400)
     else:
         try:
             rp = current_app.rph.issuer2rp[_iss]
         except KeyError:
-            return make_response("Couldn't find client for {}".format(_iss),
-                                 400)
+            return make_response(f"Couldn't find client for issuer: '{_iss}'", 400)
 
     return rp
 
