@@ -488,8 +488,7 @@ class RPHandler(object):
         try:
             tokenresp = client.do_request(
                 'accesstoken', request_args=req_args,
-                authn_method=self.get_client_authn_method(client,
-                                                          "token_endpoint"),
+                authn_method=self.get_client_authn_method(client, "token_endpoint"),
                 state=state
             )
         except Exception as err:

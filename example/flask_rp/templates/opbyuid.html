@@ -16,9 +16,11 @@
 <form action="rp" method="get">
   <h2>Start sign in flow</h2>
   <h3>By entering your unique identifier:</h3>
-  <input type="text" id="uid" name="uid" class="form-control" placeholder="UID" autofocus>  
+  <input type="text" id="uid" name="uid" class="form-control" placeholder="UID" autofocus>
+    <h3>an issuer ID</h3>
+    <input type="text" id="dyn_iss" name="dyn_iss" class="form-control">
   <h3><em>Or</em> you can chose one of the preconfigured OpenID Connect Providers</h3>
-  <select name="iss">
+  <select name="static_iss">
   <option value=""></option>
       {% for op in providers %}
         <option value="{{ op }}">{{ op }}</option>

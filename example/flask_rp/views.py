@@ -1,6 +1,6 @@
 import logging
-import urllib
 from urllib.parse import parse_qs
+from urllib.parse import splitquery
 
 from flask import Blueprint
 from flask import current_app
@@ -43,55 +43,55 @@ def index():
 
 @oidc_rp_views.route('/rp')
 def rp():
-    try:
-        iss = request.args['iss']
-    except KeyError:
-        link = ''
-    else:
-        link = iss
+    iss = request.args['dyn_iss']
+    if not iss:
+        iss = request.args['static_iss']
 
-    try:
+    if not iss:
         uid = request.args['uid']
-    except KeyError:
+    else:
         uid = ''
 
-    if link or uid:
+    if iss or uid:
         if uid:
             args = {'user_id': uid}
         else:
             args = {}
 
-        session['op_hash'] = link
+        session['op_identifier'] = iss
         try:
-            result = current_app.rph.begin(link, **args)
+            result = current_app.rph.begin(iss, **args)
         except Exception as err:
             return make_response('Something went wrong:{}'.format(err), 400)
         else:
-            return redirect(result['url'], 303)
+            response = redirect(result['url'], 303)
+            return response
     else:
         _providers = current_app.rp_config.clients.keys()
         return render_template('opbyuid.html', providers=_providers)
 
 
-def get_rp(op_hash):
+def get_rp(op_identifier):
     try:
-        _iss = current_app.rph.hash2issuer[op_hash]
+        _iss = current_app.rph.hash2issuer[op_identifier]
     except KeyError:
-        logger.error('Unkown issuer: {} not among {}'.format(
-            op_hash, list(current_app.rph.hash2issuer.keys())))
-        return make_response("Unknown hash: {}".format(op_hash), 400)
+        try:
+            rp = current_app.rph.issuer2rp[op_identifier]
+        except KeyError:
+            logger.error('Unkown issuer: {} not among {}'.format(
+                op_identifier, list(current_app.rph.hash2issuer.keys())))
+            return make_response(f"Unknown OP identifier: {op_identifier}", 400)
     else:
         try:
             rp = current_app.rph.issuer2rp[_iss]
         except KeyError:
-            return make_response("Couldn't find client for {}".format(_iss),
-                                 400)
+            return make_response(f"Couldn't find client for issuer: '{_iss}'", 400)
 
     return rp
 
 
-def finalize(op_hash, request_args):
-    rp = get_rp(op_hash)
+def finalize(op_identifier, request_args):
+    rp = get_rp(op_identifier)
 
     if hasattr(rp, 'status_code') and rp.status_code != 200:
         logger.error(rp.response[0].decode())
@@ -150,22 +150,22 @@ def finalize(op_hash, request_args):
         return make_response(res['error'], 400)
 
 
-def get_ophash_by_cb_uri(url:str):
-    uri = urllib.parse.splitquery(request.url)[0]
-    clients = current_app.rp_config.clients
-    for k,v in clients.items():
+def get_op_identifier_by_cb_uri(url: str):
+    uri = splitquery(url)[0]
+    for k,v in current_app.rph.issuer2rp.items():
+        _cntx = v.get_service_context()
         for endpoint in ("redirect_uris",
                          "post_logout_redirect_uris",
                          "frontchannel_logout_uri",
                          "backchannel_logout_uri"):
-            if uri in clients[k].get(endpoint, []):
+            if uri in _cntx.get(endpoint, []):
                 return k
 
 
-@oidc_rp_views.route('/authz_cb/<op_hash>')
-def authz_cb(op_hash):
-    op_hash = get_ophash_by_cb_uri(request.url)
-    return finalize(op_hash, request.args)
+@oidc_rp_views.route('/authz_cb/<op_identifier>')
+def authz_cb(op_identifier):
+    op_identifier = get_op_identifier_by_cb_uri(request.url)
+    return finalize(op_identifier, request.args)
 
 
 @oidc_rp_views.errorhandler(werkzeug.exceptions.BadRequest)
@@ -176,12 +176,12 @@ def handle_bad_request(e):
 @oidc_rp_views.route('/repost_fragment')
 def repost_fragment():
     args = compact(parse_qs(request.args['url_fragment']))
-    op_hash = request.args['op_hash']
-    return finalize(op_hash, args)
+    op_identifier = request.args['op_identifier']
+    return finalize(op_identifier, args)
 
 
 @oidc_rp_views.route('/ihf_cb')
-def ihf_cb(self, op_hash='', **kwargs):
+def ihf_cb(self, op_identifier='', **kwargs):
     logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
     return render_template('repost_fragment.html')
 
@@ -190,11 +190,11 @@ def ihf_cb(self, op_hash='', **kwargs):
 def session_iframe():  # session management
     logger.debug('session_iframe request_args: {}'.format(request.args))
 
-    _rp = get_rp(session['op_hash'])
+    _rp = get_rp(session['op_identifier'])
     _context = _rp.client_get("service_context")
     session_change_url = "{}/session_change".format(_context.base_url)
 
-    _issuer = current_app.rph.hash2issuer[session['op_hash']]
+    _issuer = current_app.rph.hash2issuer[session['op_identifier']]
     args = {
         'client_id': session['client_id'],
         'session_state': session['session_state'],
@@ -208,8 +208,8 @@ def session_iframe():  # session management
 
 @oidc_rp_views.route('/session_change')
 def session_change():
-    logger.debug('session_change: {}'.format(session['op_hash']))
-    _rp = get_rp(session['op_hash'])
+    logger.debug('session_change: {}'.format(session['op_identifier']))
+    _rp = get_rp(session['op_identifier'])
 
     # If there is an ID token send it along as a id_token_hint
     _aserv = _rp.client_get("service", 'authorization')
@@ -227,10 +227,10 @@ def session_change():
 
 
 # post_logout_redirect_uri
-@oidc_rp_views.route('/session_logout/<op_hash>')
-def session_logout(op_hash):
-    op_hash = get_ophash_by_cb_uri(request.url)
-    _rp = get_rp(op_hash)
+@oidc_rp_views.route('/session_logout/<op_identifier>')
+def session_logout(op_identifier):
+    op_identifier = get_op_identifier_by_cb_uri(request.url)
+    _rp = get_rp(op_identifier)
     logger.debug('post_logout')
     return "Post logout from {}".format(_rp.client_get("service_context").issuer)
 
@@ -244,9 +244,9 @@ def logout():
     return redirect(_info['url'], 303)
 
 
-@oidc_rp_views.route('/bc_logout/<op_hash>', methods=['GET', 'POST'])
-def backchannel_logout(op_hash):
-    _rp = get_rp(op_hash)
+@oidc_rp_views.route('/bc_logout/<op_identifier>', methods=['GET', 'POST'])
+def backchannel_logout(op_identifier):
+    _rp = get_rp(op_identifier)
     try:
         _state = rp_handler.backchannel_logout(_rp, request.data)
     except Exception as err:
@@ -257,9 +257,9 @@ def backchannel_logout(op_hash):
         return "OK"
 
 
-@oidc_rp_views.route('/fc_logout/<op_hash>', methods=['GET', 'POST'])
-def frontchannel_logout(op_hash):
-    _rp = get_rp(op_hash)
+@oidc_rp_views.route('/fc_logout/<op_identifier>', methods=['GET', 'POST'])
+def frontchannel_logout(op_identifier):
+    _rp = get_rp(op_identifier)
     sid = request.args['sid']
     _iss = request.args['iss']
     if _iss != _rp.client_get("service_context").get('issuer'):

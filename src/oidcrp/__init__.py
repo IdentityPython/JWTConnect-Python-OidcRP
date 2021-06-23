@@ -1,7 +1,7 @@
 import logging
 
 __author__ = 'Roland Hedberg'
-__version__ = '2.0.0'
+__version__ = '2.0.1'
 
 logger = logging.getLogger(__name__)
 

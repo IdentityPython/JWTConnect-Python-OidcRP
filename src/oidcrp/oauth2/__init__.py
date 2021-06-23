@@ -72,9 +72,7 @@ class Client(Entity):
         # just ignore verify_ssl until it goes away
         self.verify_ssl = self.httpc_params.get("verify", True)
 
-    def do_request(self, request_type, response_body_type="", request_args=None,
-                   **kwargs):
-
+    def do_request(self, request_type, response_body_type="", request_args=None, **kwargs):
         _srv = self._service[request_type]
 
         _info = _srv.get_request_parameters(request_args=request_args, **kwargs)
@@ -137,6 +135,7 @@ class Client(Entity):
         The method that sends the request and handles the response returned.
         This assumes that the response arrives in the HTTP response.
 
+        :param service: The Service instance
         :param url: The URL to which the request should be sent
         :param method: Which HTTP method to use
         :param body: A message body if any
