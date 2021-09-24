@@ -18,6 +18,7 @@ from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import Claims
 from oidcmsg.oidc import OpenIDSchema
+from oidcmsg.oidc import RegistrationRequest
 from oidcmsg.oidc.session import BackChannelLogoutRequest
 from oidcmsg.time_util import time_sans_frac
 
@@ -180,7 +181,7 @@ class RPHandler(object):
         _context.jwks_uri = self.jwks_uri
         return client
 
-    def do_provider_info(self, client=None, state=''):
+    def do_provider_info(self, client=None, state='', behaviour_args=None):
         """
         Either get the provider info from configuration or through dynamic
         discovery.
@@ -235,10 +236,14 @@ class RPHandler(object):
             except KeyError:
                 return _context.get('issuer')
 
-    def do_client_registration(self, client=None, iss_id='', state=''):
+    def do_client_registration(self, client=None,
+                               iss_id: Optional[str] = '',
+                               state: Optional[str] = '',
+                               behaviour_args: Optional[dict] = None):
         """
         Prepare for and do client registration if configured to do so
 
+        :param behaviour_args: To fine tune behaviour
         :param client: A Client instance
         :param state: A key by which the state of the session can be
             retrieved
@@ -271,7 +276,9 @@ class RPHandler(object):
                     v for k, v in callbacks.items() if not k.startswith('__')])
                 _context.set('callbacks', callbacks)
 
-            load_registration_response(client)
+            _params = RegistrationRequest().parameters()
+            request_args = {k:v for k, v in behaviour_args.items() if k in _params}
+            load_registration_response(client, request_args=request_args)
 
     def add_callbacks(self, service_context):
         _iss = service_context.get('issuer')
@@ -298,7 +305,7 @@ class RPHandler(object):
         temporary_client.do_request('webfinger', resource=user)
         return temporary_client
 
-    def client_setup(self, iss_id='', user=''):
+    def client_setup(self, iss_id='', user='', behaviour_args=None):
         """
         First if no issuer ID is given then the identifier for the user is
         used by the webfinger service to try to find the issuer ID.
@@ -307,6 +314,7 @@ class RPHandler(object):
         the necessary information for the client to be able to communicate
         with the OP/AS that has the provided issuer ID.
 
+        :param behaviour_args: To fine tune behaviour
         :param iss_id: The issuer ID
         :param user: A user identifier
         :return: A :py:class:`oidcrp.oidc.Client` instance
@@ -335,10 +343,10 @@ class RPHandler(object):
             return client
 
         logger.debug("Get provider info")
-        issuer = self.do_provider_info(client)
+        issuer = self.do_provider_info(client, behaviour_args=behaviour_args)
 
         logger.debug("Do client registration")
-        self.do_client_registration(client, iss_id)
+        self.do_client_registration(client, iss_id, behaviour_args=behaviour_args)
 
         self.issuer2rp[issuer] = client
         return client
@@ -439,7 +447,7 @@ class RPHandler(object):
         """
 
         # Get the client instance that has been assigned to this issuer
-        client = self.client_setup(issuer_id, user_id)
+        client = self.client_setup(issuer_id, user_id, behaviour_args=behaviour_args)
 
         try:
             res = self.init_authorization(client, req_args=req_args, behaviour_args=behaviour_args)

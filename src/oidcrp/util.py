@@ -534,7 +534,7 @@ def add_path(url, path):
             return '{}/{}'.format(url, path)
 
 
-def load_registration_response(client):
+def load_registration_response(client, request_args=None):
     """
     If the client has been statically registered that information
     must be provided during the configuration. If expected to be
@@ -544,7 +544,7 @@ def load_registration_response(client):
     """
     if not client.client_get("service_context").get('client_id'):
         try:
-            response = client.do_request('registration')
+            response = client.do_request('registration', request_args=request_args)
         except KeyError:
             raise ConfigurationError('No registration info')
         except Exception as err:

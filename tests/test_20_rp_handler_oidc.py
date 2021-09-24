@@ -832,7 +832,8 @@ def test_rphandler_request_uri():
 
 def test_rphandler_request():
     rph = RPHandler(BASE_URL, CLIENT_CONFIG, keyjar=CLI_KEY)
-    res = rph.begin(issuer_id='github2', behaviour_args={"request_param": "request"})
+    res = rph.begin(issuer_id='github2',
+                    behaviour_args={"request_param": "request"})
     _session = rph.get_session_information(res['state'])
     _url = res["url"]
     _qp = parse_qs(urlparse(_url).query)
@@ -990,7 +991,10 @@ class TestRPHandlerWithMockOP(object):
             '/connect/register', registration_callback, 200,
             {'content-type': "application/json"})
 
-        res = self.rph.begin(user_id=user_id)
+        res = self.rph.begin(user_id=user_id,
+                             behaviour_args={
+                                 "request_param": "request",
+                                 "request_object_signing_alg": "RS256"})
         assert res
 
         _url = res["url"]
