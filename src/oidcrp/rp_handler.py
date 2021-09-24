@@ -276,8 +276,12 @@ class RPHandler(object):
                     v for k, v in callbacks.items() if not k.startswith('__')])
                 _context.set('callbacks', callbacks)
 
-            _params = RegistrationRequest().parameters()
-            request_args = {k: v for k, v in behaviour_args.items() if k in _params}
+            if behaviour_args:
+                _params = RegistrationRequest().parameters()
+                request_args = {k: v for k, v in behaviour_args.items() if k in _params}
+            else:
+                request_args = {}
+
             load_registration_response(client, request_args=request_args)
 
     def add_callbacks(self, service_context):
