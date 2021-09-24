@@ -727,7 +727,7 @@ class RPHandler(object):
         return {'access_token': access_token, 'id_token': id_token}
 
     # noinspection PyUnusedLocal
-    def finalize(self, issuer, response):
+    def finalize(self, issuer, response, behaviour_args: Optional[dict] = None):
         """
         The third of the high level methods that a user of this Class should
         know about.
@@ -735,6 +735,7 @@ class RPHandler(object):
         callback URL there might be a number of services that the client should
         use. Which one those are are defined by the client configuration.
 
+        :param behaviour_args: For fine tuning
         :param issuer: Who sent the response
         :param response: The Authorization response as a dictionary
         :returns: A dictionary with two claims:
