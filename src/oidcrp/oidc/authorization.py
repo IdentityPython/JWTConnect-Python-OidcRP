@@ -214,8 +214,8 @@ class Authorization(authorization.Authorization):
             del kwargs['request_param']
             # local_dir, base_path
             _config = _context.get('config')
-            kwargs["local_dir"] = _config.get('local_dir', '/tmp')
-            kwargs["base_path"] = _context.get('base_url')
+            kwargs["local_dir"] = _config.get('local_dir', './requests')
+            kwargs["base_path"] = _context.get('base_url') + '/' + "requests"
             self.construct_request_parameter(req, _request_param, **kwargs)
             # removed all arguments except request/request_uri and the required
             _leave = ['request', 'request_uri']
