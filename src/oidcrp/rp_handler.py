@@ -277,7 +277,7 @@ class RPHandler(object):
                 _context.set('callbacks', callbacks)
 
             _params = RegistrationRequest().parameters()
-            request_args = {k:v for k, v in behaviour_args.items() if k in _params}
+            request_args = {k: v for k, v in behaviour_args.items() if k in _params}
             load_registration_response(client, request_args=request_args)
 
     def add_callbacks(self, service_context):
@@ -618,10 +618,12 @@ class RPHandler(object):
         res.update(id_token.extra())
         return res
 
-    def finalize_auth(self, client, issuer, response):
+    def finalize_auth(self, client, issuer: str, response: dict,
+                      behaviour_args: Optional[dict] = None):
         """
         Given the response returned to the redirect_uri, parse and verify it.
 
+        :param behaviour_args: For fine tuning behaviour
         :param client: A Client instance
         :param issuer: An Issuer ID
         :param response: The authorization response as a dictionary

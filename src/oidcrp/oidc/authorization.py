@@ -158,6 +158,9 @@ class Authorization(authorization.Authorization):
         if "keys" not in kwargs and alg and alg != "none":
             kwargs["keys"] = _context.keyjar
 
+        if alg == "none":
+            kwargs["keys"] = []
+
         _srv_cntx = _context
 
         # This is the issuer of the JWT, that is me !
