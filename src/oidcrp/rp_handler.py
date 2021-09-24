@@ -429,6 +429,8 @@ class RPHandler(object):
         Once it has the client it will construct an Authorization
         request.
 
+        :param behaviour_args:
+        :param req_args:
         :param issuer_id: Issuer ID
         :param user_id: A user identifier
         :return: A dictionary containing **url** the URL that will redirect the
