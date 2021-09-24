@@ -423,8 +423,8 @@ class RPHandler(object):
 
         logger.debug('Authorization request args: {}'.format(request_args))
 
-        if "request_param" not in behaviour_args:
-            _pi = _context.get("provider_info")
+        # if behaviour_args and "request_param" not in behaviour_args:
+        #     _pi = _context.get("provider_info")
 
         _srv = client.get_service('authorization')
         _info = _srv.get_request_parameters(request_args=request_args,
