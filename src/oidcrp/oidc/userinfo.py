@@ -105,6 +105,10 @@ class UserInfo(Service):
                         "url": spec["endpoint"]
                     }
 
+        # Extension point
+        for meth in self.post_parse_process:
+            response = meth(response, _state_interface, kwargs['state'])
+
         _state_interface.store_item(response, 'user_info', kwargs['state'])
         return response
 

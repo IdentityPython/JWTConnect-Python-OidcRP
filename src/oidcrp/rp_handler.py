@@ -85,7 +85,7 @@ class RPHandler(object):
         else:
             self.client_configs = client_configs
 
-        # keep track on which RP instance that serves with OP
+        # keep track on which RP instance that serves which OP
         self.issuer2rp = {}
         self.hash2issuer = {}
         self.httplib = http_lib
@@ -252,30 +252,51 @@ class RPHandler(object):
 
         _context = client.client_get("service_context")
         _iss = _context.get('issuer')
-        if not _context.get('redirect_uris'):
-            # Create the necessary callback URLs
-            # as a side effect self.hash2issuer is set
-            callbacks = self.create_callbacks(_iss)
-
-            _context.set('redirect_uris', [
-                v for k, v in callbacks.items() if not k.startswith('__')])
-            _context.set('callbacks', callbacks)
-        else:
-            self.hash2issuer[iss_id] = _iss
+        self.hash2issuer[iss_id] = _iss
 
         # This should only be interesting if the client supports Single Log Out
         if _context.post_logout_redirect_uris is None:
             _context.post_logout_redirect_uris = [self.base_url]
 
-        if not _context.client_id:
+        if not _context.client_id:  # means I have to do dynamic client registration
+            if not _context.get('redirect_uris'):
+                # Create the necessary callback URLs
+                # as a side effect self.hash2issuer is set
+                if 'require_request_uri_registration' in _context.get('provider_info'):
+                    callbacks = self.create_callbacks(_iss, request_uri=True)
+                else:
+                    callbacks = self.create_callbacks(_iss)
+
+                _context.set('redirect_uris', [
+                    v for k, v in callbacks.items() if not k.startswith('__')])
+                _context.set('callbacks', callbacks)
+
             load_registration_response(client)
 
     def add_callbacks(self, service_context):
-        _callbacks = self.create_callbacks(service_context.get('provider_info')['issuer'])
+        _iss = service_context.get('issuer')
+
+        if 'require_request_uri_registration' in service_context.get('provider_info'):
+            _callbacks = self.create_callbacks(_iss, request_uri=True)
+        else:
+            _callbacks = self.create_callbacks(_iss)
+
         service_context.set('redirect_uris', [
             v for k, v in _callbacks.items() if not k.startswith('__')])
         service_context.set('callbacks', _callbacks)
         return _callbacks
+
+    def do_webfinger(self, user):
+        """
+        Does OpenID Provider Issuer discovery using webfinger.
+
+        :param user: Identifier for the target End-User that is the subject of the discovery
+            request.
+        :return: A Client instance
+        """
+        temporary_client = self.init_client('')
+        temporary_client.do_request('webfinger', resource=user)
+        return temporary_client
 
     def client_setup(self, iss_id='', user=''):
         """
@@ -298,8 +319,7 @@ class RPHandler(object):
                 raise ValueError('Need issuer or user')
 
             logger.debug("Connecting to previously unknown OP")
-            temporary_client = self.init_client('')
-            temporary_client.do_request('webfinger', resource=user)
+            temporary_client = self.do_webfinger(user)
         else:
             temporary_client = None
 
@@ -323,7 +343,7 @@ class RPHandler(object):
         self.issuer2rp[issuer] = client
         return client
 
-    def create_callbacks(self, issuer):
+    def create_callbacks(self, issuer, request_uri=False):
         """
         To mitigate some security issues the redirect_uris should be OP/AS
         specific. This method creates a set of redirect_uris unique to the
@@ -337,14 +357,18 @@ class RPHandler(object):
         _hash.update(as_bytes(issuer))
         _hex = _hash.hexdigest()
         self.hash2issuer[_hex] = issuer
-        return {
+        res = {
             'code': "{}/authz_cb/{}".format(self.base_url, _hex),
             'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
             'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
             '__hex': _hex
         }
+        if request_uri:
+            res["request_uri"] = f"{self.base_url}/req_uri/{_hex}"
 
-    def init_authorization(self, client=None, state='', req_args=None):
+        return res
+
+    def init_authorization(self, client=None, state='', req_args=None, behaviour_args=None):
         """
         Constructs the URL that will redirect the user to the authorization
         endpoint of the OP/AS.
@@ -387,12 +411,16 @@ class RPHandler(object):
 
         logger.debug('Authorization request args: {}'.format(request_args))
 
+        if "request_param" not in behaviour_args:
+            _pi = _context.get("provider_info")
+
         _srv = client.get_service('authorization')
-        _info = _srv.get_request_parameters(request_args=request_args)
+        _info = _srv.get_request_parameters(request_args=request_args,
+                                            behaviour_args=behaviour_args)
         logger.debug('Authorization info: {}'.format(_info))
         return {'url': _info['url'], 'state': _state}
 
-    def begin(self, issuer_id='', user_id=''):
+    def begin(self, issuer_id='', user_id='', req_args=None, behaviour_args=None):
         """
         This is the first of the 3 high level methods that most users of this
         library should confine them self to use.
@@ -412,7 +440,7 @@ class RPHandler(object):
         client = self.client_setup(issuer_id, user_id)
 
         try:
-            res = self.init_authorization(client)
+            res = self.init_authorization(client, req_args=req_args, behaviour_args=behaviour_args)
         except Exception:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
@@ -447,7 +475,8 @@ class RPHandler(object):
         """
         if endpoint == 'token_endpoint':
             try:
-                am = client.client_get("service_context").get('behaviour')['token_endpoint_auth_method']
+                am = client.client_get("service_context").get('behaviour')[
+                    'token_endpoint_auth_method']
             except KeyError:
                 return ''
             else:
@@ -711,6 +740,8 @@ class RPHandler(object):
         _state = authorization_response['state']
         token = self.get_access_and_id_token(authorization_response,
                                              state=_state, client=client)
+        _id_token = token.get("id_token")
+        logger.debug(f"ID Token: {_id_token}")
 
         if client.client_get("service", "userinfo") and token['access_token']:
             inforesp = self.get_user_info(
@@ -723,8 +754,8 @@ class RPHandler(object):
                     'state': _state
                 }
 
-        elif token['id_token']:  # look for it in the ID Token
-            inforesp = self.userinfo_in_id_token(token['id_token'])
+        elif _id_token:  # look for it in the ID Token
+            inforesp = self.userinfo_in_id_token(_id_token)
         else:
             inforesp = {}
 
@@ -743,19 +774,19 @@ class RPHandler(object):
 
         if _sid_support:
             try:
-                sid = token['id_token']['sid']
+                sid = _id_token['sid']
             except KeyError:
                 pass
             else:
                 _context.state.store_sid2state(sid, _state)
 
-        _context.state.store_sub2state(token['id_token']['sub'], _state)
+        _context.state.store_sub2state(_id_token['sub'], _state)
 
         return {
             'userinfo': inforesp,
             'state': authorization_response['state'],
             'token': token['access_token'],
-            'id_token': token['id_token']
+            'id_token': _id_token
         }
 
     def has_active_authentication(self, state):

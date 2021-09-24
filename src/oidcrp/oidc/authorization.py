@@ -148,9 +148,9 @@ class Authorization(authorization.Authorization):
         fid.close()
         return _webname
 
-    def construct_request_parameter(self, req, request_method, audience=None, expires_in=0,
+    def construct_request_parameter(self, req, request_param, audience=None, expires_in=0,
                                     **kwargs):
-        """Construct a request parameter"""
+        """ Construct a request parameter """
         alg = self.get_request_object_signing_alg(**kwargs)
         kwargs["request_object_signing_alg"] = alg
 
@@ -176,12 +176,15 @@ class Authorization(authorization.Authorization):
         if expires_in:
             req['exp'] = utc_time_sans_frac() + int(expires_in)
 
-        _req = make_openid_request(req, **kwargs)
+        _mor_args = {k: kwargs[k] for k in ["keys", "issuer", "request_object_signing_alg", "recv",
+                                            "with_jti", "lifetime"] if k in kwargs}
+
+        _req = make_openid_request(req, **_mor_args)
 
         # Should the request be encrypted
         _req = request_object_encryption(_req, _context, **kwargs)
 
-        if request_method == "request":
+        if request_param == "request":
             req["request"] = _req
         else:  # MUST be request_uri
             req["request_uri"] = self.store_request_on_file(_req, **kwargs)
@@ -204,16 +207,23 @@ class Authorization(authorization.Authorization):
             if 'prompt' not in req:
                 req['prompt'] = 'consent'
 
-        try:
-            _request_method = kwargs['request_param']
-        except KeyError:
-            pass
-        else:
-            del kwargs['request_param']
-
-            self.construct_request_parameter(req, _request_method, **kwargs)
-
         _context.state.store_item(req, 'auth_request', req['state'])
+
+        _request_param = kwargs.get('request_param')
+        if _request_param:
+            del kwargs['request_param']
+            # local_dir, base_path
+            _config = _context.get('config')
+            kwargs["local_dir"] = _config.get('local_dir', '/tmp')
+            kwargs["base_path"] = _context.get('base_url')
+            self.construct_request_parameter(req, _request_param, **kwargs)
+            # removed all arguments except request/request_uri and the required
+            _leave = ['request', 'request_uri']
+            _leave.extend(req.required_parameters())
+            _keys = [k for k in req.keys() if k not in _leave]
+            for k in _keys:
+                del req[k]
+
         return req
 
     def gather_verify_arguments(self):

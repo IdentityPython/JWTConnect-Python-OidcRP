@@ -83,5 +83,5 @@ def construct_request_uri(local_dir, base_path, **kwargs):
     while os.path.exists(filename):
         _name = rndstr(10)
         filename = os.path.join(_filedir, _name)
-    _webname = "%s%s" % (_webpath, _name)
+    _webname = f"{_webpath}{_name}"
     return filename, _webname

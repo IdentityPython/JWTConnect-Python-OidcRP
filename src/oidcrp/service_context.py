@@ -145,7 +145,7 @@ class ServiceContext(OidcContext):
                       'behaviour', 'callback', 'issuer']:
             _val = config.get(param, _def_value[param])
             self.set(param, _val)
-            if param == 'client_secret':
+            if param == 'client_secret' and _val:
                 self.keyjar.add_symmetric('', _val)
 
         if not self.issuer:

@@ -88,6 +88,7 @@ class Service(ImpExp):
         self.pre_construct = []
         self.post_construct = []
         self.construct_extra_headers = []
+        self.post_parse_process = []
 
     def gather_request_args(self, **kwargs):
         """
@@ -204,8 +205,7 @@ class Service(ImpExp):
         # run the pre_construct methods. Will return a possibly new
         # set of request arguments but also a set of arguments to
         # be used by the post_construct methods.
-        request_args, post_args = self.do_pre_construct(request_args,
-                                                        **kwargs)
+        request_args, post_args = self.do_pre_construct(request_args, **kwargs)
 
         # If 'state' appears among the keyword argument and is not
         # expected to appear in the request, remove it.
@@ -221,6 +221,10 @@ class Service(ImpExp):
         # initiate the request as in an instance of the self.msg_type
         # message type
         request = self.msg_type(**_args)
+
+        _behaviour_args = kwargs.get("behaviour_args")
+        if _behaviour_args:
+            post_args.update(_behaviour_args)
 
         return self.do_post_construct(request, **post_args)
 
