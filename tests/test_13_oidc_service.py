@@ -68,7 +68,7 @@ class TestAuthorization(object):
         }
         entity = Entity(services=DEFAULT_OIDC_SERVICES, keyjar=CLI_KEY, config=client_config)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'authorization')
+        self.service = entity.client_get("service", 'authorization')
 
     def test_construct(self):
         req_args = {
@@ -137,13 +137,12 @@ class TestAuthorization(object):
     def test_request_init_request_method(self):
         req_args = {'response_type': 'code', 'state': 'state'}
         self.service.endpoint = 'https://example.com/authorize'
-        _info = self.service.get_request_parameters(request_args=req_args,
-                                                    request_method='value')
+        _info = self.service.get_request_parameters(request_args=req_args, request_method='value')
         assert set(_info.keys()) == {'url', 'method', 'request'}
         msg = AuthorizationRequest().from_urlencoded(
             self.service.get_urlinfo(_info['url']))
-        assert set(msg.to_dict()) == {'client_id', 'redirect_uri', 'request',
-                                      'response_type', 'state', 'scope', 'nonce'}
+        assert set(msg.to_dict()) == {'client_id', 'redirect_uri', 'request', 'response_type',
+                                      'scope'}
         _jws = jws.factory(msg['request'])
         assert _jws
         _resp = _jws.verify_compact(
@@ -267,7 +266,7 @@ class TestAuthorizationCallback(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'authorization')
+        self.service = entity.client_get("service", 'authorization')
 
     def test_construct_code(self):
         req_args = {
@@ -318,7 +317,7 @@ class TestAccessTokenRequest(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'accesstoken')
+        self.service = entity.client_get("service", 'accesstoken')
 
         # add some history
         auth_request = AuthorizationRequest(
@@ -409,7 +408,7 @@ class TestProviderInfo(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'provider_info')
+        self.service = entity.client_get("service", 'provider_info')
 
     def test_construct(self):
         _req = self.service.construct()
@@ -601,7 +600,7 @@ class TestRegistration(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'registration')
+        self.service = entity.client_get("service", 'registration')
 
     def test_construct(self):
         _req = self.service.construct()
@@ -638,7 +637,7 @@ class TestUserInfo(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'userinfo')
+        self.service = entity.client_get("service", 'userinfo')
 
         entity.client_get("service_context").behaviour = {
             'userinfo_signed_response_alg': 'RS256',
@@ -780,7 +779,7 @@ class TestCheckSession(object):
             }}
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'check_session')
+        self.service = entity.client_get("service", 'check_session')
 
     def test_construct(self):
         _state_interface = self.service.client_get("service_context").state
@@ -809,7 +808,7 @@ class TestCheckID(object):
             }}
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'check_id')
+        self.service = entity.client_get("service", 'check_id')
 
     def test_construct(self):
         _state_interface = self.service.client_get("service_context").state
@@ -839,7 +838,7 @@ class TestEndSession(object):
             }}
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'end_session')
+        self.service = entity.client_get("service", 'end_session')
 
     def test_construct(self):
         self.service.client_get("service_context").state.store_item(
@@ -880,7 +879,7 @@ def test_authz_service_conf():
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
     entity.client_get("service_context").issuer = 'https://example.com'
-    service = entity.client_get("service",'authorization')
+    service = entity.client_get("service", 'authorization')
 
     req = service.construct()
     assert 'claims' in req
@@ -900,7 +899,7 @@ def test_add_jwks_uri_or_jwks_0():
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
     entity.client_get("service_context").issuer = 'https://example.com'
-    service = entity.client_get("service",'registration')
+    service = entity.client_get("service", 'registration')
 
     req_args, post_args = add_jwks_uri_or_jwks({}, service)
     assert req_args['jwks_uri'] == 'https://example.com/jwks/jwks.json'
@@ -919,7 +918,7 @@ def test_add_jwks_uri_or_jwks_1():
         }
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
-    service = entity.client_get("service",'registration')
+    service = entity.client_get("service", 'registration')
 
     req_args, post_args = add_jwks_uri_or_jwks({}, service)
     assert req_args['jwks_uri'] == 'https://example.com/jwks/jwks.json'
@@ -938,7 +937,7 @@ def test_add_jwks_uri_or_jwks_2():
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config,
                     jwks_uri='https://example.com/jwks/jwks.json', services=DEFAULT_OIDC_SERVICES)
-    service = entity.client_get("service",'registration')
+    service = entity.client_get("service", 'registration')
 
     req_args, post_args = add_jwks_uri_or_jwks({}, service)
     assert req_args['jwks_uri'] == 'https://example.com/jwks/jwks.json'
