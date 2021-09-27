@@ -380,6 +380,21 @@ class RPHandler(object):
 
         return res
 
+    def _get_response_type(self, context, req_args: Optional[dict] =None):
+        if req_args:
+            return req_args.get("response_type", context.get('behaviour')['response_types'][0])
+        else:
+            return context.get('behaviour')['response_types'][0]
+
+    def _pick_redirect_uri(self, context, response_type: str):
+        _callbacks = context.get("callbacks")
+        if response_type == ["code"]:
+            return _callbacks["code"]
+        elif response_type == ["form_post"]:
+            return _callbacks["formpost"]
+        else:
+            return _callbacks["implicit"]
+
     def init_authorization(self, client=None, state='', req_args=None, behaviour_args=None):
         """
         Constructs the URL that will redirect the user to the authorization
@@ -400,10 +415,11 @@ class RPHandler(object):
         _context = client.client_get("service_context")
 
         _nonce = rndstr(24)
+        _response_type = self._get_response_type(_context, req_args)
         request_args = {
-            'redirect_uri': _context.get('redirect_uris')[0],
+            'redirect_uri': self._pick_redirect_uri(_context, _response_type),
             'scope': _context.get('behaviour')['scope'],
-            'response_type': _context.get('behaviour')['response_types'][0],
+            'response_type': _response_type,
             'nonce': _nonce
         }
 
