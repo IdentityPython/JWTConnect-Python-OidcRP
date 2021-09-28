@@ -731,6 +731,7 @@ class RPHandler(object):
             access_token = authorization_response["access_token"]
             if behaviour_args and behaviour_args.get("collect_id_token", False):
                 if "id_token" not in _resp_type:
+                    logger.debug("Collect ID Token")
                     # get the access token
                     token_resp = self.get_access_token(state, client=client)
                     if is_error_message(token_resp):
@@ -772,6 +773,9 @@ class RPHandler(object):
         """
 
         client = self.issuer2rp[issuer]
+
+        if behaviour_args:
+            logger.debug(f"Behaviour args: {behaviour_args}")
 
         authorization_response = self.finalize_auth(client, issuer, response)
         if is_error_message(authorization_response):
