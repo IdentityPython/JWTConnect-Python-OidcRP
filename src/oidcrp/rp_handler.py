@@ -380,7 +380,7 @@ class RPHandler(object):
 
         return res
 
-    def _get_response_type(self, context, req_args: Optional[dict] =None):
+    def _get_response_type(self, context, req_args: Optional[dict] = None):
         if req_args:
             return req_args.get("response_type", context.get('behaviour')['response_types'][0])
         else:
@@ -682,8 +682,10 @@ class RPHandler(object):
                                   authorization_response['state'])
         return authorization_response
 
-    def get_access_and_id_token(self, authorization_response=None, state='', client=None,
-                                behaviour_args: Optionl[dict] =None):
+    def get_access_and_id_token(self, authorization_response=None,
+                                state: Optional[str] = '',
+                                client: Optional[object] =None,
+                                behaviour_args: Optional[dict] = None):
         """
         There are a number of services where access tokens and ID tokens can
         occur in the response. This method goes through the possible places
