@@ -185,10 +185,10 @@ def repost_fragment():
     return finalize(op_identifier, args)
 
 
-@oidc_rp_views.route('/ihf_cb')
-def ihf_cb(self, op_identifier='', **kwargs):
+@oidc_rp_views.route('/authz_im_cb')
+def authz_im_cb(op_identifier='', **kwargs):
     logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
-    return render_template('repost_fragment.html')
+    return render_template('repost_fragment.html', op_identifier=op_identifier)
 
 
 @oidc_rp_views.route('/session_iframe')

@@ -813,7 +813,10 @@ class RPHandler(object):
             else:
                 _context.state.store_sid2state(sid, _state)
 
-        _context.state.store_sub2state(_id_token['sub'], _state)
+        if _id_token:
+            _context.state.store_sub2state(_id_token['sub'], _state)
+        else:
+            _context.state.store_sub2state(inforesp['sub'], _state)
 
         return {
             'userinfo': inforesp,
