@@ -682,13 +682,14 @@ class RPHandler(object):
                                   authorization_response['state'])
         return authorization_response
 
-    def get_access_and_id_token(self, authorization_response=None, state='',
-                                client=None):
+    def get_access_and_id_token(self, authorization_response=None, state='', client=None,
+                                behaviour_args: Optionl[dict] =None):
         """
         There are a number of services where access tokens and ID tokens can
         occur in the response. This method goes through the possible places
         based on the response_type the client uses.
 
+        :param behaviour_args: For fine tuning behaviour
         :param authorization_response: The Authorization response
         :param state: The state key (the state parameter in the
             authorization request)
@@ -726,19 +727,26 @@ class RPHandler(object):
         if _resp_type in [{'token'}, {'id_token', 'token'}, {'code', 'token'},
                           {'code', 'id_token', 'token'}]:
             access_token = authorization_response["access_token"]
-        elif _resp_type in [{'code'}, {'code', 'id_token'}]:
+            if behaviour_args and behaviour_args.get("collect_id_token", False):
+                if "id_token" not in _resp_type:
+                    # get the access token
+                    token_resp = self.get_access_token(state, client=client)
+                    if is_error_message(token_resp):
+                        return False, "Invalid response %s." % token_resp["error"]
+                    # Now which access_token should I use
+                    access_token = token_resp["access_token"]
+                    # May or may not get an ID Token
+                    id_token = token_resp.get('__verified_id_token')
 
+        elif _resp_type in [{'code'}, {'code', 'id_token'}]:
             # get the access token
             token_resp = self.get_access_token(state, client=client)
             if is_error_message(token_resp):
                 return False, "Invalid response %s." % token_resp["error"]
 
             access_token = token_resp["access_token"]
-
-            try:
-                id_token = token_resp['__verified_id_token']
-            except KeyError:
-                pass
+            # May or may not get an ID Token
+            id_token = token_resp.get('__verified_id_token')
 
         return {'access_token': access_token, 'id_token': id_token}
 
@@ -771,8 +779,8 @@ class RPHandler(object):
             }
 
         _state = authorization_response['state']
-        token = self.get_access_and_id_token(authorization_response,
-                                             state=_state, client=client)
+        token = self.get_access_and_id_token(authorization_response, state=_state, client=client,
+                                             behaviour_args=behaviour_args)
         _id_token = token.get("id_token")
         logger.debug(f"ID Token: {_id_token}")
 
