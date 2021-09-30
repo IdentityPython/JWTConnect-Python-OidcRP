@@ -1,4 +1,8 @@
+import logging
+
 from oidcmsg.exception import MissingParameter
+
+logger = logging.getLogger(__name__)
 
 
 def get_state_parameter(request_args, kwargs):
@@ -23,16 +27,10 @@ def pick_redirect_uris(request_args=None, service=None, **kwargs):
 
     _callback = _context.callback
     if _callback:
-        try:
-            _response_type = request_args['response_type']
-        except KeyError:
-            _response_type = _context.behaviour['response_types'][0]
-            request_args['response_type'] = _response_type
+        _response_type = request_args.get('response_type', _context.behaviour['response_types'][0])
+        request_args['response_type'] = _response_type
 
-        try:
-            _response_mode = request_args['response_mode']
-        except KeyError:
-            _response_mode = ''
+        _response_mode = request_args.get('response_mode')
 
         if _response_mode == 'form_post':
             request_args['redirect_uri'] = _callback['form_post']
@@ -40,6 +38,10 @@ def pick_redirect_uris(request_args=None, service=None, **kwargs):
             request_args['redirect_uri'] = _callback['code']
         else:
             request_args['redirect_uri'] = _callback['implicit']
+
+        logger.debug(
+            f"pick_redirect_uris: response_type={_response_type}, response_mode={_response_mode}, "
+            f"redirect_uri={request_args['redirect_uri']}")
     else:
         request_args['redirect_uri'] = _context.redirect_uris[0]
 

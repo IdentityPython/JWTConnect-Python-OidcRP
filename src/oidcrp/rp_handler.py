@@ -775,7 +775,7 @@ class RPHandler(object):
         client = self.issuer2rp[issuer]
 
         if behaviour_args:
-            logger.debug(f"Behaviour args: {behaviour_args}")
+            logger.debug(f"Finalize behaviour args: {behaviour_args}")
 
         authorization_response = self.finalize_auth(client, issuer, response)
         if is_error_message(authorization_response):
