@@ -28,6 +28,7 @@ from .defaults import DEFAULT_OIDC_SERVICES
 from .defaults import DEFAULT_RP_KEY_DEFS
 from .exception import OidcServiceError
 from .oauth2 import Client
+from .oauth2.utils import pick_redirect_uri
 from .util import add_path
 from .util import dynamic_provider_info_discovery
 from .util import load_registration_response
@@ -386,15 +387,6 @@ class RPHandler(object):
         else:
             return context.get('behaviour')['response_types'][0]
 
-    def _pick_redirect_uri(self, context, response_type: str):
-        _callbacks = context.get("callbacks")
-        if response_type == ["code"]:
-            return _callbacks["code"]
-        elif response_type == ["form_post"]:
-            return _callbacks["formpost"]
-        else:
-            return _callbacks["implicit"]
-
     def init_authorization(self, client=None, state='', req_args=None, behaviour_args=None):
         """
         Constructs the URL that will redirect the user to the authorization
@@ -417,7 +409,7 @@ class RPHandler(object):
         _nonce = rndstr(24)
         _response_type = self._get_response_type(_context, req_args)
         request_args = {
-            'redirect_uri': self._pick_redirect_uri(_context, _response_type),
+            'redirect_uri': pick_redirect_uri(_context, _response_type),
             'scope': _context.get('behaviour')['scope'],
             'response_type': _response_type,
             'nonce': _nonce

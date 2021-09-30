@@ -8,7 +8,7 @@ from oidcmsg.time_util import utc_time_sans_frac
 
 from oidcrp.exception import ParameterError
 from oidcrp.oauth2 import authorization
-from oidcrp.oauth2.utils import pick_redirect_uris
+from oidcrp.oauth2.utils import pre_construct_pick_redirect_uri
 from oidcrp.oidc import IDT2REG
 from oidcrp.oidc.utils import construct_request_uri
 from oidcrp.oidc.utils import request_object_encryption
@@ -28,7 +28,7 @@ class Authorization(authorization.Authorization):
         authorization.Authorization.__init__(self, client_get,
                                              client_authn_factory, conf=conf)
         self.default_request_args = {'scope': ['openid']}
-        self.pre_construct = [self.set_state, pick_redirect_uris,
+        self.pre_construct = [self.set_state, pre_construct_pick_redirect_uri,
                               self.oidc_pre_construct]
         self.post_construct = [self.oidc_post_construct]
 

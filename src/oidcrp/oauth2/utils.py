@@ -1,6 +1,11 @@
 import logging
+from typing import Optional
+from typing import Union
 
 from oidcmsg.exception import MissingParameter
+from oidcmsg.message import Message
+
+from oidcrp.service import Service
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +23,13 @@ def get_state_parameter(request_args, kwargs):
     return _state
 
 
-def pick_redirect_uris(request_args=None, service=None, **kwargs):
-    """Pick one redirect_uri base on response_mode out of a list of such."""
-    _context = service.client_get("service_context")
-
+def pick_redirect_uri(context, request_args=None):
     if 'redirect_uri' in request_args:
         return request_args, {}
 
-    _callback = _context.callback
+    _callback = context.callback
     if _callback:
-        _response_type = request_args.get('response_type', _context.behaviour['response_types'][0])
+        _response_type = request_args.get('response_type', context.behaviour['response_types'][0])
         request_args['response_type'] = _response_type
 
         _response_mode = request_args.get('response_mode')
@@ -43,8 +45,15 @@ def pick_redirect_uris(request_args=None, service=None, **kwargs):
             f"pick_redirect_uris: response_type={_response_type}, response_mode={_response_mode}, "
             f"redirect_uri={request_args['redirect_uri']}")
     else:
-        request_args['redirect_uri'] = _context.redirect_uris[0]
+        request_args['redirect_uri'] = context.redirect_uris[0]
 
+    return request_args, {}
+
+
+def pre_construct_pick_redirect_uri(request_args: Optional[Union[Message, dict]] = None,
+                                    service: Optional[Service] = None, **kwargs):
+    _context = service.client_get("service_context")
+    request_args["redirect_uri"] = pick_redirect_uri(_context, request_args)
     return request_args, {}
 
 
