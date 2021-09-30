@@ -275,7 +275,7 @@ class RPHandler(object):
 
                 _context.set('redirect_uris', [
                     v for k, v in callbacks.items() if not k.startswith('__')])
-                _context.set('callbacks', callbacks)
+                _context.set('callback', callbacks)
 
             if behaviour_args:
                 _params = RegistrationRequest().parameters()
@@ -295,7 +295,7 @@ class RPHandler(object):
 
         service_context.set('redirect_uris', [
             v for k, v in _callbacks.items() if not k.startswith('__')])
-        service_context.set('callbacks', _callbacks)
+        service_context.set('callback', _callbacks)
         return _callbacks
 
     def do_webfinger(self, user):
@@ -409,7 +409,7 @@ class RPHandler(object):
         _nonce = rndstr(24)
         _response_type = self._get_response_type(_context, req_args)
         request_args = {
-            'redirect_uri': pick_redirect_uri(_context, _response_type),
+            'redirect_uri': pick_redirect_uri(_context, response_type=_response_type),
             'scope': _context.get('behaviour')['scope'],
             'response_type': _response_type,
             'nonce': _nonce
