@@ -409,7 +409,9 @@ class RPHandler(object):
         _nonce = rndstr(24)
         _response_type = self._get_response_type(_context, req_args)
         request_args = {
-            'redirect_uri': pick_redirect_uri(_context, response_type=_response_type),
+            'redirect_uri': pick_redirect_uri(_context,
+                                              request_args=req_args,
+                                              response_type=_response_type),
             'scope': _context.get('behaviour')['scope'],
             'response_type': _response_type,
             'nonce': _nonce
