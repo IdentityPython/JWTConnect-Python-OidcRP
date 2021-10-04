@@ -898,7 +898,7 @@ class TestRPHandlerWithMockOP(object):
         # assume code flow
         resp = self.rph.finalize(_session['iss'], auth_response.to_dict())
 
-        assert set(resp.keys()) == {'userinfo', 'state', 'token', 'id_token'}
+        assert set(resp.keys()) == {'userinfo', 'state', 'token', 'id_token', 'session_state'}
 
     def test_dynamic_setup(self):
         user_id = 'acct:foobar@example.com'

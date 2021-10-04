@@ -344,7 +344,7 @@ class Service(ImpExp):
         return _headers
 
     def get_request_parameters(self, request_args=None, method="",
-                               request_body_type="", authn_method='', **kwargs):
+                               request_body_type="", authn_method='', **kwargs) -> dict:
         """
         Builds the request message and constructs the HTTP headers.
 

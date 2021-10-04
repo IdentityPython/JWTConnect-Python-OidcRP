@@ -237,6 +237,30 @@ class RPHandler(object):
             except KeyError:
                 return _context.get('issuer')
 
+    def add_callbacks(self, context):
+        _iss = context.get('issuer')
+        # Create the necessary callback URLs
+        # as a side effect self.hash2issuer is set
+        _extra_uris = {
+            "request_uri": False,
+            "backchannel_logout_uri": False,
+            "frontchannel_logout_uri": False
+        }
+        _pi = context.get('provider_info')
+        _cp = context.config.get("client_preferences")
+        if 'require_request_uri_registration' in _pi and "request_uri_usable" in _cp:
+            _extra_uris['request_uri'] = True
+        if 'frontchannel_logout_supported' in _pi and "frontchannel_logout_usable" in _cp:
+            _extra_uris["frontchannel_logout_uri"] = True
+        if 'backchannel_logout_supported' in _pi and "backchannel_logout_usable" in _cp:
+            _extra_uris["backchannel_logout_uri"] = True
+
+        callbacks = self.create_callbacks(_iss, **_extra_uris)
+
+        context.set('redirect_uris', [
+            v for k, v in callbacks.items() if not k.startswith('__')])
+        context.set('callback', callbacks)
+
     def do_client_registration(self, client=None,
                                iss_id: Optional[str] = '',
                                state: Optional[str] = '',
@@ -266,16 +290,7 @@ class RPHandler(object):
 
         if not _context.client_id:  # means I have to do dynamic client registration
             if not _context.get('redirect_uris'):
-                # Create the necessary callback URLs
-                # as a side effect self.hash2issuer is set
-                if 'require_request_uri_registration' in _context.get('provider_info'):
-                    callbacks = self.create_callbacks(_iss, request_uri=True)
-                else:
-                    callbacks = self.create_callbacks(_iss)
-
-                _context.set('redirect_uris', [
-                    v for k, v in callbacks.items() if not k.startswith('__')])
-                _context.set('callback', callbacks)
+                self.add_callbacks(_context)
 
             if behaviour_args:
                 _params = RegistrationRequest().parameters()
@@ -284,19 +299,6 @@ class RPHandler(object):
                 request_args = {}
 
             load_registration_response(client, request_args=request_args)
-
-    def add_callbacks(self, service_context):
-        _iss = service_context.get('issuer')
-
-        if 'require_request_uri_registration' in service_context.get('provider_info'):
-            _callbacks = self.create_callbacks(_iss, request_uri=True)
-        else:
-            _callbacks = self.create_callbacks(_iss)
-
-        service_context.set('redirect_uris', [
-            v for k, v in _callbacks.items() if not k.startswith('__')])
-        service_context.set('callback', _callbacks)
-        return _callbacks
 
     def do_webfinger(self, user):
         """
@@ -356,12 +358,16 @@ class RPHandler(object):
         self.issuer2rp[issuer] = client
         return client
 
-    def create_callbacks(self, issuer, request_uri=False):
+    def create_callbacks(self, issuer, request_uri=False, backchannel_logout_uri=False,
+                         frontchannel_logout_uri=False):
         """
         To mitigate some security issues the redirect_uris should be OP/AS
         specific. This method creates a set of redirect_uris unique to the
         OP/AS.
 
+        :param frontchannel_logout_uri: Whether a front-channel logout uri should be constructed
+        :param backchannel_logout_uri: Whether a back-channel logout uri should be constructed
+        :param request_uri: Whether a request_uri should be constructed
         :param issuer: Issuer ID
         :return: A set of redirect_uris
         """
@@ -379,6 +385,15 @@ class RPHandler(object):
         if request_uri:
             res["request_uri"] = f"{self.base_url}/req_uri/{_hex}"
 
+        if backchannel_logout_uri or frontchannel_logout_uri:
+            res["post_logout_redirect_uris"] = f"{self.base_url}/session_logout/{_hex}"
+
+        if backchannel_logout_uri:
+            res["backchannel_logout_uri"] = f"{self.base_url}/bc_logout/{_hex}"
+        if frontchannel_logout_uri:
+            res["frontchannel_logout_uri"] = f"{self.base_url}/fc_logout/{_hex}"
+
+        logger.debug(f"Created callback URIs: {res}")
         return res
 
     def _get_response_type(self, context, req_args: Optional[dict] = None):
@@ -678,7 +693,7 @@ class RPHandler(object):
 
     def get_access_and_id_token(self, authorization_response=None,
                                 state: Optional[str] = '',
-                                client: Optional[object] =None,
+                                client: Optional[object] = None,
                                 behaviour_args: Optional[dict] = None):
         """
         There are a number of services where access tokens and ID tokens can
@@ -830,7 +845,8 @@ class RPHandler(object):
             'userinfo': inforesp,
             'state': authorization_response['state'],
             'token': token['access_token'],
-            'id_token': _id_token
+            'id_token': _id_token,
+            'session_state': authorization_response.get('session_state', '')
         }
 
     def has_active_authentication(self, state):
@@ -898,7 +914,9 @@ class RPHandler(object):
             else:
                 raise OidcServiceError('No valid access token')
 
-    def logout(self, state, client=None, post_logout_redirect_uri=''):
+    def logout(self, state: str,
+               client: Optional[Client] = None,
+               post_logout_redirect_uri: Optional[str] = '') -> dict:
         """
         Does a RP initiated logout from an OP. After logout the user will be
         redirect by the OP to a URL of choice (post_logout_redirect_uri).
@@ -928,6 +946,17 @@ class RPHandler(object):
                                           request_args=request_args)
 
         return resp
+
+    def close(self, state: str,
+              issuer: Optional[str] = '',
+              post_logout_redirect_uri: Optional[str] = '') -> dict:
+        if issuer:
+            client = self.issuer2rp[issuer]
+        else:
+            client = self.get_client_from_session_key(state)
+
+        return self.logout(state=state, client=client,
+                           post_logout_redirect_uri=post_logout_redirect_uri)
 
     def clear_session(self, state):
         client = self.get_client_from_session_key(state)
