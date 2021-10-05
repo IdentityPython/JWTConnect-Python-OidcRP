@@ -28,8 +28,6 @@ from .defaults import DEFAULT_RP_KEY_DEFS
 from .exception import OidcServiceError
 from .oauth2 import Client
 from .oauth2.utils import pick_redirect_uri
-from .oidc.registration import CALLBACK_URIS
-from .oidc.registration import add_callbacks
 from .util import add_path
 from .util import dynamic_provider_info_discovery
 from .util import load_registration_response
@@ -152,6 +150,9 @@ class RPHandler(object):
         :param issuer: An issuer ID
         :return: A Client instance
         """
+
+        logger.debug(20 * "*" + " init_client " + 20 * "*")
+
         try:
             _cnf = self.pick_config(issuer)
         except KeyError:
@@ -193,6 +194,7 @@ class RPHandler(object):
             retrieved
         :return: issuer ID
         """
+        logger.debug(20 * "*" + " do_provider_info " + 20 * "*")
 
         if not client:
             if state:
@@ -252,6 +254,8 @@ class RPHandler(object):
             retrieved
         """
 
+        logger.debug(20 * "*" + " do_client_registration " + 20 * "*")
+
         if not client:
             if state:
                 client = self.get_client_from_session_key(state)
@@ -291,6 +295,9 @@ class RPHandler(object):
             request.
         :return: A Client instance
         """
+
+        logger.debug(20 * "*" + " do_webfinger " + 20 * "*")
+
         temporary_client = self.init_client('')
         temporary_client.do_request('webfinger', resource=user)
         return temporary_client
@@ -309,6 +316,8 @@ class RPHandler(object):
         :param user: A user identifier
         :return: A :py:class:`oidcrp.oidc.Client` instance
         """
+
+        logger.debug(20 * "*" + " client_setup " + 20 * "*")
 
         logger.info('client_setup: iss_id={}, user={}'.format(iss_id, user))
 
@@ -341,44 +350,6 @@ class RPHandler(object):
         self.issuer2rp[issuer] = client
         return client
 
-    # def create_callbacks(self, issuer, request_uri=False, backchannel_logout_uri=False,
-    #                      frontchannel_logout_uri=False):
-    #     """
-    #     To mitigate some security issues the redirect_uris should be OP/AS
-    #     specific. This method creates a set of redirect_uris unique to the
-    #     OP/AS.
-    #
-    #     :param frontchannel_logout_uri: Whether a front-channel logout uri should be constructed
-    #     :param backchannel_logout_uri: Whether a back-channel logout uri should be constructed
-    #     :param request_uri: Whether a request_uri should be constructed
-    #     :param issuer: Issuer ID
-    #     :return: A set of redirect_uris
-    #     """
-    #     _hash = hashlib.sha256()
-    #     _hash.update(self.hash_seed)
-    #     _hash.update(as_bytes(issuer))
-    #     _hex = _hash.hexdigest()
-    #     self.hash2issuer[_hex] = issuer
-    #     res = {
-    #         'code': "{}/authz_cb/{}".format(self.base_url, _hex),
-    #         'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
-    #         'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
-    #         '__hex': _hex
-    #     }
-    #     if request_uri:
-    #         res["request_uri"] = f"{self.base_url}/req_uri/{_hex}"
-    #
-    #     if backchannel_logout_uri or frontchannel_logout_uri:
-    #         res["post_logout_redirect_uris"] = f"{self.base_url}/session_logout/{_hex}"
-    #
-    #     if backchannel_logout_uri:
-    #         res["backchannel_logout_uri"] = f"{self.base_url}/bc_logout/{_hex}"
-    #     if frontchannel_logout_uri:
-    #         res["frontchannel_logout_uri"] = f"{self.base_url}/fc_logout/{_hex}"
-    #
-    #     logger.debug(f"Created callback URIs: {res}")
-    #     return res
-
     def _get_response_type(self, context, req_args: Optional[dict] = None):
         if req_args:
             return req_args.get("response_type", context.get('behaviour')['response_types'][0])
@@ -396,6 +367,9 @@ class RPHandler(object):
             URL and **state** the key to the session information in the
             state data store.
         """
+
+        logger.debug(20 * "*" + " init_authorization " + 20 * "*")
+
         if not client:
             if state:
                 client = self.get_client_from_session_key(state)
@@ -517,7 +491,7 @@ class RPHandler(object):
         :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` or
             :py:class:`oidcmsg.oauth2.AuthorizationResponse`
         """
-        logger.debug('get_accesstoken')
+        logger.debug(20 * "*" + " get_access_token " + 20 * "*")
 
         if client is None:
             client = self.get_client_from_session_key(state)
@@ -563,6 +537,9 @@ class RPHandler(object):
         :param scope: What the returned token should be valid for.
         :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` instance
         """
+
+        logger.debug(20 * "*" + " refresh_access_token " + 20 * "*")
+
         if scope:
             req_args = {'scope': scope}
         else:
@@ -599,6 +576,9 @@ class RPHandler(object):
         :param kwargs: Extra keyword arguments
         :return: A :py:class:`oidcmsg.oidc.OpenIDSchema` instance
         """
+
+        logger.debug(20 * "*" + " get_user_info " + 20 * "*")
+
         if client is None:
             client = self.get_client_from_session_key(state)
 
@@ -642,6 +622,9 @@ class RPHandler(object):
         :return: An :py:class:`oidcmsg.oidc.AuthorizationResponse` or
             :py:class:`oidcmsg.oauth2.AuthorizationResponse` instance.
         """
+
+        logger.debug(20 * "*" + " finalize_auth " + 20 * "*")
+
         _srv = client.get_service('authorization')
         try:
             authorization_response = _srv.parse_response(response,
@@ -691,6 +674,8 @@ class RPHandler(object):
             token as value and **id_token** with a verified ID Token if one
             was returned otherwise None.
         """
+
+        logger.debug(20 * "*" + " get_access_and_id_token " + 20 * "*")
 
         if client is None:
             client = self.get_client_from_session_key(state)
@@ -910,6 +895,9 @@ class RPHandler(object):
             should be used
         :return: A US
         """
+
+        logger.debug(20 * "*" + " logout " + 20 * "*")
+
         if client is None:
             client = self.get_client_from_session_key(state)
 
@@ -933,6 +921,9 @@ class RPHandler(object):
     def close(self, state: str,
               issuer: Optional[str] = '',
               post_logout_redirect_uri: Optional[str] = '') -> dict:
+
+        logger.debug(20 * "*" + " close " + 20 * "*")
+
         if issuer:
             client = self.issuer2rp[issuer]
         else:

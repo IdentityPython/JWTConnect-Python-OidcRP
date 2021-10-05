@@ -184,7 +184,7 @@ def add_callback_uris(request_args=None, service=None, **kwargs):
         _req_val = request_args.get(_key)
         if not _req_val:
             _uri = _context.register_args.get(_key)
-            if _uri is None:
+            if not _uri:
                 _uri = _context.callback.get(_key)
             if _uri:
                 request_args[_key] = _uri
