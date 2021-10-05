@@ -916,6 +916,7 @@ class RPHandler(object):
         resp = srv.get_request_parameters(state=state,
                                           request_args=request_args)
 
+        logger.debug(f"EndSession Request: {resp}")
         return resp
 
     def close(self, state: str,
