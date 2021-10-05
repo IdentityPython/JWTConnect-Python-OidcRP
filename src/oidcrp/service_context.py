@@ -11,6 +11,7 @@ from cryptojwt.key_bundle import KeyBundle
 from cryptojwt.utils import as_bytes
 from oidcmsg.context import OidcContext
 from oidcmsg.oidc import RegistrationRequest
+from oidcmsg.util import rndstr
 
 from oidcrp.state_interface import StateInterface
 
@@ -97,6 +98,8 @@ class ServiceContext(OidcContext):
         "client_secret_expires_at": 0,
         'clock_skew': None,
         "config": None,
+        "hash_seed": b'',
+        "hash2issuer": None,
         "httpc_params": None,
         'issuer': None,
         "kid": None,
@@ -126,6 +129,7 @@ class ServiceContext(OidcContext):
         self.client_preferences = {}
         self.args = {}
         self.add_on = {}
+        self.hash2issuer = {}
         self.httpc_params = {}
         self.issuer = ""
         self.client_id = ""
@@ -155,6 +159,12 @@ class ServiceContext(OidcContext):
             self.clock_skew = config['clock_skew']
         except KeyError:
             self.clock_skew = 15
+
+        _seed = config.get("hash_seed")
+        if _seed:
+            self.hash_seed = as_bytes(_seed)
+        else:
+            self.hash_seed = as_bytes(rndstr(32))
 
         for key, val in kwargs.items():
             setattr(self, key, val)

@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import sys
 import traceback
@@ -29,6 +28,8 @@ from .defaults import DEFAULT_RP_KEY_DEFS
 from .exception import OidcServiceError
 from .oauth2 import Client
 from .oauth2.utils import pick_redirect_uri
+from .oidc.registration import CALLBACK_URIS
+from .oidc.registration import add_callbacks
 from .util import add_path
 from .util import dynamic_provider_info_discovery
 from .util import load_registration_response
@@ -237,33 +238,10 @@ class RPHandler(object):
             except KeyError:
                 return _context.get('issuer')
 
-    def add_callbacks(self, context):
-        _iss = context.get('issuer')
-        # Create the necessary callback URLs
-        # as a side effect self.hash2issuer is set
-        _extra_uris = {
-            "request_uri": False,
-            "backchannel_logout_uri": False,
-            "frontchannel_logout_uri": False
-        }
-        _pi = context.get('provider_info')
-        _cp = context.config.get("client_preferences")
-        if 'require_request_uri_registration' in _pi and "request_uri_usable" in _cp:
-            _extra_uris['request_uri'] = True
-        if 'frontchannel_logout_supported' in _pi and "frontchannel_logout_usable" in _cp:
-            _extra_uris["frontchannel_logout_uri"] = True
-        if 'backchannel_logout_supported' in _pi and "backchannel_logout_usable" in _cp:
-            _extra_uris["backchannel_logout_uri"] = True
-
-        callbacks = self.create_callbacks(_iss, **_extra_uris)
-
-        context.set('redirect_uris', [
-            v for k, v in callbacks.items() if not k.startswith('__')])
-        context.set('callback', callbacks)
-
     def do_client_registration(self, client=None,
                                iss_id: Optional[str] = '',
                                state: Optional[str] = '',
+                               request_args: Optional[dict] = None,
                                behaviour_args: Optional[dict] = None):
         """
         Prepare for and do client registration if configured to do so
@@ -289,14 +267,19 @@ class RPHandler(object):
             _context.post_logout_redirect_uris = [self.base_url]
 
         if not _context.client_id:  # means I have to do dynamic client registration
-            if not _context.get('redirect_uris'):
-                self.add_callbacks(_context)
+            if request_args is None:
+                request_args = {}
 
             if behaviour_args:
                 _params = RegistrationRequest().parameters()
-                request_args = {k: v for k, v in behaviour_args.items() if k in _params}
-            else:
-                request_args = {}
+                request_args.update({k: v for k, v in behaviour_args.items() if k in _params})
+
+            # _ignore = [k for k in list(request_args.keys()) if k in CALLBACK_URIS]
+            # if _context.get('redirect_uris'):
+            #     if 'redirect_uris' not in _ignore:
+            #         _ignore.append('redirect_uris')
+            #
+            # add_callbacks(_context, _ignore)
 
             load_registration_response(client, request_args=request_args)
 
@@ -358,43 +341,43 @@ class RPHandler(object):
         self.issuer2rp[issuer] = client
         return client
 
-    def create_callbacks(self, issuer, request_uri=False, backchannel_logout_uri=False,
-                         frontchannel_logout_uri=False):
-        """
-        To mitigate some security issues the redirect_uris should be OP/AS
-        specific. This method creates a set of redirect_uris unique to the
-        OP/AS.
-
-        :param frontchannel_logout_uri: Whether a front-channel logout uri should be constructed
-        :param backchannel_logout_uri: Whether a back-channel logout uri should be constructed
-        :param request_uri: Whether a request_uri should be constructed
-        :param issuer: Issuer ID
-        :return: A set of redirect_uris
-        """
-        _hash = hashlib.sha256()
-        _hash.update(self.hash_seed)
-        _hash.update(as_bytes(issuer))
-        _hex = _hash.hexdigest()
-        self.hash2issuer[_hex] = issuer
-        res = {
-            'code': "{}/authz_cb/{}".format(self.base_url, _hex),
-            'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
-            'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
-            '__hex': _hex
-        }
-        if request_uri:
-            res["request_uri"] = f"{self.base_url}/req_uri/{_hex}"
-
-        if backchannel_logout_uri or frontchannel_logout_uri:
-            res["post_logout_redirect_uris"] = f"{self.base_url}/session_logout/{_hex}"
-
-        if backchannel_logout_uri:
-            res["backchannel_logout_uri"] = f"{self.base_url}/bc_logout/{_hex}"
-        if frontchannel_logout_uri:
-            res["frontchannel_logout_uri"] = f"{self.base_url}/fc_logout/{_hex}"
-
-        logger.debug(f"Created callback URIs: {res}")
-        return res
+    # def create_callbacks(self, issuer, request_uri=False, backchannel_logout_uri=False,
+    #                      frontchannel_logout_uri=False):
+    #     """
+    #     To mitigate some security issues the redirect_uris should be OP/AS
+    #     specific. This method creates a set of redirect_uris unique to the
+    #     OP/AS.
+    #
+    #     :param frontchannel_logout_uri: Whether a front-channel logout uri should be constructed
+    #     :param backchannel_logout_uri: Whether a back-channel logout uri should be constructed
+    #     :param request_uri: Whether a request_uri should be constructed
+    #     :param issuer: Issuer ID
+    #     :return: A set of redirect_uris
+    #     """
+    #     _hash = hashlib.sha256()
+    #     _hash.update(self.hash_seed)
+    #     _hash.update(as_bytes(issuer))
+    #     _hex = _hash.hexdigest()
+    #     self.hash2issuer[_hex] = issuer
+    #     res = {
+    #         'code': "{}/authz_cb/{}".format(self.base_url, _hex),
+    #         'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
+    #         'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
+    #         '__hex': _hex
+    #     }
+    #     if request_uri:
+    #         res["request_uri"] = f"{self.base_url}/req_uri/{_hex}"
+    #
+    #     if backchannel_logout_uri or frontchannel_logout_uri:
+    #         res["post_logout_redirect_uris"] = f"{self.base_url}/session_logout/{_hex}"
+    #
+    #     if backchannel_logout_uri:
+    #         res["backchannel_logout_uri"] = f"{self.base_url}/bc_logout/{_hex}"
+    #     if frontchannel_logout_uri:
+    #         res["frontchannel_logout_uri"] = f"{self.base_url}/fc_logout/{_hex}"
+    #
+    #     logger.debug(f"Created callback URIs: {res}")
+    #     return res
 
     def _get_response_type(self, context, req_args: Optional[dict] = None):
         if req_args:

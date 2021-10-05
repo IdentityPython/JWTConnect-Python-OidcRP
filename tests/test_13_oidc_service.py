@@ -615,14 +615,59 @@ class TestRegistration(object):
         assert len(_req) == 5
         assert 'post_logout_redirect_uris' in _req
 
-    def test_config_with_required_request_uri(self):
-        _pi = self.service.client_get("service_context").provider_info
-        _pi['require_request_uri_registration'] = True
-        self.service.client_get("service_context").provider_info = _pi
-        _req = self.service.construct()
-        assert isinstance(_req, RegistrationRequest)
-        assert len(_req) == 5
-        assert 'request_uris' in _req
+
+def test_config_with_required_request_uri():
+    client_config = {
+        'client_id': 'client_id', 'client_secret': 'a longesh password',
+        'redirect_uris': ['https://example.com/cli/authz_cb'],
+        'issuer': ISS,
+        'requests_dir': 'requests',
+        'base_url': 'https://example.com/cli/',
+        'client_preferences': {
+            "request_uri_usable": True
+        }
+    }
+    entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
+    entity.client_get("service_context").issuer = 'https://example.com'
+    service = entity.client_get("service", 'registration')
+    _context = service.client_get("service_context")
+
+    _pi = _context.provider_info
+    _pi['require_request_uri_registration'] = True
+    _context.config["client_preferences"]["request_uri_usable"] = True
+    _req = service.construct()
+    assert isinstance(_req, RegistrationRequest)
+    assert len(_req) == 5
+    assert 'request_uris' in _req
+
+
+def test_config_logout_uri():
+    client_config = {
+        'client_id': 'client_id', 'client_secret': 'a longesh password',
+        'redirect_uris': ['https://example.com/cli/authz_cb'],
+        'issuer': ISS,
+        'requests_dir': 'requests',
+        'base_url': 'https://example.com/cli/',
+        'client_preferences': {
+            "request_uri_usable": True
+        }
+    }
+    entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
+    entity.client_get("service_context").issuer = 'https://example.com'
+    service = entity.client_get("service", 'registration')
+    _context = service.client_get("service_context")
+
+    _pi = _context.provider_info
+    _pi['require_request_uri_registration'] = True
+    _pi['frontchannel_logout_supported'] = True
+    _context.config["client_preferences"]["request_uri_usable"] = True
+    _context.config["client_preferences"]["frontchannel_logout_usable"] = True
+    _req = service.construct()
+    assert isinstance(_req, RegistrationRequest)
+    assert len(_req) == 7
+    assert 'request_uris' in _req
+    assert 'frontchannel_logout_uri' in _req
+    assert 'post_logout_redirect_uris' in _req
 
 
 class TestUserInfo(object):

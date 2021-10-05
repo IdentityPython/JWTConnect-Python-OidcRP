@@ -17,6 +17,7 @@ import pytest
 import responses
 
 from oidcrp.entity import Entity
+from oidcrp.oidc.registration import add_callbacks
 from oidcrp.rp_handler import RPHandler
 
 BASE_URL = 'https://example.com/rp'
@@ -337,18 +338,22 @@ class TestRPHandler(object):
         assert self.rph.hash2issuer['github'] == _context.get('issuer')
 
     def test_create_callbacks(self):
-        cb = self.rph.create_callbacks('https://op.example.com/')
+        client = self.rph.init_client('https://op.example.com/')
+        _srv = client.client_get("service", "registration")
+        _context = _srv.client_get("service_context")
+        add_callbacks(_context, [])
 
-        assert set(cb.keys()) == {'code', 'implicit', 'form_post', '__hex'}
+        cb = _srv.client_get("service_context").callback
+
+        assert set(cb.keys()) == {'redirect_uris', 'code', 'implicit', '__hex'}
         _hash = cb['__hex']
 
-        assert cb['code'] == 'https://example.com/rp/authz_cb/{}'.format(_hash)
-        assert cb['implicit'] == 'https://example.com/rp/authz_im_cb/{}'.format(_hash)
-        assert cb['form_post'] == 'https://example.com/rp/authz_fp_cb/{}'.format(_hash)
+        assert cb['code'] == f'https://example.com/rp/authz_cb/{_hash}'
+        assert cb['implicit'] == f'https://example.com/rp/authz_im_cb/{_hash}'
 
-        assert list(self.rph.hash2issuer.keys()) == [_hash]
+        assert list(_context.hash2issuer.keys()) == [_hash]
 
-        assert self.rph.hash2issuer[_hash] == 'https://op.example.com/'
+        assert _context.hash2issuer[_hash] == 'https://op.example.com/'
 
     def test_begin(self):
         res = self.rph.begin(issuer_id='github')

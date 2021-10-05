@@ -275,23 +275,6 @@ class TestRPHandler(object):
 
         assert rph_1.hash2issuer['github'] == _context.get('issuer')
 
-    def test_create_callbacks(self):
-        rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
-                          keyjar=CLI_KEY, module_dirs=['oidc'])
-
-        cb = rph_1.create_callbacks('https://op.example.com/')
-
-        assert set(cb.keys()) == {'code', 'implicit', 'form_post', '__hex'}
-        _hash = cb['__hex']
-
-        assert cb['code'] == 'https://example.com/rp/authz_cb/{}'.format(_hash)
-        assert cb['implicit'] == 'https://example.com/rp/authz_im_cb/{}'.format(_hash)
-        assert cb['form_post'] == 'https://example.com/rp/authz_fp_cb/{}'.format(_hash)
-
-        assert list(rph_1.hash2issuer.keys()) == [_hash]
-
-        assert rph_1.hash2issuer[_hash] == 'https://op.example.com/'
-
     def test_begin(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
                           keyjar=CLI_KEY, module_dirs=['oidc'])

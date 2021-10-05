@@ -538,7 +538,7 @@ def load_registration_response(client, request_args=None):
     """
     If the client has been statically registered that information
     must be provided during the configuration. If expected to be
-    done dynamically. This method will do dynamic client registration.
+    done dynamically this method will do dynamic client registration.
 
     :param client: A :py:class:`oidcrp.oidc.Client` instance
     """

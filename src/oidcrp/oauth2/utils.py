@@ -3,6 +3,7 @@ from typing import Optional
 from typing import Union
 
 from oidcmsg.exception import MissingParameter
+from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.message import Message
 
 from oidcrp.service import Service
@@ -32,7 +33,9 @@ def pick_redirect_uri(context,
     if 'redirect_uri' in request_args:
         return request_args["redirect_uri"]
 
-    if context.callback:
+    if context.redirect_uris:
+        redirect_uri = context.redirect_uris[0]
+    elif context.callback:
         if not response_type:
             _conf_resp_types = context.behaviour.get('response_types', [])
             response_type = request_args.get('response_type')
@@ -52,7 +55,8 @@ def pick_redirect_uri(context,
             f"pick_redirect_uris: response_type={response_type}, response_mode={_response_mode}, "
             f"redirect_uri={redirect_uri}")
     else:
-        redirect_uri = context.redirect_uris[0]
+        logger.error("No redirect_uri")
+        raise MissingRequiredAttribute('redirect_uri')
 
     return redirect_uri
 
