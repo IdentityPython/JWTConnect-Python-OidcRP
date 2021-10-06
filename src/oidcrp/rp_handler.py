@@ -948,7 +948,7 @@ def backchannel_logout(client, request='', request_args=None):
     if request:
         req = BackChannelLogoutRequest().from_urlencoded(as_unicode(request))
     else:
-        req = BackChannelLogoutRequest(**request_args)
+        req = BackChannelLogoutRequest()
 
     _context = client.client_get("service_context")
     kwargs = {
