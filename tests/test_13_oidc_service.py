@@ -891,9 +891,8 @@ class TestEndSession(object):
             'token_response', 'abcde')
         _req = self.service.construct(state='abcde')
         assert isinstance(_req, EndSessionRequest)
-        assert len(_req) == 3
-        assert set(_req.keys()) == {'state', 'id_token_hint',
-                                    'post_logout_redirect_uri'}
+        assert len(_req) == 2
+        assert set(_req.keys()) == {'state', 'id_token_hint'}
 
 
 def test_authz_service_conf():

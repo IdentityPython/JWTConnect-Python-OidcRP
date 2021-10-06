@@ -7,7 +7,6 @@ from cryptojwt.utils import as_bytes
 from oidcmsg import oidc
 from oidcmsg.oauth2 import ResponseMessage
 
-from oidcrp.oidc.provider_info_discovery import add_redirect_uris
 from oidcrp.service import Service
 
 __author__ = 'Roland Hedberg'
@@ -81,7 +80,7 @@ def create_callbacks(issuer: str,
         res["request_uris"] = f"{base_url}/req_uri/{_hex}"
 
     if backchannel_logout_uri or frontchannel_logout_uri:
-        res["post_logout_redirect_uri"] = f"{base_url}/session_logout/{_hex}"
+        res["post_logout_redirect_uris"] = [f"{base_url}/session_logout/{_hex}"]
 
     if backchannel_logout_uri:
         res["backchannel_logout_uri"] = f"{base_url}/bc_logout/{_hex}"
@@ -163,7 +162,7 @@ def add_callbacks(context, ignore: Optional[List[str]] = None):
     context.set('callback', callbacks)
 
 
-CALLBACK_URIS = ["post_logout_redirect_uri", "backchannel_logout_uri", "frontchannel_logout_uri",
+CALLBACK_URIS = ["post_logout_redirect_uris", "backchannel_logout_uri", "frontchannel_logout_uri",
                  "request_uris", 'redirect_uris']
 
 

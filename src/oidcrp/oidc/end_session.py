@@ -54,13 +54,14 @@ class EndSession(Service):
 
     def add_post_logout_redirect_uri(self, request_args=None, **kwargs):
         if 'post_logout_redirect_uri' not in request_args:
-            try:
-                request_args[
-                    'post_logout_redirect_uri'
-                ] = self.client_get("service_context").register_args[
-                    'post_logout_redirect_uris'][0]
-            except KeyError:
-                pass
+            _context = self.client_get("service_context")
+            _uri = _context.register_args.get('post_logout_redirect_uri')
+            if _uri:
+                request_args['post_logout_redirect_uri'] = _uri
+            else:
+                _uris = _context.callback.get("post_logout_redirect_uris", [])
+                if _uris:
+                    request_args['post_logout_redirect_uri'] = _uris[0]
 
         return request_args, {}
 

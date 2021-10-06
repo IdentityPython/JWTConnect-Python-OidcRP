@@ -3,6 +3,7 @@ import logging
 
 from oidcmsg.exception import FormatError
 
+from oidcrp.configure import URIS
 from oidcrp.entity import Entity
 from oidcrp.exception import OidcServiceError
 from oidcrp.exception import ParseError

@@ -312,7 +312,7 @@ class TestRPHandler(object):
         # only 2 things should have happened
 
         assert self.rph.hash2issuer['github'] == issuer
-        assert client.client_get("service_context").post_logout_redirect_uris == []
+        assert client.client_get("service_context").callback.get("post_logout_redirect_uris") is None
 
     def test_do_client_setup(self):
         client = self.rph.client_setup('github')

@@ -248,6 +248,7 @@ class RPHandler(object):
         """
         Prepare for and do client registration if configured to do so
 
+        :param iss_id: Issuer ID
         :param behaviour_args: To fine tune behaviour
         :param client: A Client instance
         :param state: A key by which the state of the session can be
@@ -267,8 +268,8 @@ class RPHandler(object):
         self.hash2issuer[iss_id] = _iss
 
         # This should only be interesting if the client supports Single Log Out
-        if _context.post_logout_redirect_uris is None:
-            _context.post_logout_redirect_uris = [self.base_url]
+        # if _context.callback.get("post_logout_redirect_uris") is None:
+        #     _context.callback["post_logout_redirect_uris"] = [self.base_url]
 
         if not _context.client_id:  # means I have to do dynamic client registration
             if request_args is None:
