@@ -90,7 +90,7 @@ class Service(ImpExp):
         self.construct_extra_headers = []
         self.post_parse_process = []
 
-    def gather_request_args(self, **kwargs):
+    def gather_request_args(self,**kwargs):
         """
         Go through the attributes that the message class can contain and
         add values if they are missing but exists in the client info or
@@ -444,7 +444,9 @@ class Service(ImpExp):
         """
         return response
 
-    def gather_verify_arguments(self):
+    def gather_verify_arguments(self,
+                                response: Optional[Union[dict, Message]] = None,
+                                behaviour_args: Optional[dict] = None):
         """
         Need to add some information before running verify()
 
@@ -501,7 +503,11 @@ class Service(ImpExp):
                 raise
         return resp
 
-    def parse_response(self, info, sformat="", state="", **kwargs):
+    def parse_response(self, info,
+                       sformat: Optional[str] = "",
+                       state: Optional[str] = "",
+                       behaviour_args: Optional[dict] = None,
+                       **kwargs):
         """
         This the start of a pipeline that will:
 
@@ -513,8 +519,8 @@ class Service(ImpExp):
             3 runs the do_post_parse_response method iff the response was not
               an error response.
 
-        :param info: The response, can be either in a JSON or an urlencoded
-            format
+        :param behaviour_args:
+        :param info: The response, can be either in a JSON or an urlencoded format
         :param sformat: Which serialization that was used
         :param state: The state
         :param kwargs: Extra key word arguments
@@ -554,7 +560,7 @@ class Service(ImpExp):
         if is_error_message(resp):
             LOGGER.debug('Error response: %s', resp)
         else:
-            vargs = self.gather_verify_arguments()
+            vargs = self.gather_verify_arguments(response=resp, behaviour_args=behaviour_args)
             LOGGER.debug("Verify response with %s", vargs)
             try:
                 # verify the message. If something is wrong an exception is thrown

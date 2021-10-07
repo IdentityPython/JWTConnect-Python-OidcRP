@@ -1,14 +1,16 @@
 import logging
+from typing import Optional
+from typing import Union
 
 from oidcmsg import oauth2
 from oidcmsg import oidc
 from oidcmsg.exception import MissingRequiredAttribute
+from oidcmsg.message import Message
 from oidcmsg.oidc import make_openid_request
 from oidcmsg.oidc import verified_claim_name
 from oidcmsg.time_util import time_sans_frac
 from oidcmsg.time_util import utc_time_sans_frac
 
-from oidcrp.exception import ParameterError
 from oidcrp.oauth2 import authorization
 from oidcrp.oauth2.utils import pre_construct_pick_redirect_uri
 from oidcrp.oidc import IDT2REG
@@ -239,34 +241,9 @@ class Authorization(authorization.Authorization):
 
         return req
 
-    # def post_parse_response(self, response, **kwargs):
-    #     """
-    #     Add scope claim to response, from the request, if not present in the
-    #     response
-    #
-    #     :param response: The response
-    #     :param kwargs: Extra Keyword arguments
-    #     :return: A possibly augmented response
-    #     """
-    #
-    #     authorization.Authorization.parse_response(self, response, **kwargs)
-    #
-    #     if "id_token" not in response:
-    #         try:
-    #             _key = kwargs['state']
-    #         except KeyError:
-    #             pass
-    #         else:
-    #             if _key:
-    #                 item = self.client_get("service_context").state.get_item(oauth2.AuthorizationRequest,
-    #                                                                  'auth_request', _key)
-    #                 try:
-    #                     response["scope"] = item["scope"]
-    #                 except KeyError:
-    #                     pass
-    #     return response
-
-    def gather_verify_arguments(self):
+    def gather_verify_arguments(self,
+                                response: Optional[Union[dict, Message]] = None,
+                                behaviour_args: Optional[dict] = None):
         """
         Need to add some information before running verify()
 
