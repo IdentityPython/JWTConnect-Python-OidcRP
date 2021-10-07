@@ -2,6 +2,7 @@ import logging
 
 from oidcmsg import oauth2
 from oidcmsg import oidc
+from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.oidc import make_openid_request
 from oidcmsg.oidc import verified_claim_name
 from oidcmsg.time_util import time_sans_frac
@@ -49,25 +50,31 @@ class Authorization(authorization.Authorization):
     def update_service_context(self, resp, key='', **kwargs):
         _context = self.client_get("service_context")
 
-        _idt = resp.get(verified_claim_name('id_token'))
-        if _idt:
-            # If there is a verified ID Token then we have to do nonce
-            # verification
-            item = _context.state.get_item(oauth2.AuthorizationRequest, 'auth_request', key)
-            if item['nonce'] != _idt['nonce']:
-                raise ValueError('Invalid nonce')
-
-            # try:
-            #     if _context.state.get_state_by_nonce(_idt['nonce']) != key:
-            #         raise ParameterError('Someone has messed with "nonce"')
-            # except KeyError:
-            #     raise ValueError('Invalid nonce')
-
-            _context.state.store_sub2state(_idt['sub'], key)
-
         if 'expires_in' in resp:
             resp['__expires_at'] = time_sans_frac() + int(resp['expires_in'])
         _context.state.store_item(resp.to_json(), 'auth_response', key)
+
+    def get_request_from_response(self, response):
+        _context = self.client_get("service_context")
+        return _context.state.get_item(oauth2.AuthorizationRequest, 'auth_request',
+                                       response["state"])
+
+    def post_parse_response(self, response, **kwargs):
+        response = authorization.Authorization.post_parse_response(self, response, **kwargs)
+
+        _idt = response.get(verified_claim_name('id_token'))
+        if _idt:
+            # If there is a verified ID Token then we have to do nonce
+            # verification.
+            _request = self.get_request_from_response(response)
+            _req_nonce = _request.get('nonce')
+            if _req_nonce:
+                _id_token_nonce = _idt.get('nonce')
+                if not _id_token_nonce:
+                    raise MissingRequiredAttribute('nonce')
+                elif _req_nonce != _id_token_nonce:
+                    raise ValueError('Invalid nonce')
+        return response
 
     def oidc_pre_construct(self, request_args=None, post_args=None, **kwargs):
         _context = self.client_get("service_context")
@@ -271,10 +278,6 @@ class Authorization(authorization.Authorization):
             'keyjar': _context.keyjar, 'verify': True,
             'skew': _context.clock_skew
         }
-
-        _nonce = _context.state.get_item(oauth2.AuthorizationRequest, 'auth_request', 'nonce')
-        if _nonce:
-            kwargs["nonce"] = _nonce
 
         _client_id = _context.client_id
         if _client_id:

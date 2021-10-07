@@ -557,8 +557,7 @@ class Service(ImpExp):
             vargs = self.gather_verify_arguments()
             LOGGER.debug("Verify response with %s", vargs)
             try:
-                # verify the message. If something is wrong an exception is
-                # thrown
+                # verify the message. If something is wrong an exception is thrown
                 resp.verify(**vargs)
             except Exception as err:
                 LOGGER.error(

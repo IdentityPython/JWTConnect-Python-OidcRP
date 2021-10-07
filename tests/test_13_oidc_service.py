@@ -7,6 +7,7 @@ from cryptojwt.jws.utils import left_hash
 from cryptojwt.jwt import JWT
 from cryptojwt.key_jar import build_keyjar
 from cryptojwt.key_jar import init_key_jar
+from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.oidc import AccessTokenRequest
 from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationRequest
@@ -202,7 +203,7 @@ class TestAuthorization(object):
         idt = JWT(ISS_KEY, iss=ISS, lifetime=3600)
         payload = {
             'sub': '123456789', 'aud': ['client_id'],
-            'nonce': 'nonce'
+            'nonce': 'noice'
         }
         # have to calculate c_hash
         alg = 'RS256'
@@ -211,9 +212,8 @@ class TestAuthorization(object):
 
         _idt = idt.pack(payload)
         resp = AuthorizationResponse(state='state', code='code', id_token=_idt)
-        resp = self.service.parse_response(resp.to_urlencoded())
-        with pytest.raises(ParameterError):
-            self.service.update_service_context(resp, 'state2')
+        with pytest.raises(ValueError):
+            self.service.parse_response(resp.to_urlencoded())
 
     def test_update_service_context_with_idtoken_missing_nonce(self):
         req_args = {'response_type': 'code', 'state': 'state', 'nonce': 'nonce'}
@@ -229,9 +229,8 @@ class TestAuthorization(object):
 
         _idt = idt.pack(payload)
         resp = AuthorizationResponse(state='state', code='code', id_token=_idt)
-        resp = self.service.parse_response(resp.to_urlencoded())
-        with pytest.raises(ValueError):
-            self.service.update_service_context(resp, 'state')
+        with pytest.raises(MissingRequiredAttribute):
+            self.service.parse_response(resp.to_urlencoded())
 
     @pytest.mark.parametrize("allow_sign_alg_none", [True, False])
     def test_allow_unsigned_idtoken(self, allow_sign_alg_none):
@@ -240,14 +239,14 @@ class TestAuthorization(object):
         self.service.get_request_parameters(request_args=req_args)
         # Build an ID Token
         idt = JWT(ISS_KEY, iss=ISS, lifetime=3600, sign_alg='none')
-        payload = {'sub': '123456789', 'aud': ['client_id']}
+        payload = {'sub': '123456789', 'aud': ['client_id'], 'nonce': req_args['nonce']}
         _idt = idt.pack(payload)
         self.service.client_get("service_context").behaviour["verify_args"] = {
             "allow_sign_alg_none": allow_sign_alg_none
         }
         resp = AuthorizationResponse(state='state', code='code', id_token=_idt)
         if allow_sign_alg_none:
-            resp = self.service.parse_response(resp.to_urlencoded())
+            self.service.parse_response(resp.to_urlencoded())
         else:
             with pytest.raises(UnsupportedAlgorithm):
                 self.service.parse_response(resp.to_urlencoded())
