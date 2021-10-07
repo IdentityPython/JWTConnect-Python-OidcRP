@@ -9,6 +9,7 @@ from cryptojwt.key_jar import init_key_jar
 from cryptojwt.utils import as_bytes
 from oidcmsg import verified_claim_name
 from oidcmsg.exception import MessageException
+from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.exception import NotForMe
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oauth2 import is_error_message
@@ -628,16 +629,14 @@ class RPHandler(object):
 
         _srv = client.get_service('authorization')
         try:
-            authorization_response = _srv.parse_response(response,
-                                                         sformat='dict')
+            authorization_response = _srv.parse_response(response, sformat='dict')
         except Exception as err:
             logger.error('Parsing authorization_response: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
             raise
         else:
-            logger.debug(
-                'Authz response: {}'.format(authorization_response.to_dict()))
+            logger.debug('Authz response: {}'.format(authorization_response.to_dict()))
 
         if is_error_message(authorization_response):
             return authorization_response
@@ -947,8 +946,10 @@ def backchannel_logout(client, request='', request_args=None):
     """
     if request:
         req = BackChannelLogoutRequest().from_urlencoded(as_unicode(request))
+    elif request_args:
+        req = BackChannelLogoutRequest(**request_args)
     else:
-        req = BackChannelLogoutRequest()
+        raise MissingRequiredAttribute('logout_token')
 
     _context = client.client_get("service_context")
     kwargs = {
@@ -959,10 +960,13 @@ def backchannel_logout(client, request='', request_args=None):
             "id_token_signed_response_alg", "RS256")
     }
 
+    logger.debug(f"(backchannel_logout) Verifying request using: {kwargs}")
     try:
         req.verify(**kwargs)
     except (MessageException, ValueError, NotForMe) as err:
         raise MessageException('Bogus logout request: {}'.format(err))
+    else:
+        logger.debug("Request verified OK")
 
     # Find the subject through 'sid' or 'sub'
     sub = req[verified_claim_name('logout_token')].get('sub')

@@ -1,5 +1,6 @@
 import logging
 
+from oidcmsg import oauth2
 from oidcmsg import oidc
 from oidcmsg.oidc import make_openid_request
 from oidcmsg.oidc import verified_claim_name
@@ -47,18 +48,20 @@ class Authorization(authorization.Authorization):
 
     def update_service_context(self, resp, key='', **kwargs):
         _context = self.client_get("service_context")
-        try:
-            _idt = resp[verified_claim_name('id_token')]
-        except KeyError:
-            pass
-        else:
+
+        _idt = resp.get(verified_claim_name('id_token'))
+        if _idt:
             # If there is a verified ID Token then we have to do nonce
             # verification
-            try:
-                if _context.state.get_state_by_nonce(_idt['nonce']) != key:
-                    raise ParameterError('Someone has messed with "nonce"')
-            except KeyError:
-                raise ValueError('Missing nonce value')
+            item = _context.state.get_item(oauth2.AuthorizationRequest, 'auth_request', key)
+            if item['nonce'] != _idt['nonce']:
+                raise ValueError('Invalid nonce')
+
+            # try:
+            #     if _context.state.get_state_by_nonce(_idt['nonce']) != key:
+            #         raise ParameterError('Someone has messed with "nonce"')
+            # except KeyError:
+            #     raise ValueError('Invalid nonce')
 
             _context.state.store_sub2state(_idt['sub'], key)
 
@@ -229,6 +232,33 @@ class Authorization(authorization.Authorization):
 
         return req
 
+    # def post_parse_response(self, response, **kwargs):
+    #     """
+    #     Add scope claim to response, from the request, if not present in the
+    #     response
+    #
+    #     :param response: The response
+    #     :param kwargs: Extra Keyword arguments
+    #     :return: A possibly augmented response
+    #     """
+    #
+    #     authorization.Authorization.parse_response(self, response, **kwargs)
+    #
+    #     if "id_token" not in response:
+    #         try:
+    #             _key = kwargs['state']
+    #         except KeyError:
+    #             pass
+    #         else:
+    #             if _key:
+    #                 item = self.client_get("service_context").state.get_item(oauth2.AuthorizationRequest,
+    #                                                                  'auth_request', _key)
+    #                 try:
+    #                     response["scope"] = item["scope"]
+    #                 except KeyError:
+    #                     pass
+    #     return response
+
     def gather_verify_arguments(self):
         """
         Need to add some information before running verify()
@@ -241,6 +271,10 @@ class Authorization(authorization.Authorization):
             'keyjar': _context.keyjar, 'verify': True,
             'skew': _context.clock_skew
         }
+
+        _nonce = _context.state.get_item(oauth2.AuthorizationRequest, 'auth_request', 'nonce')
+        if _nonce:
+            kwargs["nonce"] = _nonce
 
         _client_id = _context.client_id
         if _client_id:
