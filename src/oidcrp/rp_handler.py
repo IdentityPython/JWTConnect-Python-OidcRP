@@ -28,9 +28,9 @@ from .defaults import DEFAULT_OIDC_SERVICES
 from .defaults import DEFAULT_RP_KEY_DEFS
 from .exception import OidcServiceError
 from .oauth2 import Client
+from .oauth2 import dynamic_provider_info_discovery
 from .oauth2.utils import pick_redirect_uri
 from .util import add_path
-from .util import dynamic_provider_info_discovery
 from .util import load_registration_response
 from .util import rndstr
 
@@ -185,11 +185,15 @@ class RPHandler(object):
         _context.jwks_uri = self.jwks_uri
         return client
 
-    def do_provider_info(self, client=None, state='', behaviour_args=None):
+    def do_provider_info(self,
+                         client: Optional[Client]=None,
+                         state: Optional[str]='',
+                         behaviour_args: Optional[dict]=None) -> str:
         """
         Either get the provider info from configuration or through dynamic
         discovery.
 
+        :param behaviour_args:
         :param client: A Client instance
         :param state: A key by which the state of the session can be
             retrieved
@@ -205,7 +209,7 @@ class RPHandler(object):
 
         _context = client.client_get("service_context")
         if not _context.get('provider_info'):
-            dynamic_provider_info_discovery(client)
+            dynamic_provider_info_discovery(client, behaviour_args=behaviour_args)
             return _context.get('provider_info')['issuer']
         else:
             _pi = _context.get('provider_info')
@@ -280,16 +284,9 @@ class RPHandler(object):
                 _params = RegistrationRequest().parameters()
                 request_args.update({k: v for k, v in behaviour_args.items() if k in _params})
 
-            # _ignore = [k for k in list(request_args.keys()) if k in CALLBACK_URIS]
-            # if _context.get('redirect_uris'):
-            #     if 'redirect_uris' not in _ignore:
-            #         _ignore.append('redirect_uris')
-            #
-            # add_callbacks(_context, _ignore)
-
             load_registration_response(client, request_args=request_args)
 
-    def do_webfinger(self, user):
+    def do_webfinger(self, user: str) -> Client:
         """
         Does OpenID Provider Issuer discovery using webfinger.
 
@@ -304,7 +301,10 @@ class RPHandler(object):
         temporary_client.do_request('webfinger', resource=user)
         return temporary_client
 
-    def client_setup(self, iss_id='', user='', behaviour_args=None):
+    def client_setup(self,
+                     iss_id: Optional[str] = '',
+                     user: Optional[str] = '',
+                     behaviour_args: Optional[dict] = None) -> Client:
         """
         First if no issuer ID is given then the identifier for the user is
         used by the webfinger service to try to find the issuer ID.
@@ -358,11 +358,17 @@ class RPHandler(object):
         else:
             return context.get('behaviour')['response_types'][0]
 
-    def init_authorization(self, client=None, state='', req_args=None, behaviour_args=None):
+    def init_authorization(self,
+                           client: Optional[Client] = None,
+                           state: Optional[str] = '',
+                           req_args: Optional[dict] = None,
+                           behaviour_args: Optional[dict] = None) -> dict:
         """
         Constructs the URL that will redirect the user to the authorization
         endpoint of the OP/AS.
 
+        :param behaviour_args:
+        :param state:
         :param client: A Client instance
         :param req_args: Non-default Request arguments
         :return: A dictionary with 2 keys: **url** The authorization redirect
@@ -607,8 +613,7 @@ class RPHandler(object):
         :param id_token: An :py:class:`oidcmsg.oidc.IDToken` instance
         :return: A dictionary with user information
         """
-        res = dict([(k, id_token[k]) for k in OpenIDSchema.c_param.keys() if
-                    k in id_token])
+        res = dict([(k, id_token[k]) for k in OpenIDSchema.c_param.keys() if k in id_token])
         res.update(id_token.extra())
         return res
 
@@ -629,7 +634,8 @@ class RPHandler(object):
 
         _srv = client.get_service('authorization')
         try:
-            authorization_response = _srv.parse_response(response, sformat='dict')
+            authorization_response = _srv.parse_response(response, sformat='dict',
+                                                         behaviour_args=behaviour_args)
         except Exception as err:
             logger.error('Parsing authorization_response: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())

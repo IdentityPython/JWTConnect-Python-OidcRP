@@ -1,15 +1,19 @@
 from json import JSONDecodeError
 import logging
+from typing import Optional
 
 from oidcmsg.exception import FormatError
+from oidcmsg.message import Message
+from oidcmsg.oauth2 import is_error_message
 
-from oidcrp.configure import URIS
 from oidcrp.entity import Entity
+from oidcrp.exception import ConfigurationError
 from oidcrp.exception import OidcServiceError
 from oidcrp.exception import ParseError
 from oidcrp.http import HTTPLib
 from oidcrp.service import REQUEST_INFO
 from oidcrp.service import SUCCESSFUL
+from oidcrp.service import Service
 from oidcrp.util import do_add_ons
 from oidcrp.util import get_deserialization_method
 
@@ -73,7 +77,11 @@ class Client(Entity):
         # just ignore verify_ssl until it goes away
         self.verify_ssl = self.httpc_params.get("verify", True)
 
-    def do_request(self, request_type, response_body_type="", request_args=None, **kwargs):
+    def do_request(self,
+                   request_type: str,
+                   response_body_type: Optional[str] = "",
+                   request_args: Optional[dict] = None,
+                   behaviour_args: Optional[dict] = None, **kwargs):
         _srv = self._service[request_type]
 
         _info = _srv.get_request_parameters(request_args=request_args, **kwargs)
@@ -94,8 +102,13 @@ class Client(Entity):
         self.client_id = client_id
         self._service_context.set('client_id', client_id)
 
-    def get_response(self, service, url, method="GET", body=None, response_body_type="",
-                     headers=None, **kwargs):
+    def get_response(self,
+                     service: Service,
+                     url: str,
+                     method: Optional[str] = "GET",
+                     body: Optional[dict] = None,
+                     response_body_type: Optional[str] = "",
+                     headers: Optional[dict] = None, **kwargs):
         """
 
         :param url:
@@ -130,8 +143,13 @@ class Client(Entity):
         return self.parse_request_response(service, resp,
                                            response_body_type, **kwargs)
 
-    def service_request(self, service, url, method="GET", body=None,
-                        response_body_type="", headers=None, **kwargs):
+    def service_request(self,
+                        service: Service,
+                        url: str,
+                        method: Optional[str] = "GET",
+                        body: Optional[dict] = None,
+                        response_body_type: Optional[str] = "",
+                        headers: Optional[dict] = None, **kwargs) -> Message:
         """
         The method that sends the request and handles the response returned.
         This assumes that the response arrives in the HTTP response.
@@ -250,3 +268,27 @@ class Client(Entity):
                                                           reqresp.text))
             raise OidcServiceError("HTTP ERROR: %s [%s] on %s" % (
                 reqresp.text, reqresp.status_code, reqresp.url))
+
+
+def dynamic_provider_info_discovery(client: Client, behaviour_args: Optional[dict]=None):
+    """
+    This is about performing dynamic Provider Info discovery
+
+    :param behaviour_args:
+    :param client: A :py:class:`oidcrp.oidc.Client` instance
+    """
+    try:
+        client.get_service('provider_info')
+    except KeyError:
+        raise ConfigurationError(
+            'Can not do dynamic provider info discovery')
+    else:
+        _context = client.client_get("service_context")
+        try:
+            _context.set('issuer', _context.config['srv_discovery_url'])
+        except KeyError:
+            pass
+
+        response = client.do_request('provider_info', behaviour_args=behaviour_args)
+        if is_error_message(response):
+            raise OidcServiceError(response['error'])

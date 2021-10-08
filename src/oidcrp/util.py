@@ -9,6 +9,7 @@ import os
 import ssl
 import string
 import sys
+from typing import Optional
 from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
@@ -553,26 +554,3 @@ def load_registration_response(client, request_args=None):
         else:
             if 'error' in response:
                 raise OidcServiceError(response.to_json())
-
-
-def dynamic_provider_info_discovery(client):
-    """
-    This is about performing dynamic Provider Info discovery
-
-    :param client: A :py:class:`oidcrp.oidc.Client` instance
-    """
-    try:
-        client.get_service('provider_info')
-    except KeyError:
-        raise ConfigurationError(
-            'Can not do dynamic provider info discovery')
-    else:
-        _context = client.client_get("service_context")
-        try:
-            _context.set('issuer', _context.config['srv_discovery_url'])
-        except KeyError:
-            pass
-
-        response = client.do_request('provider_info')
-        if is_error_message(response):
-            raise OidcServiceError(response['error'])
