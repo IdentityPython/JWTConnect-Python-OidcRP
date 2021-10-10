@@ -359,7 +359,7 @@ class TestRPHandler(object):
                                                      'token_endpoint')
         assert authn_method == 'client_secret_post'
 
-    def test_get_access_token(self):
+    def test_get_tokens(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
                           keyjar=CLI_KEY, module_dirs=['oidc'])
 
@@ -401,7 +401,7 @@ class TestRPHandler(object):
             resp = rph_1.finalize_auth(client, _session['iss'],
                                        auth_response.to_dict())
 
-            resp = rph_1.get_access_token(res['state'], client)
+            resp = rph_1.get_tokens(res['state'], client)
             assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
                                         'token_type', '__verified_id_token',
                                         '__expires_at'}

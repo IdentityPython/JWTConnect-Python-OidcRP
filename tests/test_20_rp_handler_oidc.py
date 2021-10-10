@@ -425,7 +425,7 @@ class TestRPHandler(object):
                                                         'token_endpoint')
         assert authn_method == 'client_secret_post'
 
-    def test_get_access_token(self):
+    def test_get_tokens(self):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -464,7 +464,7 @@ class TestRPHandler(object):
             resp = self.rph.finalize_auth(client, _session['iss'],
                                           auth_response.to_dict())
 
-            resp = self.rph.get_access_token(res['state'], client)
+            resp = self.rph.get_tokens(res['state'], client)
             assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
                                         'token_type', '__verified_id_token',
                                         '__expires_at'}

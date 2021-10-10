@@ -489,7 +489,7 @@ class RPHandler(object):
                 else:  # a list
                     return am[0]
 
-    def get_access_token(self, state, client: Optional[Client] = None):
+    def get_tokens(self, state, client: Optional[Client] = None):
         """
         Use the 'accesstoken' service to get an access token from the OP/AS.
 
@@ -499,7 +499,7 @@ class RPHandler(object):
         :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` or
             :py:class:`oidcmsg.oauth2.AuthorizationResponse`
         """
-        logger.debug(20 * "*" + " get_access_token " + 20 * "*")
+        logger.debug(20 * "*" + " get_tokens " + 20 * "*")
 
         if client is None:
             client = self.get_client_from_session_key(state)
@@ -699,8 +699,7 @@ class RPHandler(object):
         if not state:
             state = authorization_response['state']
 
-        authreq = _context.state.get_item(
-            AuthorizationRequest, 'auth_request', state)
+        authreq = _context.state.get_item(AuthorizationRequest, 'auth_request', state)
         _resp_type = set(authreq['response_type'])
 
         access_token = None
@@ -712,11 +711,10 @@ class RPHandler(object):
         if _resp_type in [{'token'}, {'id_token', 'token'}, {'code', 'token'},
                           {'code', 'id_token', 'token'}]:
             access_token = authorization_response["access_token"]
-            if behaviour_args and behaviour_args.get("collect_id_token", False):
-                if "id_token" not in _resp_type:
-                    logger.debug("Collect ID Token")
-                    # get the access token
-                    token_resp = self.get_access_token(state, client=client)
+            if behaviour_args:
+                if behaviour_args.get("collect_tokens", False):
+                    # get what you can from the token endpoint
+                    token_resp = self.get_tokens(state, client=client)
                     if is_error_message(token_resp):
                         return False, "Invalid response %s." % token_resp["error"]
                     # Now which access_token should I use
@@ -726,7 +724,7 @@ class RPHandler(object):
 
         elif _resp_type in [{'code'}, {'code', 'id_token'}]:
             # get the access token
-            token_resp = self.get_access_token(state, client=client)
+            token_resp = self.get_tokens(state, client=client)
             if is_error_message(token_resp):
                 return False, "Invalid response %s." % token_resp["error"]
 
