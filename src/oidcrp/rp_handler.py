@@ -273,8 +273,8 @@ class RPHandler(object):
         self.hash2issuer[iss_id] = _iss
 
         # This should only be interesting if the client supports Single Log Out
-        # if _context.callback.get("post_logout_redirect_uris") is None:
-        #     _context.callback["post_logout_redirect_uris"] = [self.base_url]
+        # if _context.callback.get("post_logout_redirect_uri") is None:
+        #     _context.callback["post_logout_redirect_uri"] = [self.base_url]
 
         if not _context.client_id:  # means I have to do dynamic client registration
             if request_args is None:

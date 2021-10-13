@@ -162,9 +162,7 @@
       "redirect_uris": [
         "https://{domain}:{port}/authz_cb/local"
       ],
-      "post_logout_redirect_uris": [
-        "https://{domain}:{port}/session_logout/local"
-      ],
+      "post_logout_redirect_uri": "https://{domain}:{port}/session_logout/local",
       "frontchannel_logout_uri": "https://{domain}:{port}/fc_logout/local",
       "frontchannel_logout_session_required": true,
       "backchannel_logout_uri": "https://{domain}:{port}/bc_logout/local",
@@ -231,9 +229,7 @@
       "redirect_uris": [
         "https://{domain}:{port}/authz_cb/django"
       ],
-      "post_logout_redirect_uris": [
-        "https://{domain}:{port}/session_logout/django"
-      ],
+      "post_logout_redirect_uris": "https://{domain}:{port}/session_logout/django",
       "frontchannel_logout_uri": "https://{domain}:{port}/fc_logout/django",
       "frontchannel_logout_session_required": true,
       "backchannel_logout_uri": "https://{domain}:{port}/bc_logout/django",
