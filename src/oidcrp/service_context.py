@@ -103,7 +103,7 @@ class ServiceContext(OidcContext):
         "httpc_params": None,
         'issuer': None,
         "kid": None,
-        "post_logout_redirect_uri": '',
+        "post_logout_redirect_uris": None,
         'provider_info': None,
         'redirect_uris': None,
         "requests_dir": None,
@@ -137,7 +137,7 @@ class ServiceContext(OidcContext):
         self.client_secret_expires_at = 0
         self.behaviour = {}
         self.provider_info = {}
-        self.post_logout_redirect_uri = ''
+        self.post_logout_redirect_uris = []
         self.redirect_uris = []
         self.register_args = {}
         self.registration_response = {}

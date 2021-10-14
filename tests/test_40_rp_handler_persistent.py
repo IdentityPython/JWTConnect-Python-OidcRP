@@ -247,7 +247,7 @@ class TestRPHandler(object):
         # only 2 things should have happened
 
         assert rph_1.hash2issuer['github'] == issuer
-        assert not client.client_get("service_context").callback.get('post_logout_redirect_uri')
+        assert not client.client_get("service_context").callback.get('post_logout_redirect_uris')
 
     def test_do_client_setup(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,

@@ -608,11 +608,11 @@ class TestRegistration(object):
 
     def test_config_with_post_logout(self):
         self.service.client_get("service_context").register_args[
-            'post_logout_redirect_uri'] = 'https://example.com/post_logout'
+            'post_logout_redirect_uris'] = ['https://example.com/post_logout']
         _req = self.service.construct()
         assert isinstance(_req, RegistrationRequest)
         assert len(_req) == 5
-        assert 'post_logout_redirect_uri' in _req
+        assert 'post_logout_redirect_uris' in _req
 
 
 def test_config_with_required_request_uri():
@@ -666,7 +666,7 @@ def test_config_logout_uri():
     assert len(_req) == 7
     assert 'request_uris' in _req
     assert 'frontchannel_logout_uri' in _req
-    assert 'post_logout_redirect_uri' in _req
+    assert 'post_logout_redirect_uris' in _req
 
 
 class TestUserInfo(object):
@@ -874,7 +874,7 @@ class TestEndSession(object):
             'redirect_uris': ['https://example.com/cli/authz_cb'],
             'issuer': self._iss, 'requests_dir': 'requests',
             'base_url': 'https://example.com/cli/',
-            'post_logout_redirect_uri': 'https://example.com/post_logout'
+            'post_logout_redirect_uris': ['https://example.com/post_logout']
         }
         services = {
             "checksession": {

@@ -160,7 +160,7 @@ def get_op_identifier_by_cb_uri(url: str):
     for k, v in current_app.rph.issuer2rp.items():
         _cntx = v.get_service_context()
         for endpoint in ("redirect_uris",
-                         "post_logout_redirect_uri",
+                         "post_logout_redirect_uris",
                          "frontchannel_logout_uri",
                          "backchannel_logout_uri"):
             if uri in _cntx.get(endpoint, []):

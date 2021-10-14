@@ -100,7 +100,7 @@ class Base:
 
 
 URIS = [
-    "redirect_uris", 'post_logout_redirect_uri', 'frontchannel_logout_uri',
+    "redirect_uris", 'post_logout_redirect_uris', 'frontchannel_logout_uri',
     'backchannel_logout_uri', 'issuer', 'base_url']
 
 
