@@ -59,9 +59,9 @@ class EndSession(Service):
             if _uri:
                 request_args['post_logout_redirect_uri'] = _uri
             else:
-                _uris = _context.callback.get("post_logout_redirect_uri", [])
-                if _uris:
-                    request_args['post_logout_redirect_uri'] = _uris[0]
+                _uri = _context.callback.get("post_logout_redirect_uri")
+                if _uri:
+                    request_args['post_logout_redirect_uri'] = _uri
 
         return request_args, {}
 
