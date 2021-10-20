@@ -44,9 +44,9 @@ def pick_redirect_uri(context,
 
         _response_mode = request_args.get('response_mode')
 
-        if _response_mode == 'form_post':
+        if _response_mode == 'form_post' or response_type == ["form_post"]:
             redirect_uri = context.callback['form_post']
-        elif response_type == 'code':
+        elif response_type == 'code' or response_type == ["code"]:
             redirect_uri = context.callback['code']
         else:
             redirect_uri = context.callback['implicit']
