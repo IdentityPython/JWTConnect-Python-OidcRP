@@ -1,3 +1,4 @@
+from inspect import currentframe
 import logging
 import sys
 import traceback
@@ -377,7 +378,6 @@ class RPHandler(object):
         """
 
         logger.debug(20 * "*" + " init_authorization " + 20 * "*")
-
         if not client:
             if state:
                 client = self.get_client_from_session_key(state)
@@ -791,8 +791,7 @@ class RPHandler(object):
 
         _context = client.client_get("service_context")
         try:
-            _sid_support = _context.get('provider_info')[
-                'backchannel_logout_session_supported']
+            _sid_support = _context.get('provider_info')['backchannel_logout_session_supported']
         except KeyError:
             try:
                 _sid_support = _context.get('provider_info')[
@@ -800,7 +799,7 @@ class RPHandler(object):
             except:
                 _sid_support = False
 
-        if _sid_support:
+        if _sid_support and _id_token:
             try:
                 sid = _id_token['sid']
             except KeyError:
