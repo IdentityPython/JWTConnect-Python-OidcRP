@@ -1,4 +1,6 @@
 import logging
+from typing import Optional
+from typing import Union
 
 from oidcmsg import oidc
 from oidcmsg.exception import MissingSigningKey
@@ -105,10 +107,16 @@ class UserInfo(Service):
                         "url": spec["endpoint"]
                     }
 
+        # Extension point
+        for meth in self.post_parse_process:
+            response = meth(response, _state_interface, kwargs['state'])
+
         _state_interface.store_item(response, 'user_info', kwargs['state'])
         return response
 
-    def gather_verify_arguments(self):
+    def gather_verify_arguments(self,
+                                response: Optional[Union[dict, Message]] = None,
+                                behaviour_args: Optional[dict] = None):
         """
         Need to add some information before running verify()
 

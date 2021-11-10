@@ -7,6 +7,7 @@ from cryptojwt.jws.utils import left_hash
 from cryptojwt.jwt import JWT
 from cryptojwt.key_jar import build_keyjar
 from cryptojwt.key_jar import init_key_jar
+from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.oidc import AccessTokenRequest
 from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationRequest
@@ -68,7 +69,7 @@ class TestAuthorization(object):
         }
         entity = Entity(services=DEFAULT_OIDC_SERVICES, keyjar=CLI_KEY, config=client_config)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'authorization')
+        self.service = entity.client_get("service", 'authorization')
 
     def test_construct(self):
         req_args = {
@@ -137,13 +138,12 @@ class TestAuthorization(object):
     def test_request_init_request_method(self):
         req_args = {'response_type': 'code', 'state': 'state'}
         self.service.endpoint = 'https://example.com/authorize'
-        _info = self.service.get_request_parameters(request_args=req_args,
-                                                    request_method='value')
+        _info = self.service.get_request_parameters(request_args=req_args, request_method='value')
         assert set(_info.keys()) == {'url', 'method', 'request'}
         msg = AuthorizationRequest().from_urlencoded(
             self.service.get_urlinfo(_info['url']))
-        assert set(msg.to_dict()) == {'client_id', 'redirect_uri', 'request',
-                                      'response_type', 'state', 'scope', 'nonce'}
+        assert set(msg.to_dict()) == {'client_id', 'redirect_uri', 'request', 'response_type',
+                                      'scope'}
         _jws = jws.factory(msg['request'])
         assert _jws
         _resp = _jws.verify_compact(
@@ -203,7 +203,7 @@ class TestAuthorization(object):
         idt = JWT(ISS_KEY, iss=ISS, lifetime=3600)
         payload = {
             'sub': '123456789', 'aud': ['client_id'],
-            'nonce': 'nonce'
+            'nonce': 'noice'
         }
         # have to calculate c_hash
         alg = 'RS256'
@@ -212,9 +212,8 @@ class TestAuthorization(object):
 
         _idt = idt.pack(payload)
         resp = AuthorizationResponse(state='state', code='code', id_token=_idt)
-        resp = self.service.parse_response(resp.to_urlencoded())
-        with pytest.raises(ParameterError):
-            self.service.update_service_context(resp, 'state2')
+        with pytest.raises(ValueError):
+            self.service.parse_response(resp.to_urlencoded())
 
     def test_update_service_context_with_idtoken_missing_nonce(self):
         req_args = {'response_type': 'code', 'state': 'state', 'nonce': 'nonce'}
@@ -230,9 +229,8 @@ class TestAuthorization(object):
 
         _idt = idt.pack(payload)
         resp = AuthorizationResponse(state='state', code='code', id_token=_idt)
-        resp = self.service.parse_response(resp.to_urlencoded())
-        with pytest.raises(ValueError):
-            self.service.update_service_context(resp, 'state')
+        with pytest.raises(MissingRequiredAttribute):
+            self.service.parse_response(resp.to_urlencoded())
 
     @pytest.mark.parametrize("allow_sign_alg_none", [True, False])
     def test_allow_unsigned_idtoken(self, allow_sign_alg_none):
@@ -241,14 +239,14 @@ class TestAuthorization(object):
         self.service.get_request_parameters(request_args=req_args)
         # Build an ID Token
         idt = JWT(ISS_KEY, iss=ISS, lifetime=3600, sign_alg='none')
-        payload = {'sub': '123456789', 'aud': ['client_id']}
+        payload = {'sub': '123456789', 'aud': ['client_id'], 'nonce': req_args['nonce']}
         _idt = idt.pack(payload)
         self.service.client_get("service_context").behaviour["verify_args"] = {
             "allow_sign_alg_none": allow_sign_alg_none
         }
         resp = AuthorizationResponse(state='state', code='code', id_token=_idt)
         if allow_sign_alg_none:
-            resp = self.service.parse_response(resp.to_urlencoded())
+            self.service.parse_response(resp.to_urlencoded())
         else:
             with pytest.raises(UnsupportedAlgorithm):
                 self.service.parse_response(resp.to_urlencoded())
@@ -267,7 +265,7 @@ class TestAuthorizationCallback(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'authorization')
+        self.service = entity.client_get("service", 'authorization')
 
     def test_construct_code(self):
         req_args = {
@@ -318,7 +316,7 @@ class TestAccessTokenRequest(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'accesstoken')
+        self.service = entity.client_get("service", 'accesstoken')
 
         # add some history
         auth_request = AuthorizationRequest(
@@ -409,7 +407,7 @@ class TestProviderInfo(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'provider_info')
+        self.service = entity.client_get("service", 'provider_info')
 
     def test_construct(self):
         _req = self.service.construct()
@@ -601,7 +599,7 @@ class TestRegistration(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'registration')
+        self.service = entity.client_get("service", 'registration')
 
     def test_construct(self):
         _req = self.service.construct()
@@ -616,14 +614,59 @@ class TestRegistration(object):
         assert len(_req) == 5
         assert 'post_logout_redirect_uris' in _req
 
-    def test_config_with_required_request_uri(self):
-        _pi = self.service.client_get("service_context").provider_info
-        _pi['require_request_uri_registration'] = True
-        self.service.client_get("service_context").provider_info = _pi
-        _req = self.service.construct()
-        assert isinstance(_req, RegistrationRequest)
-        assert len(_req) == 5
-        assert 'request_uris' in _req
+
+def test_config_with_required_request_uri():
+    client_config = {
+        'client_id': 'client_id', 'client_secret': 'a longesh password',
+        'redirect_uris': ['https://example.com/cli/authz_cb'],
+        'issuer': ISS,
+        'requests_dir': 'requests',
+        'base_url': 'https://example.com/cli/',
+        'client_preferences': {
+            "request_uri_usable": True
+        }
+    }
+    entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
+    entity.client_get("service_context").issuer = 'https://example.com'
+    service = entity.client_get("service", 'registration')
+    _context = service.client_get("service_context")
+
+    _pi = _context.provider_info
+    _pi['require_request_uri_registration'] = True
+    _context.config["client_preferences"]["request_uri_usable"] = True
+    _req = service.construct()
+    assert isinstance(_req, RegistrationRequest)
+    assert len(_req) == 5
+    assert 'request_uris' in _req
+
+
+def test_config_logout_uri():
+    client_config = {
+        'client_id': 'client_id', 'client_secret': 'a longesh password',
+        'redirect_uris': ['https://example.com/cli/authz_cb'],
+        'issuer': ISS,
+        'requests_dir': 'requests',
+        'base_url': 'https://example.com/cli/',
+        'client_preferences': {
+            "request_uri_usable": True
+        }
+    }
+    entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
+    entity.client_get("service_context").issuer = 'https://example.com'
+    service = entity.client_get("service", 'registration')
+    _context = service.client_get("service_context")
+
+    _pi = _context.provider_info
+    _pi['require_request_uri_registration'] = True
+    _pi['frontchannel_logout_supported'] = True
+    _context.config["client_preferences"]["request_uri_usable"] = True
+    _context.config["client_preferences"]["frontchannel_logout_usable"] = True
+    _req = service.construct()
+    assert isinstance(_req, RegistrationRequest)
+    assert len(_req) == 7
+    assert 'request_uris' in _req
+    assert 'frontchannel_logout_uri' in _req
+    assert 'post_logout_redirect_uris' in _req
 
 
 class TestUserInfo(object):
@@ -638,7 +681,7 @@ class TestUserInfo(object):
         }
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'userinfo')
+        self.service = entity.client_get("service", 'userinfo')
 
         entity.client_get("service_context").behaviour = {
             'userinfo_signed_response_alg': 'RS256',
@@ -780,7 +823,7 @@ class TestCheckSession(object):
             }}
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'check_session')
+        self.service = entity.client_get("service", 'check_session')
 
     def test_construct(self):
         _state_interface = self.service.client_get("service_context").state
@@ -809,7 +852,7 @@ class TestCheckID(object):
             }}
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'check_id')
+        self.service = entity.client_get("service", 'check_id')
 
     def test_construct(self):
         _state_interface = self.service.client_get("service_context").state
@@ -839,7 +882,7 @@ class TestEndSession(object):
             }}
         entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
         entity.client_get("service_context").issuer = 'https://example.com'
-        self.service = entity.client_get("service",'end_session')
+        self.service = entity.client_get("service", 'end_session')
 
     def test_construct(self):
         self.service.client_get("service_context").state.store_item(
@@ -847,9 +890,8 @@ class TestEndSession(object):
             'token_response', 'abcde')
         _req = self.service.construct(state='abcde')
         assert isinstance(_req, EndSessionRequest)
-        assert len(_req) == 3
-        assert set(_req.keys()) == {'state', 'id_token_hint',
-                                    'post_logout_redirect_uri'}
+        assert len(_req) == 2
+        assert set(_req.keys()) == {'state', 'id_token_hint'}
 
 
 def test_authz_service_conf():
@@ -880,7 +922,7 @@ def test_authz_service_conf():
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config, services=services)
     entity.client_get("service_context").issuer = 'https://example.com'
-    service = entity.client_get("service",'authorization')
+    service = entity.client_get("service", 'authorization')
 
     req = service.construct()
     assert 'claims' in req
@@ -900,7 +942,7 @@ def test_add_jwks_uri_or_jwks_0():
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
     entity.client_get("service_context").issuer = 'https://example.com'
-    service = entity.client_get("service",'registration')
+    service = entity.client_get("service", 'registration')
 
     req_args, post_args = add_jwks_uri_or_jwks({}, service)
     assert req_args['jwks_uri'] == 'https://example.com/jwks/jwks.json'
@@ -919,7 +961,7 @@ def test_add_jwks_uri_or_jwks_1():
         }
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config, services=DEFAULT_OIDC_SERVICES)
-    service = entity.client_get("service",'registration')
+    service = entity.client_get("service", 'registration')
 
     req_args, post_args = add_jwks_uri_or_jwks({}, service)
     assert req_args['jwks_uri'] == 'https://example.com/jwks/jwks.json'
@@ -938,7 +980,7 @@ def test_add_jwks_uri_or_jwks_2():
     }
     entity = Entity(keyjar=CLI_KEY, config=client_config,
                     jwks_uri='https://example.com/jwks/jwks.json', services=DEFAULT_OIDC_SERVICES)
-    service = entity.client_get("service",'registration')
+    service = entity.client_get("service", 'registration')
 
     req_args, post_args = add_jwks_uri_or_jwks({}, service)
     assert req_args['jwks_uri'] == 'https://example.com/jwks/jwks.json'

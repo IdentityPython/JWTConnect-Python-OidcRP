@@ -247,7 +247,7 @@ class TestRPHandler(object):
         # only 2 things should have happened
 
         assert rph_1.hash2issuer['github'] == issuer
-        assert not client.client_get("service_context").post_logout_redirect_uris
+        assert not client.client_get("service_context").callback.get('post_logout_redirect_uris')
 
     def test_do_client_setup(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
@@ -274,23 +274,6 @@ class TestRPHandler(object):
             assert _srv.endpoint == _endp
 
         assert rph_1.hash2issuer['github'] == _context.get('issuer')
-
-    def test_create_callbacks(self):
-        rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
-                          keyjar=CLI_KEY, module_dirs=['oidc'])
-
-        cb = rph_1.create_callbacks('https://op.example.com/')
-
-        assert set(cb.keys()) == {'code', 'implicit', 'form_post', '__hex'}
-        _hash = cb['__hex']
-
-        assert cb['code'] == 'https://example.com/rp/authz_cb/{}'.format(_hash)
-        assert cb['implicit'] == 'https://example.com/rp/authz_im_cb/{}'.format(_hash)
-        assert cb['form_post'] == 'https://example.com/rp/authz_fp_cb/{}'.format(_hash)
-
-        assert list(rph_1.hash2issuer.keys()) == [_hash]
-
-        assert rph_1.hash2issuer[_hash] == 'https://op.example.com/'
 
     def test_begin(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
@@ -376,7 +359,7 @@ class TestRPHandler(object):
                                                      'token_endpoint')
         assert authn_method == 'client_secret_post'
 
-    def test_get_access_token(self):
+    def test_get_tokens(self):
         rph_1 = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
                           keyjar=CLI_KEY, module_dirs=['oidc'])
 
@@ -418,7 +401,7 @@ class TestRPHandler(object):
             resp = rph_1.finalize_auth(client, _session['iss'],
                                        auth_response.to_dict())
 
-            resp = rph_1.get_access_token(res['state'], client)
+            resp = rph_1.get_tokens(res['state'], client)
             assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
                                         'token_type', '__verified_id_token',
                                         '__expires_at'}

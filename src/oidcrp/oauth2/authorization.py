@@ -7,7 +7,7 @@ from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.time_util import time_sans_frac
 
 from oidcrp.oauth2.utils import get_state_parameter
-from oidcrp.oauth2.utils import pick_redirect_uris
+from oidcrp.oauth2.utils import pre_construct_pick_redirect_uri
 from oidcrp.oauth2.utils import set_state_parameter
 from oidcrp.service import Service
 
@@ -32,7 +32,7 @@ class Authorization(Service):
     def __init__(self, client_get, client_authn_factory=None, conf=None):
         Service.__init__(self, client_get,
                          client_authn_factory=client_authn_factory, conf=conf)
-        self.pre_construct.extend([pick_redirect_uris, set_state_parameter])
+        self.pre_construct.extend([pre_construct_pick_redirect_uri, set_state_parameter])
         self.post_construct.append(self.store_auth_request)
 
     def update_service_context(self, resp, key='', **kwargs):

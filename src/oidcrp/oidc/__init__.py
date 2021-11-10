@@ -2,6 +2,7 @@ import json
 import logging
 
 from oidcrp.client_auth import BearerHeader
+from oidcrp.oidc.registration import CALLBACK_URIS
 
 try:
     from json import JSONDecodeError
@@ -111,6 +112,15 @@ class RP(oauth2.Client):
         oauth2.Client.__init__(self, client_authn_factory=client_authn_factory,
                                keyjar=keyjar, verify_ssl=verify_ssl, config=config,
                                httplib=httplib, services=_srvs, httpc_params=httpc_params)
+
+        _context = self.get_service_context()
+        if _context.callback is None:
+            _context.callback = {}
+
+        for _cb in CALLBACK_URIS:
+            _uri = config.get(_cb)
+            if _uri:
+                _context.callback[_cb] = _uri
 
     def fetch_distributed_claims(self, userinfo, callback=None):
         """

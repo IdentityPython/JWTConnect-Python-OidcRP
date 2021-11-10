@@ -1,14 +1,18 @@
 import logging
+from typing import Optional
+from typing import Union
 
+from oidcmsg import oauth2
 from oidcmsg import oidc
+from oidcmsg.exception import MissingRequiredAttribute
+from oidcmsg.message import Message
 from oidcmsg.oidc import make_openid_request
 from oidcmsg.oidc import verified_claim_name
 from oidcmsg.time_util import time_sans_frac
 from oidcmsg.time_util import utc_time_sans_frac
 
-from oidcrp.exception import ParameterError
 from oidcrp.oauth2 import authorization
-from oidcrp.oauth2.utils import pick_redirect_uris
+from oidcrp.oauth2.utils import pre_construct_pick_redirect_uri
 from oidcrp.oidc import IDT2REG
 from oidcrp.oidc.utils import construct_request_uri
 from oidcrp.oidc.utils import request_object_encryption
@@ -28,7 +32,7 @@ class Authorization(authorization.Authorization):
         authorization.Authorization.__init__(self, client_get,
                                              client_authn_factory, conf=conf)
         self.default_request_args = {'scope': ['openid']}
-        self.pre_construct = [self.set_state, pick_redirect_uris,
+        self.pre_construct = [self.set_state, pre_construct_pick_redirect_uri,
                               self.oidc_pre_construct]
         self.post_construct = [self.oidc_post_construct]
 
@@ -47,24 +51,32 @@ class Authorization(authorization.Authorization):
 
     def update_service_context(self, resp, key='', **kwargs):
         _context = self.client_get("service_context")
-        try:
-            _idt = resp[verified_claim_name('id_token')]
-        except KeyError:
-            pass
-        else:
-            # If there is a verified ID Token then we have to do nonce
-            # verification
-            try:
-                if _context.state.get_state_by_nonce(_idt['nonce']) != key:
-                    raise ParameterError('Someone has messed with "nonce"')
-            except KeyError:
-                raise ValueError('Missing nonce value')
-
-            _context.state.store_sub2state(_idt['sub'], key)
 
         if 'expires_in' in resp:
             resp['__expires_at'] = time_sans_frac() + int(resp['expires_in'])
         _context.state.store_item(resp.to_json(), 'auth_response', key)
+
+    def get_request_from_response(self, response):
+        _context = self.client_get("service_context")
+        return _context.state.get_item(oauth2.AuthorizationRequest, 'auth_request',
+                                       response["state"])
+
+    def post_parse_response(self, response, **kwargs):
+        response = authorization.Authorization.post_parse_response(self, response, **kwargs)
+
+        _idt = response.get(verified_claim_name('id_token'))
+        if _idt:
+            # If there is a verified ID Token then we have to do nonce
+            # verification.
+            _request = self.get_request_from_response(response)
+            _req_nonce = _request.get('nonce')
+            if _req_nonce:
+                _id_token_nonce = _idt.get('nonce')
+                if not _id_token_nonce:
+                    raise MissingRequiredAttribute('nonce')
+                elif _req_nonce != _id_token_nonce:
+                    raise ValueError('Invalid nonce')
+        return response
 
     def oidc_pre_construct(self, request_args=None, post_args=None, **kwargs):
         _context = self.client_get("service_context")
@@ -148,15 +160,18 @@ class Authorization(authorization.Authorization):
         fid.close()
         return _webname
 
-    def construct_request_parameter(self, req, request_method, audience=None, expires_in=0,
+    def construct_request_parameter(self, req, request_param, audience=None, expires_in=0,
                                     **kwargs):
-        """Construct a request parameter"""
+        """ Construct a request parameter """
         alg = self.get_request_object_signing_alg(**kwargs)
         kwargs["request_object_signing_alg"] = alg
 
         _context = self.client_get("service_context")
         if "keys" not in kwargs and alg and alg != "none":
             kwargs["keys"] = _context.keyjar
+
+        if alg == "none":
+            kwargs["keys"] = []
 
         _srv_cntx = _context
 
@@ -176,12 +191,15 @@ class Authorization(authorization.Authorization):
         if expires_in:
             req['exp'] = utc_time_sans_frac() + int(expires_in)
 
-        _req = make_openid_request(req, **kwargs)
+        _mor_args = {k: kwargs[k] for k in ["keys", "issuer", "request_object_signing_alg", "recv",
+                                            "with_jti", "lifetime"] if k in kwargs}
+
+        _req = make_openid_request(req, **_mor_args)
 
         # Should the request be encrypted
         _req = request_object_encryption(_req, _context, **kwargs)
 
-        if request_method == "request":
+        if request_param == "request":
             req["request"] = _req
         else:  # MUST be request_uri
             req["request_uri"] = self.store_request_on_file(_req, **kwargs)
@@ -204,19 +222,28 @@ class Authorization(authorization.Authorization):
             if 'prompt' not in req:
                 req['prompt'] = 'consent'
 
-        try:
-            _request_method = kwargs['request_param']
-        except KeyError:
-            pass
-        else:
-            del kwargs['request_param']
-
-            self.construct_request_parameter(req, _request_method, **kwargs)
-
         _context.state.store_item(req, 'auth_request', req['state'])
+
+        _request_param = kwargs.get('request_param')
+        if _request_param:
+            del kwargs['request_param']
+            # local_dir, base_path
+            _config = _context.get('config')
+            kwargs["local_dir"] = _config.get('local_dir', './requests')
+            kwargs["base_path"] = _context.get('base_url') + '/' + "requests"
+            self.construct_request_parameter(req, _request_param, **kwargs)
+            # removed all arguments except request/request_uri and the required
+            _leave = ['request', 'request_uri']
+            _leave.extend(req.required_parameters())
+            _keys = [k for k in req.keys() if k not in _leave]
+            for k in _keys:
+                del req[k]
+
         return req
 
-    def gather_verify_arguments(self):
+    def gather_verify_arguments(self,
+                                response: Optional[Union[dict, Message]] = None,
+                                behaviour_args: Optional[dict] = None):
         """
         Need to add some information before running verify()
 

@@ -1,4 +1,14 @@
+import logging
+from typing import Optional
+from typing import Union
+
 from oidcmsg.exception import MissingParameter
+from oidcmsg.exception import MissingRequiredAttribute
+from oidcmsg.message import Message
+
+from oidcrp.service import Service
+
+logger = logging.getLogger(__name__)
 
 
 def get_state_parameter(request_args, kwargs):
@@ -14,35 +24,48 @@ def get_state_parameter(request_args, kwargs):
     return _state
 
 
-def pick_redirect_uris(request_args=None, service=None, **kwargs):
-    """Pick one redirect_uri base on response_mode out of a list of such."""
-    _context = service.client_get("service_context")
+def pick_redirect_uri(context,
+                      request_args: Optional[Union[Message, dict]] = None,
+                      response_type: Optional[str] = ''):
+    if request_args is None:
+        request_args = {}
 
     if 'redirect_uri' in request_args:
-        return request_args, {}
+        return request_args["redirect_uri"]
 
-    _callback = _context.callback
-    if _callback:
-        try:
-            _response_type = request_args['response_type']
-        except KeyError:
-            _response_type = _context.behaviour['response_types'][0]
-            request_args['response_type'] = _response_type
+    if context.redirect_uris:
+        redirect_uri = context.redirect_uris[0]
+    elif context.callback:
+        if not response_type:
+            _conf_resp_types = context.behaviour.get('response_types', [])
+            response_type = request_args.get('response_type')
+            if not response_type and _conf_resp_types:
+                response_type = _conf_resp_types[0]
 
-        try:
-            _response_mode = request_args['response_mode']
-        except KeyError:
-            _response_mode = ''
+        _response_mode = request_args.get('response_mode')
 
-        if _response_mode == 'form_post':
-            request_args['redirect_uri'] = _callback['form_post']
-        elif _response_type == 'code':
-            request_args['redirect_uri'] = _callback['code']
+        if _response_mode == 'form_post' or response_type == ["form_post"]:
+            redirect_uri = context.callback['form_post']
+        elif response_type == 'code' or response_type == ["code"]:
+            redirect_uri = context.callback['code']
         else:
-            request_args['redirect_uri'] = _callback['implicit']
-    else:
-        request_args['redirect_uri'] = _context.redirect_uris[0]
+            redirect_uri = context.callback['implicit']
 
+        logger.debug(
+            f"pick_redirect_uris: response_type={response_type}, response_mode={_response_mode}, "
+            f"redirect_uri={redirect_uri}")
+    else:
+        logger.error("No redirect_uri")
+        raise MissingRequiredAttribute('redirect_uri')
+
+    return redirect_uri
+
+
+def pre_construct_pick_redirect_uri(request_args: Optional[Union[Message, dict]] = None,
+                                    service: Optional[Service] = None, **kwargs):
+    _context = service.client_get("service_context")
+    request_args["redirect_uri"] = pick_redirect_uri(_context,
+                                                     request_args=request_args)
     return request_args, {}
 
 

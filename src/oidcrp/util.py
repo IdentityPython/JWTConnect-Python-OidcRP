@@ -9,6 +9,7 @@ import os
 import ssl
 import string
 import sys
+from typing import Optional
 from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
@@ -534,17 +535,17 @@ def add_path(url, path):
             return '{}/{}'.format(url, path)
 
 
-def load_registration_response(client):
+def load_registration_response(client, request_args=None):
     """
     If the client has been statically registered that information
     must be provided during the configuration. If expected to be
-    done dynamically. This method will do dynamic client registration.
+    done dynamically this method will do dynamic client registration.
 
     :param client: A :py:class:`oidcrp.oidc.Client` instance
     """
     if not client.client_get("service_context").get('client_id'):
         try:
-            response = client.do_request('registration')
+            response = client.do_request('registration', request_args=request_args)
         except KeyError:
             raise ConfigurationError('No registration info')
         except Exception as err:
@@ -553,26 +554,3 @@ def load_registration_response(client):
         else:
             if 'error' in response:
                 raise OidcServiceError(response.to_json())
-
-
-def dynamic_provider_info_discovery(client):
-    """
-    This is about performing dynamic Provider Info discovery
-
-    :param client: A :py:class:`oidcrp.oidc.Client` instance
-    """
-    try:
-        client.get_service('provider_info')
-    except KeyError:
-        raise ConfigurationError(
-            'Can not do dynamic provider info discovery')
-    else:
-        _context = client.client_get("service_context")
-        try:
-            _context.set('issuer', _context.config['srv_discovery_url'])
-        except KeyError:
-            pass
-
-        response = client.do_request('provider_info')
-        if is_error_message(response):
-            raise OidcServiceError(response['error'])

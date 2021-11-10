@@ -18,6 +18,10 @@
         <dd>{{ url }}</dd>
     {% endfor %}
 </dl>
+<dl>
+    <dt>ID Token</dt>
+    <dd>{{ id_token }}</dd>
+</dl>
 <h3>User information</h3>
 <dl>
     {% for key, value in userinfo.items() %}

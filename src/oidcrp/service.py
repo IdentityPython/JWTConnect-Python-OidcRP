@@ -88,8 +88,9 @@ class Service(ImpExp):
         self.pre_construct = []
         self.post_construct = []
         self.construct_extra_headers = []
+        self.post_parse_process = []
 
-    def gather_request_args(self, **kwargs):
+    def gather_request_args(self,**kwargs):
         """
         Go through the attributes that the message class can contain and
         add values if they are missing but exists in the client info or
@@ -204,8 +205,7 @@ class Service(ImpExp):
         # run the pre_construct methods. Will return a possibly new
         # set of request arguments but also a set of arguments to
         # be used by the post_construct methods.
-        request_args, post_args = self.do_pre_construct(request_args,
-                                                        **kwargs)
+        request_args, post_args = self.do_pre_construct(request_args, **kwargs)
 
         # If 'state' appears among the keyword argument and is not
         # expected to appear in the request, remove it.
@@ -221,6 +221,10 @@ class Service(ImpExp):
         # initiate the request as in an instance of the self.msg_type
         # message type
         request = self.msg_type(**_args)
+
+        _behaviour_args = kwargs.get("behaviour_args")
+        if _behaviour_args:
+            post_args.update(_behaviour_args)
 
         return self.do_post_construct(request, **post_args)
 
@@ -340,7 +344,7 @@ class Service(ImpExp):
         return _headers
 
     def get_request_parameters(self, request_args=None, method="",
-                               request_body_type="", authn_method='', **kwargs):
+                               request_body_type="", authn_method='', **kwargs) -> dict:
         """
         Builds the request message and constructs the HTTP headers.
 
@@ -440,7 +444,9 @@ class Service(ImpExp):
         """
         return response
 
-    def gather_verify_arguments(self):
+    def gather_verify_arguments(self,
+                                response: Optional[Union[dict, Message]] = None,
+                                behaviour_args: Optional[dict] = None):
         """
         Need to add some information before running verify()
 
@@ -497,7 +503,11 @@ class Service(ImpExp):
                 raise
         return resp
 
-    def parse_response(self, info, sformat="", state="", **kwargs):
+    def parse_response(self, info,
+                       sformat: Optional[str] = "",
+                       state: Optional[str] = "",
+                       behaviour_args: Optional[dict] = None,
+                       **kwargs):
         """
         This the start of a pipeline that will:
 
@@ -509,8 +519,8 @@ class Service(ImpExp):
             3 runs the do_post_parse_response method iff the response was not
               an error response.
 
-        :param info: The response, can be either in a JSON or an urlencoded
-            format
+        :param behaviour_args:
+        :param info: The response, can be either in a JSON or an urlencoded format
         :param sformat: Which serialization that was used
         :param state: The state
         :param kwargs: Extra key word arguments
@@ -550,11 +560,10 @@ class Service(ImpExp):
         if is_error_message(resp):
             LOGGER.debug('Error response: %s', resp)
         else:
-            vargs = self.gather_verify_arguments()
+            vargs = self.gather_verify_arguments(response=resp, behaviour_args=behaviour_args)
             LOGGER.debug("Verify response with %s", vargs)
             try:
-                # verify the message. If something is wrong an exception is
-                # thrown
+                # verify the message. If something is wrong an exception is thrown
                 resp.verify(**vargs)
             except Exception as err:
                 LOGGER.error(
