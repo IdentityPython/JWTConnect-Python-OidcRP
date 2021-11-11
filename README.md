@@ -1,8 +1,8 @@
 # oidcrp
 High level interface to the OIDC RP library
 
-oidcrp represents the 4th layer in the
-JWTConnect stack (cryptojwt, oidcmsg, oidcservice, oidcrp)
+oidcrp represents the 3rd layer in the
+JWTConnect stack (cryptojwt, oidcmsg, oidcrp)
 
 See the documentation at http://oidcrp.readthedocs.io/en/latest/ .
 
