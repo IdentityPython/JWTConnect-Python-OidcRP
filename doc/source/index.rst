@@ -4,6 +4,10 @@
 Welcome to oidcrp's documentation!
 ==================================
 
+.. image:: _images/oid-l-certification-mark-l-rgb-150dpi-90mm-300x157.png
+  :width: 300
+  :alt: OIDC Certified
+
 .. toctree::
    :maxdepth: 2
 
