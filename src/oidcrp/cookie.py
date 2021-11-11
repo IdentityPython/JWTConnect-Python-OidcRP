@@ -137,7 +137,7 @@ def make_cookie(name, load, seed, expire=0, domain="", path="", timestamp="",
     :param enc_key: The key to use for cookie encryption.
     :type enc_key: byte string
     :param secure: A secure cookie is only sent to the server with an encrypted request over the
-    HTTPS protocol.
+        HTTPS protocol.
     :type secure: boolean
     :param http_only: HttpOnly cookies are inaccessible to JavaScript's Document.cookie API
     :type http_only: boolean
