@@ -1,4 +1,4 @@
-import hashlib
+from inspect import currentframe
 import logging
 import sys
 import traceback
@@ -10,6 +10,7 @@ from cryptojwt.key_jar import init_key_jar
 from cryptojwt.utils import as_bytes
 from oidcmsg import verified_claim_name
 from oidcmsg.exception import MessageException
+from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.exception import NotForMe
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oauth2 import is_error_message
@@ -18,6 +19,7 @@ from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import Claims
 from oidcmsg.oidc import OpenIDSchema
+from oidcmsg.oidc import RegistrationRequest
 from oidcmsg.oidc.session import BackChannelLogoutRequest
 from oidcmsg.time_util import time_sans_frac
 
@@ -27,8 +29,9 @@ from .defaults import DEFAULT_OIDC_SERVICES
 from .defaults import DEFAULT_RP_KEY_DEFS
 from .exception import OidcServiceError
 from .oauth2 import Client
+from .oauth2 import dynamic_provider_info_discovery
+from .oauth2.utils import pick_redirect_uri
 from .util import add_path
-from .util import dynamic_provider_info_discovery
 from .util import load_registration_response
 from .util import rndstr
 
@@ -85,7 +88,7 @@ class RPHandler(object):
         else:
             self.client_configs = client_configs
 
-        # keep track on which RP instance that serves with OP
+        # keep track on which RP instance that serves which OP
         self.issuer2rp = {}
         self.hash2issuer = {}
         self.httplib = http_lib
@@ -149,6 +152,9 @@ class RPHandler(object):
         :param issuer: An issuer ID
         :return: A Client instance
         """
+
+        logger.debug(20 * "*" + " init_client " + 20 * "*")
+
         try:
             _cnf = self.pick_config(issuer)
         except KeyError:
@@ -180,16 +186,21 @@ class RPHandler(object):
         _context.jwks_uri = self.jwks_uri
         return client
 
-    def do_provider_info(self, client=None, state=''):
+    def do_provider_info(self,
+                         client: Optional[Client]=None,
+                         state: Optional[str]='',
+                         behaviour_args: Optional[dict]=None) -> str:
         """
         Either get the provider info from configuration or through dynamic
         discovery.
 
+        :param behaviour_args:
         :param client: A Client instance
         :param state: A key by which the state of the session can be
             retrieved
         :return: issuer ID
         """
+        logger.debug(20 * "*" + " do_provider_info " + 20 * "*")
 
         if not client:
             if state:
@@ -199,7 +210,7 @@ class RPHandler(object):
 
         _context = client.client_get("service_context")
         if not _context.get('provider_info'):
-            dynamic_provider_info_discovery(client)
+            dynamic_provider_info_discovery(client, behaviour_args=behaviour_args)
             return _context.get('provider_info')['issuer']
         else:
             _pi = _context.get('provider_info')
@@ -235,14 +246,22 @@ class RPHandler(object):
             except KeyError:
                 return _context.get('issuer')
 
-    def do_client_registration(self, client=None, iss_id='', state=''):
+    def do_client_registration(self, client=None,
+                               iss_id: Optional[str] = '',
+                               state: Optional[str] = '',
+                               request_args: Optional[dict] = None,
+                               behaviour_args: Optional[dict] = None):
         """
         Prepare for and do client registration if configured to do so
 
+        :param iss_id: Issuer ID
+        :param behaviour_args: To fine tune behaviour
         :param client: A Client instance
         :param state: A key by which the state of the session can be
             retrieved
         """
+
+        logger.debug(20 * "*" + " do_client_registration " + 20 * "*")
 
         if not client:
             if state:
@@ -252,32 +271,41 @@ class RPHandler(object):
 
         _context = client.client_get("service_context")
         _iss = _context.get('issuer')
-        if not _context.get('redirect_uris'):
-            # Create the necessary callback URLs
-            # as a side effect self.hash2issuer is set
-            callbacks = self.create_callbacks(_iss)
-
-            _context.set('redirect_uris', [
-                v for k, v in callbacks.items() if not k.startswith('__')])
-            _context.set('callbacks', callbacks)
-        else:
-            self.hash2issuer[iss_id] = _iss
+        self.hash2issuer[iss_id] = _iss
 
         # This should only be interesting if the client supports Single Log Out
-        if _context.post_logout_redirect_uris is None:
-            _context.post_logout_redirect_uris = [self.base_url]
+        # if _context.callback.get("post_logout_redirect_uri") is None:
+        #     _context.callback["post_logout_redirect_uri"] = [self.base_url]
 
-        if not _context.client_id:
-            load_registration_response(client)
+        if not _context.client_id:  # means I have to do dynamic client registration
+            if request_args is None:
+                request_args = {}
 
-    def add_callbacks(self, service_context):
-        _callbacks = self.create_callbacks(service_context.get('provider_info')['issuer'])
-        service_context.set('redirect_uris', [
-            v for k, v in _callbacks.items() if not k.startswith('__')])
-        service_context.set('callbacks', _callbacks)
-        return _callbacks
+            if behaviour_args:
+                _params = RegistrationRequest().parameters()
+                request_args.update({k: v for k, v in behaviour_args.items() if k in _params})
 
-    def client_setup(self, iss_id='', user=''):
+            load_registration_response(client, request_args=request_args)
+
+    def do_webfinger(self, user: str) -> Client:
+        """
+        Does OpenID Provider Issuer discovery using webfinger.
+
+        :param user: Identifier for the target End-User that is the subject of the discovery
+            request.
+        :return: A Client instance
+        """
+
+        logger.debug(20 * "*" + " do_webfinger " + 20 * "*")
+
+        temporary_client = self.init_client('')
+        temporary_client.do_request('webfinger', resource=user)
+        return temporary_client
+
+    def client_setup(self,
+                     iss_id: Optional[str] = '',
+                     user: Optional[str] = '',
+                     behaviour_args: Optional[dict] = None) -> Client:
         """
         First if no issuer ID is given then the identifier for the user is
         used by the webfinger service to try to find the issuer ID.
@@ -286,10 +314,13 @@ class RPHandler(object):
         the necessary information for the client to be able to communicate
         with the OP/AS that has the provided issuer ID.
 
+        :param behaviour_args: To fine tune behaviour
         :param iss_id: The issuer ID
         :param user: A user identifier
         :return: A :py:class:`oidcrp.oidc.Client` instance
         """
+
+        logger.debug(20 * "*" + " client_setup " + 20 * "*")
 
         logger.info('client_setup: iss_id={}, user={}'.format(iss_id, user))
 
@@ -298,8 +329,7 @@ class RPHandler(object):
                 raise ValueError('Need issuer or user')
 
             logger.debug("Connecting to previously unknown OP")
-            temporary_client = self.init_client('')
-            temporary_client.do_request('webfinger', resource=user)
+            temporary_client = self.do_webfinger(user)
         else:
             temporary_client = None
 
@@ -315,46 +345,39 @@ class RPHandler(object):
             return client
 
         logger.debug("Get provider info")
-        issuer = self.do_provider_info(client)
+        issuer = self.do_provider_info(client, behaviour_args=behaviour_args)
 
         logger.debug("Do client registration")
-        self.do_client_registration(client, iss_id)
+        self.do_client_registration(client, iss_id, behaviour_args=behaviour_args)
 
         self.issuer2rp[issuer] = client
         return client
 
-    def create_callbacks(self, issuer):
-        """
-        To mitigate some security issues the redirect_uris should be OP/AS
-        specific. This method creates a set of redirect_uris unique to the
-        OP/AS.
+    def _get_response_type(self, context, req_args: Optional[dict] = None):
+        if req_args:
+            return req_args.get("response_type", context.get('behaviour')['response_types'][0])
+        else:
+            return context.get('behaviour')['response_types'][0]
 
-        :param issuer: Issuer ID
-        :return: A set of redirect_uris
-        """
-        _hash = hashlib.sha256()
-        _hash.update(self.hash_seed)
-        _hash.update(as_bytes(issuer))
-        _hex = _hash.hexdigest()
-        self.hash2issuer[_hex] = issuer
-        return {
-            'code': "{}/authz_cb/{}".format(self.base_url, _hex),
-            'implicit': "{}/authz_im_cb/{}".format(self.base_url, _hex),
-            'form_post': "{}/authz_fp_cb/{}".format(self.base_url, _hex),
-            '__hex': _hex
-        }
-
-    def init_authorization(self, client=None, state='', req_args=None):
+    def init_authorization(self,
+                           client: Optional[Client] = None,
+                           state: Optional[str] = '',
+                           req_args: Optional[dict] = None,
+                           behaviour_args: Optional[dict] = None) -> dict:
         """
         Constructs the URL that will redirect the user to the authorization
         endpoint of the OP/AS.
 
+        :param behaviour_args:
+        :param state:
         :param client: A Client instance
         :param req_args: Non-default Request arguments
         :return: A dictionary with 2 keys: **url** The authorization redirect
             URL and **state** the key to the session information in the
             state data store.
         """
+
+        logger.debug(20 * "*" + " init_authorization " + 20 * "*")
         if not client:
             if state:
                 client = self.get_client_from_session_key(state)
@@ -364,10 +387,13 @@ class RPHandler(object):
         _context = client.client_get("service_context")
 
         _nonce = rndstr(24)
+        _response_type = self._get_response_type(_context, req_args)
         request_args = {
-            'redirect_uri': _context.get('redirect_uris')[0],
+            'redirect_uri': pick_redirect_uri(_context,
+                                              request_args=req_args,
+                                              response_type=_response_type),
             'scope': _context.get('behaviour')['scope'],
-            'response_type': _context.get('behaviour')['response_types'][0],
+            'response_type': _response_type,
             'nonce': _nonce
         }
 
@@ -387,12 +413,16 @@ class RPHandler(object):
 
         logger.debug('Authorization request args: {}'.format(request_args))
 
+        # if behaviour_args and "request_param" not in behaviour_args:
+        #     _pi = _context.get("provider_info")
+
         _srv = client.get_service('authorization')
-        _info = _srv.get_request_parameters(request_args=request_args)
+        _info = _srv.get_request_parameters(request_args=request_args,
+                                            behaviour_args=behaviour_args)
         logger.debug('Authorization info: {}'.format(_info))
         return {'url': _info['url'], 'state': _state}
 
-    def begin(self, issuer_id='', user_id=''):
+    def begin(self, issuer_id='', user_id='', req_args=None, behaviour_args=None):
         """
         This is the first of the 3 high level methods that most users of this
         library should confine them self to use.
@@ -401,6 +431,8 @@ class RPHandler(object):
         Once it has the client it will construct an Authorization
         request.
 
+        :param behaviour_args:
+        :param req_args:
         :param issuer_id: Issuer ID
         :param user_id: A user identifier
         :return: A dictionary containing **url** the URL that will redirect the
@@ -409,10 +441,10 @@ class RPHandler(object):
         """
 
         # Get the client instance that has been assigned to this issuer
-        client = self.client_setup(issuer_id, user_id)
+        client = self.client_setup(issuer_id, user_id, behaviour_args=behaviour_args)
 
         try:
-            res = self.init_authorization(client)
+            res = self.init_authorization(client, req_args=req_args, behaviour_args=behaviour_args)
         except Exception:
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
@@ -447,7 +479,8 @@ class RPHandler(object):
         """
         if endpoint == 'token_endpoint':
             try:
-                am = client.client_get("service_context").get('behaviour')['token_endpoint_auth_method']
+                am = client.client_get("service_context").get('behaviour')[
+                    'token_endpoint_auth_method']
             except KeyError:
                 return ''
             else:
@@ -456,7 +489,7 @@ class RPHandler(object):
                 else:  # a list
                     return am[0]
 
-    def get_access_token(self, state, client: Optional[Client] = None):
+    def get_tokens(self, state, client: Optional[Client] = None):
         """
         Use the 'accesstoken' service to get an access token from the OP/AS.
 
@@ -466,7 +499,7 @@ class RPHandler(object):
         :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` or
             :py:class:`oidcmsg.oauth2.AuthorizationResponse`
         """
-        logger.debug('get_accesstoken')
+        logger.debug(20 * "*" + " get_tokens " + 20 * "*")
 
         if client is None:
             client = self.get_client_from_session_key(state)
@@ -512,6 +545,9 @@ class RPHandler(object):
         :param scope: What the returned token should be valid for.
         :return: A :py:class:`oidcmsg.oidc.AccessTokenResponse` instance
         """
+
+        logger.debug(20 * "*" + " refresh_access_token " + 20 * "*")
+
         if scope:
             req_args = {'scope': scope}
         else:
@@ -548,6 +584,9 @@ class RPHandler(object):
         :param kwargs: Extra keyword arguments
         :return: A :py:class:`oidcmsg.oidc.OpenIDSchema` instance
         """
+
+        logger.debug(20 * "*" + " get_user_info " + 20 * "*")
+
         if client is None:
             client = self.get_client_from_session_key(state)
 
@@ -574,33 +613,36 @@ class RPHandler(object):
         :param id_token: An :py:class:`oidcmsg.oidc.IDToken` instance
         :return: A dictionary with user information
         """
-        res = dict([(k, id_token[k]) for k in OpenIDSchema.c_param.keys() if
-                    k in id_token])
+        res = dict([(k, id_token[k]) for k in OpenIDSchema.c_param.keys() if k in id_token])
         res.update(id_token.extra())
         return res
 
-    def finalize_auth(self, client, issuer, response):
+    def finalize_auth(self, client, issuer: str, response: dict,
+                      behaviour_args: Optional[dict] = None):
         """
         Given the response returned to the redirect_uri, parse and verify it.
 
+        :param behaviour_args: For fine tuning behaviour
         :param client: A Client instance
         :param issuer: An Issuer ID
         :param response: The authorization response as a dictionary
         :return: An :py:class:`oidcmsg.oidc.AuthorizationResponse` or
             :py:class:`oidcmsg.oauth2.AuthorizationResponse` instance.
         """
+
+        logger.debug(20 * "*" + " finalize_auth " + 20 * "*")
+
         _srv = client.get_service('authorization')
         try:
-            authorization_response = _srv.parse_response(response,
-                                                         sformat='dict')
+            authorization_response = _srv.parse_response(response, sformat='dict',
+                                                         behaviour_args=behaviour_args)
         except Exception as err:
             logger.error('Parsing authorization_response: {}'.format(err))
             message = traceback.format_exception(*sys.exc_info())
             logger.error(message)
             raise
         else:
-            logger.debug(
-                'Authz response: {}'.format(authorization_response.to_dict()))
+            logger.debug('Authz response: {}'.format(authorization_response.to_dict()))
 
         if is_error_message(authorization_response):
             return authorization_response
@@ -621,13 +663,16 @@ class RPHandler(object):
                                   authorization_response['state'])
         return authorization_response
 
-    def get_access_and_id_token(self, authorization_response=None, state='',
-                                client=None):
+    def get_access_and_id_token(self, authorization_response=None,
+                                state: Optional[str] = '',
+                                client: Optional[object] = None,
+                                behaviour_args: Optional[dict] = None):
         """
         There are a number of services where access tokens and ID tokens can
         occur in the response. This method goes through the possible places
         based on the response_type the client uses.
 
+        :param behaviour_args: For fine tuning behaviour
         :param authorization_response: The Authorization response
         :param state: The state key (the state parameter in the
             authorization request)
@@ -635,6 +680,8 @@ class RPHandler(object):
             token as value and **id_token** with a verified ID Token if one
             was returned otherwise None.
         """
+
+        logger.debug(20 * "*" + " get_access_and_id_token " + 20 * "*")
 
         if client is None:
             client = self.get_client_from_session_key(state)
@@ -652,8 +699,7 @@ class RPHandler(object):
         if not state:
             state = authorization_response['state']
 
-        authreq = _context.state.get_item(
-            AuthorizationRequest, 'auth_request', state)
+        authreq = _context.state.get_item(AuthorizationRequest, 'auth_request', state)
         _resp_type = set(authreq['response_type'])
 
         access_token = None
@@ -665,24 +711,31 @@ class RPHandler(object):
         if _resp_type in [{'token'}, {'id_token', 'token'}, {'code', 'token'},
                           {'code', 'id_token', 'token'}]:
             access_token = authorization_response["access_token"]
-        elif _resp_type in [{'code'}, {'code', 'id_token'}]:
+            if behaviour_args:
+                if behaviour_args.get("collect_tokens", False):
+                    # get what you can from the token endpoint
+                    token_resp = self.get_tokens(state, client=client)
+                    if is_error_message(token_resp):
+                        return False, "Invalid response %s." % token_resp["error"]
+                    # Now which access_token should I use
+                    access_token = token_resp["access_token"]
+                    # May or may not get an ID Token
+                    id_token = token_resp.get('__verified_id_token')
 
+        elif _resp_type in [{'code'}, {'code', 'id_token'}]:
             # get the access token
-            token_resp = self.get_access_token(state, client=client)
+            token_resp = self.get_tokens(state, client=client)
             if is_error_message(token_resp):
                 return False, "Invalid response %s." % token_resp["error"]
 
             access_token = token_resp["access_token"]
-
-            try:
-                id_token = token_resp['__verified_id_token']
-            except KeyError:
-                pass
+            # May or may not get an ID Token
+            id_token = token_resp.get('__verified_id_token')
 
         return {'access_token': access_token, 'id_token': id_token}
 
     # noinspection PyUnusedLocal
-    def finalize(self, issuer, response):
+    def finalize(self, issuer, response, behaviour_args: Optional[dict] = None):
         """
         The third of the high level methods that a user of this Class should
         know about.
@@ -690,6 +743,7 @@ class RPHandler(object):
         callback URL there might be a number of services that the client should
         use. Which one those are are defined by the client configuration.
 
+        :param behaviour_args: For fine tuning
         :param issuer: Who sent the response
         :param response: The Authorization response as a dictionary
         :returns: A dictionary with two claims:
@@ -701,6 +755,9 @@ class RPHandler(object):
 
         client = self.issuer2rp[issuer]
 
+        if behaviour_args:
+            logger.debug(f"Finalize behaviour args: {behaviour_args}")
+
         authorization_response = self.finalize_auth(client, issuer, response)
         if is_error_message(authorization_response):
             return {
@@ -709,8 +766,10 @@ class RPHandler(object):
             }
 
         _state = authorization_response['state']
-        token = self.get_access_and_id_token(authorization_response,
-                                             state=_state, client=client)
+        token = self.get_access_and_id_token(authorization_response, state=_state, client=client,
+                                             behaviour_args=behaviour_args)
+        _id_token = token.get("id_token")
+        logger.debug(f"ID Token: {_id_token}")
 
         if client.client_get("service", "userinfo") and token['access_token']:
             inforesp = self.get_user_info(
@@ -723,8 +782,8 @@ class RPHandler(object):
                     'state': _state
                 }
 
-        elif token['id_token']:  # look for it in the ID Token
-            inforesp = self.userinfo_in_id_token(token['id_token'])
+        elif _id_token:  # look for it in the ID Token
+            inforesp = self.userinfo_in_id_token(_id_token)
         else:
             inforesp = {}
 
@@ -732,8 +791,7 @@ class RPHandler(object):
 
         _context = client.client_get("service_context")
         try:
-            _sid_support = _context.get('provider_info')[
-                'backchannel_logout_session_supported']
+            _sid_support = _context.get('provider_info')['backchannel_logout_session_supported']
         except KeyError:
             try:
                 _sid_support = _context.get('provider_info')[
@@ -741,21 +799,25 @@ class RPHandler(object):
             except:
                 _sid_support = False
 
-        if _sid_support:
+        if _sid_support and _id_token:
             try:
-                sid = token['id_token']['sid']
+                sid = _id_token['sid']
             except KeyError:
                 pass
             else:
                 _context.state.store_sid2state(sid, _state)
 
-        _context.state.store_sub2state(token['id_token']['sub'], _state)
+        if _id_token:
+            _context.state.store_sub2state(_id_token['sub'], _state)
+        else:
+            _context.state.store_sub2state(inforesp['sub'], _state)
 
         return {
             'userinfo': inforesp,
             'state': authorization_response['state'],
             'token': token['access_token'],
-            'id_token': token['id_token']
+            'id_token': _id_token,
+            'session_state': authorization_response.get('session_state', '')
         }
 
     def has_active_authentication(self, state):
@@ -823,7 +885,9 @@ class RPHandler(object):
             else:
                 raise OidcServiceError('No valid access token')
 
-    def logout(self, state, client=None, post_logout_redirect_uri=''):
+    def logout(self, state: str,
+               client: Optional[Client] = None,
+               post_logout_redirect_uri: Optional[str] = '') -> dict:
         """
         Does a RP initiated logout from an OP. After logout the user will be
         redirect by the OP to a URL of choice (post_logout_redirect_uri).
@@ -834,6 +898,9 @@ class RPHandler(object):
             should be used
         :return: A US
         """
+
+        logger.debug(20 * "*" + " logout " + 20 * "*")
+
         if client is None:
             client = self.get_client_from_session_key(state)
 
@@ -852,7 +919,22 @@ class RPHandler(object):
         resp = srv.get_request_parameters(state=state,
                                           request_args=request_args)
 
+        logger.debug(f"EndSession Request: {resp}")
         return resp
+
+    def close(self, state: str,
+              issuer: Optional[str] = '',
+              post_logout_redirect_uri: Optional[str] = '') -> dict:
+
+        logger.debug(20 * "*" + " close " + 20 * "*")
+
+        if issuer:
+            client = self.issuer2rp[issuer]
+        else:
+            client = self.get_client_from_session_key(state)
+
+        return self.logout(state=state, client=client,
+                           post_logout_redirect_uri=post_logout_redirect_uri)
 
     def clear_session(self, state):
         client = self.get_client_from_session_key(state)
@@ -867,8 +949,10 @@ def backchannel_logout(client, request='', request_args=None):
     """
     if request:
         req = BackChannelLogoutRequest().from_urlencoded(as_unicode(request))
-    else:
+    elif request_args:
         req = BackChannelLogoutRequest(**request_args)
+    else:
+        raise MissingRequiredAttribute('logout_token')
 
     _context = client.client_get("service_context")
     kwargs = {
@@ -879,10 +963,13 @@ def backchannel_logout(client, request='', request_args=None):
             "id_token_signed_response_alg", "RS256")
     }
 
+    logger.debug(f"(backchannel_logout) Verifying request using: {kwargs}")
     try:
         req.verify(**kwargs)
     except (MessageException, ValueError, NotForMe) as err:
         raise MessageException('Bogus logout request: {}'.format(err))
+    else:
+        logger.debug("Request verified OK")
 
     # Find the subject through 'sid' or 'sub'
     sub = req[verified_claim_name('logout_token')].get('sub')

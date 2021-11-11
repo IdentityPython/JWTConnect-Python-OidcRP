@@ -1,7 +1,9 @@
 import logging
 from typing import Optional
+from typing import Union
 
 from oidcmsg import oidc
+from oidcmsg.message import Message
 from oidcmsg.oidc import verified_claim_name
 from oidcmsg.time_util import time_sans_frac
 
@@ -26,7 +28,9 @@ class AccessToken(access_token.AccessToken):
         access_token.AccessToken.__init__(self, client_get,
                                           client_authn_factory=client_authn_factory, conf=conf)
 
-    def gather_verify_arguments(self):
+    def gather_verify_arguments(self,
+                                response: Optional[Union[dict, Message]] = None,
+                                behaviour_args: Optional[dict] = None):
         """
         Need to add some information before running verify()
 

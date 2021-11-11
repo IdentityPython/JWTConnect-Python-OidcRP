@@ -14,7 +14,7 @@ from oidcrp.util import lower_or_upper
 try:
     from secrets import token_urlsafe as rnd_token
 except ImportError:
-    from oidcendpoint import rndstr as rnd_token
+    from cryptojwt import rndstr as rnd_token
 
 DEFAULT_FILE_ATTRIBUTE_NAMES = ['server_key', 'server_cert', 'filename', 'template_dir',
                                 'private_path', 'public_path', 'db_file']

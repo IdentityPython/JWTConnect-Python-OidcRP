@@ -17,6 +17,7 @@ import pytest
 import responses
 
 from oidcrp.entity import Entity
+from oidcrp.oidc.registration import add_callbacks
 from oidcrp.rp_handler import RPHandler
 
 BASE_URL = 'https://example.com/rp'
@@ -29,7 +30,8 @@ CLIENT_PREFS = {
                        "code id_token token", "code token"],
     "scope": ["openid", "profile", "email", "address", "phone"],
     "token_endpoint_auth_method": "client_secret_basic",
-    "verify_args": {"allow_sign_alg_none": True}
+    "verify_args": {"allow_sign_alg_none": True},
+    "request_parameter_preference": ["request_uri", "request"]
 }
 
 CLIENT_CONFIG = {
@@ -145,6 +147,40 @@ CLIENT_CONFIG = {
         },
         'services': {
             'authorization': {
+                'class': 'oidcrp.oidc.authorization.Authorization',
+            },
+            'access_token': {
+                'class': 'oidcrp.oidc.access_token.AccessToken'
+            },
+            'userinfo': {
+                'class': 'oidcrp.oidc.userinfo.UserInfo',
+                'kwargs': {'conf': {'default_authn_method': ''}}
+            },
+            'refresh_access_token': {
+                'class': 'oidcrp.oidc.refresh_access_token.RefreshAccessToken'
+            }
+        }
+    },
+    'github2': {
+        "issuer": "https://github.com/login/oauth/authorize",
+        'client_id': 'eeeeeeeee',
+        'client_secret': 'aaaaaaaaaaaaaaaaaaaa',
+        "redirect_uris": ["{}/authz_cb/github".format(BASE_URL)],
+        "behaviour": {
+            "response_types": ["code"],
+            "scope": ["user", "public_repo"],
+            "token_endpoint_auth_method": '',
+            "verify_args": {"allow_sign_alg_none": True}
+        },
+        "provider_info": {
+            "authorization_endpoint": "https://github.com/login/oauth/authorize",
+            "token_endpoint": "https://github.com/login/oauth/access_token",
+            "userinfo_endpoint": "https://api.github.com/user",
+            "request_parameter_supported": True,
+            "request_uri_parameter_supported": True
+        },
+        'services': {
+            'authorization': {
                 'class': 'oidcrp.oidc.authorization.Authorization'
             },
             'access_token': {
@@ -155,8 +191,7 @@ CLIENT_CONFIG = {
                 'kwargs': {'conf': {'default_authn_method': ''}}
             },
             'refresh_access_token': {
-                'class': 'oidcrp.oidc.refresh_access_token'
-                         '.RefreshAccessToken'
+                'class': 'oidcrp.oidc.refresh_access_token.RefreshAccessToken'
             }
         }
     }
@@ -265,7 +300,7 @@ class TestRPHandler(object):
         # Make sure the service endpoints are set
 
         for service_type in ['authorization', 'accesstoken', 'userinfo']:
-            _srv = client.client_get("service",service_type)
+            _srv = client.client_get("service", service_type)
             _endp = client.client_get("service_context").get('provider_info')[_srv.endpoint_name]
             assert _srv.endpoint == _endp
 
@@ -277,7 +312,7 @@ class TestRPHandler(object):
         # only 2 things should have happened
 
         assert self.rph.hash2issuer['github'] == issuer
-        assert client.client_get("service_context").post_logout_redirect_uris == []
+        assert client.client_get("service_context").callback.get("post_logout_redirect_uris") is None
 
     def test_do_client_setup(self):
         client = self.rph.client_setup('github')
@@ -296,25 +331,29 @@ class TestRPHandler(object):
         assert len(keys) == 2
 
         for service_type in ['authorization', 'accesstoken', 'userinfo']:
-            _srv = client.client_get("service",service_type)
+            _srv = client.client_get("service", service_type)
             _endp = _srv.client_get("service_context").get('provider_info')[_srv.endpoint_name]
             assert _srv.endpoint == _endp
 
         assert self.rph.hash2issuer['github'] == _context.get('issuer')
 
     def test_create_callbacks(self):
-        cb = self.rph.create_callbacks('https://op.example.com/')
+        client = self.rph.init_client('https://op.example.com/')
+        _srv = client.client_get("service", "registration")
+        _context = _srv.client_get("service_context")
+        add_callbacks(_context, [])
 
-        assert set(cb.keys()) == {'code', 'implicit', 'form_post', '__hex'}
+        cb = _srv.client_get("service_context").callback
+
+        assert set(cb.keys()) == {'redirect_uris', 'code', 'implicit', '__hex'}
         _hash = cb['__hex']
 
-        assert cb['code'] == 'https://example.com/rp/authz_cb/{}'.format(_hash)
-        assert cb['implicit'] == 'https://example.com/rp/authz_im_cb/{}'.format(_hash)
-        assert cb['form_post'] == 'https://example.com/rp/authz_fp_cb/{}'.format(_hash)
+        assert cb['code'] == f'https://example.com/rp/authz_cb/{_hash}'
+        assert cb['implicit'] == f'https://example.com/rp/authz_im_cb/{_hash}'
 
-        assert list(self.rph.hash2issuer.keys()) == [_hash]
+        assert list(_context.hash2issuer.keys()) == [_hash]
 
-        assert self.rph.hash2issuer[_hash] == 'https://op.example.com/'
+        assert _context.hash2issuer[_hash] == 'https://op.example.com/'
 
     def test_begin(self):
         res = self.rph.begin(issuer_id='github')
@@ -367,8 +406,9 @@ class TestRPHandler(object):
                                               state=res['state'])
         resp = self.rph.finalize_auth(client, _session['iss'], auth_response.to_dict())
         assert set(resp.keys()) == {'state', 'code'}
-        aresp = client.client_get("service_context").state.get_item(AuthorizationResponse, 'auth_response',
-                                                            res['state'])
+        aresp = client.client_get("service_context").state.get_item(AuthorizationResponse,
+                                                                    'auth_response',
+                                                                    res['state'])
         assert set(aresp.keys()) == {'state', 'code'}
 
     def test_get_client_authn_method(self):
@@ -385,7 +425,7 @@ class TestRPHandler(object):
                                                         'token_endpoint')
         assert authn_method == 'client_secret_post'
 
-    def test_get_access_token(self):
+    def test_get_tokens(self):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
@@ -417,14 +457,14 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.client_get("service",'accesstoken').endpoint = _url
+            client.client_get("service", 'accesstoken').endpoint = _url
 
             auth_response = AuthorizationResponse(code='access_code',
                                                   state=res['state'])
             resp = self.rph.finalize_auth(client, _session['iss'],
                                           auth_response.to_dict())
 
-            resp = self.rph.get_access_token(res['state'], client)
+            resp = self.rph.get_tokens(res['state'], client)
             assert set(resp.keys()) == {'access_token', 'expires_in', 'id_token',
                                         'token_type', '__verified_id_token',
                                         '__expires_at'}
@@ -466,7 +506,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.client_get("service",'accesstoken').endpoint = _url
+            client.client_get("service", 'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -507,7 +547,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.client_get("service",'accesstoken').endpoint = _url
+            client.client_get("service", 'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -548,7 +588,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.client_get("service",'accesstoken').endpoint = _url
+            client.client_get("service", 'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -562,7 +602,7 @@ class TestRPHandler(object):
         with responses.RequestsMock() as rsps:
             rsps.add("GET", _url, body='{"sub":"EndUserSubject"}',
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.client_get("service",'userinfo').endpoint = _url
+            client.client_get("service", 'userinfo').endpoint = _url
 
             userinfo_resp = self.rph.get_user_info(res['state'], client,
                                                    token_resp['access_token'])
@@ -595,7 +635,7 @@ def test_get_provider_specific_service():
         }
     }
     entity = Entity(services=srv_desc)
-    assert entity.client_get("service",'accesstoken').response_body_type == 'urlencoded'
+    assert entity.client_get("service", 'accesstoken').response_body_type == 'urlencoded'
 
 
 class TestRPHandlerTier2(object):
@@ -634,7 +674,7 @@ class TestRPHandlerTier2(object):
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
 
-            client.client_get("service",'accesstoken').endpoint = _url
+            client.client_get("service", 'accesstoken').endpoint = _url
 
             _response = AuthorizationResponse(code='access_code',
                                               state=res['state'])
@@ -649,7 +689,7 @@ class TestRPHandlerTier2(object):
             rsps.add("GET", _url, body='{"sub":"EndUserSubject"}',
                      adding_headers={"Content-Type": "application/json"}, status=200)
 
-            client.client_get("service",'userinfo').endpoint = _url
+            client.client_get("service", 'userinfo').endpoint = _url
             self.rph.get_user_info(res['state'], client,
                                    token_resp['access_token'])
             self.state = res['state']
@@ -677,7 +717,7 @@ class TestRPHandlerTier2(object):
             rsps.add("POST", _url, body=at.to_json(),
                      adding_headers={"Content-Type": "application/json"}, status=200)
 
-            client.client_get("service",'refresh_token').endpoint = _url
+            client.client_get("service", 'refresh_token').endpoint = _url
             res = self.rph.refresh_access_token(self.state, client, 'openid email')
             assert res['access_token'] == '2nd_accessTok'
 
@@ -689,7 +729,7 @@ class TestRPHandlerTier2(object):
         with responses.RequestsMock() as rsps:
             rsps.add("GET", _url, body='{"sub":"EndUserSubject", "mail":"foo@example.com"}',
                      adding_headers={"Content-Type": "application/json"}, status=200)
-            client.client_get("service",'userinfo').endpoint = _url
+            client.client_get("service", 'userinfo').endpoint = _url
 
             resp = self.rph.get_user_info(self.state, client)
             assert set(resp.keys()) == {'sub', 'mail'}
@@ -722,8 +762,7 @@ class MockOP(object):
         self.post_response = {}
         self.register_post_response('default', 'OK', 200)
 
-    def register_get_response(self, path, data, status_code=200,
-                              headers=None):
+    def register_get_response(self, path, data, status_code=200, headers=None):
         _headers = headers or {}
         self.get_response[path] = MockResponse(status_code, data, _headers)
 
@@ -787,13 +826,32 @@ def registration_callback(data):
     return json.dumps(_req)
 
 
+def test_rphandler_request_uri():
+    rph = RPHandler(BASE_URL, CLIENT_CONFIG, keyjar=CLI_KEY)
+    res = rph.begin(issuer_id='github2', behaviour_args={"request_param": "request_uri"})
+    _session = rph.get_session_information(res['state'])
+    _url = res["url"]
+    _qp = parse_qs(urlparse(_url).query)
+    assert 'request_uri' in _qp
+
+
+def test_rphandler_request():
+    rph = RPHandler(BASE_URL, CLIENT_CONFIG, keyjar=CLI_KEY)
+    res = rph.begin(issuer_id='github2',
+                    behaviour_args={"request_param": "request"})
+    _session = rph.get_session_information(res['state'])
+    _url = res["url"]
+    _qp = parse_qs(urlparse(_url).query)
+    assert 'request' in _qp
+
+
 class TestRPHandlerWithMockOP(object):
     @pytest.fixture(autouse=True)
     def rphandler_setup(self):
         self.issuer = 'https://github.com/login/oauth/authorize'
         self.mock_op = MockOP(issuer=self.issuer)
         self.rph = RPHandler(BASE_URL, client_configs=CLIENT_CONFIG,
-                             http_lib=self.mock_op, keyjar=KeyJar())
+                             http_lib=self.mock_op, keyjar=CLI_KEY)
 
     def test_finalize(self):
         auth_query = self.rph.begin(issuer_id='github')
@@ -845,7 +903,7 @@ class TestRPHandlerWithMockOP(object):
         # assume code flow
         resp = self.rph.finalize(_session['iss'], auth_response.to_dict())
 
-        assert set(resp.keys()) == {'userinfo', 'state', 'token', 'id_token'}
+        assert set(resp.keys()) == {'userinfo', 'state', 'token', 'id_token', 'session_state'}
 
     def test_dynamic_setup(self):
         user_id = 'acct:foobar@example.com'
@@ -863,32 +921,22 @@ class TestRPHandlerWithMockOP(object):
             "issuer": "https://server.example.com",
             "subject_types_supported": ['public'],
             "token_endpoint": "https://server.example.com/connect/token",
-            "token_endpoint_auth_methods_supported": ["client_secret_basic",
-                                                      "private_key_jwt"],
+            "token_endpoint_auth_methods_supported": ["client_secret_basic", "private_key_jwt"],
             "userinfo_endpoint": "https://server.example.com/connect/user",
             "check_id_endpoint": "https://server.example.com/connect/check_id",
-            "refresh_session_endpoint":
-                "https://server.example.com/connect/refresh_session",
-            "end_session_endpoint":
-                "https://server.example.com/connect/end_session",
+            "refresh_session_endpoint": "https://server.example.com/connect/refresh_session",
+            "end_session_endpoint": "https://server.example.com/connect/end_session",
             "jwks_uri": "https://server.example.com/jwk.json",
-            "registration_endpoint":
-                "https://server.example.com/connect/register",
-            "scopes_supported": ["openid", "profile", "email", "address",
-                                 "phone"],
-            "response_types_supported": ["code", "code id_token",
-                                         "token id_token"],
-            "acrs_supported": ["1", "2",
-                               "http://id.incommon.org/assurance/bronze"],
+            "registration_endpoint": "https://server.example.com/connect/register",
+            "scopes_supported": ["openid", "profile", "email", "address", "phone"],
+            "response_types_supported": ["code", "code id_token", "token id_token"],
+            "acrs_supported": ["1", "2", "http://id.incommon.org/assurance/bronze"],
             "user_id_types_supported": ["public", "pairwise"],
-            "userinfo_algs_supported": ["HS256", "RS256", "A128CBC", "A128KW",
-                                        "RSA1_5"],
+            "userinfo_algs_supported": ["HS256", "RS256", "A128CBC", "A128KW", "RSA1_5"],
             "id_token_signing_alg_values_supported": ["HS256", "RS256",
                                                       "A128CBC", "A128KW",
                                                       "RSA1_5"],
-            "request_object_algs_supported": ["HS256", "RS256", "A128CBC",
-                                              "A128KW",
-                                              "RSA1_5"]
+            "request_object_algs_supported": ["HS256", "RS256", "A128CBC", "A128KW", "RSA1_5"]
         }
 
         pcr = ProviderConfigurationResponse(**resp)
@@ -902,3 +950,58 @@ class TestRPHandlerWithMockOP(object):
 
         auth_query = self.rph.begin(user_id=user_id)
         assert auth_query
+
+    def test_dynamic_setup_redirect_uri(self):
+        user_id = 'acct:foobar@example.com'
+        _link = Link(rel="http://openid.net/specs/connect/1.0/issuer",
+                     href="https://server.example.com")
+        webfinger_response = JRD(subject=user_id, links=[_link])
+        self.mock_op.register_get_response(
+            '/.well-known/webfinger', webfinger_response.to_json(), 200,
+            {'content-type': "application/json"})
+
+        resp = {
+            "authorization_endpoint":
+                "https://server.example.com/connect/authorize",
+            "issuer": "https://server.example.com",
+            "subject_types_supported": ['public'],
+            "token_endpoint": "https://server.example.com/connect/token",
+            "token_endpoint_auth_methods_supported": ["client_secret_basic", "private_key_jwt"],
+            "userinfo_endpoint": "https://server.example.com/connect/user",
+            "check_id_endpoint": "https://server.example.com/connect/check_id",
+            "refresh_session_endpoint": "https://server.example.com/connect/refresh_session",
+            "end_session_endpoint": "https://server.example.com/connect/end_session",
+            "jwks_uri": "https://server.example.com/jwk.json",
+            "registration_endpoint": "https://server.example.com/connect/register",
+            "scopes_supported": ["openid", "profile", "email", "address", "phone"],
+            "response_types_supported": ["code", "code id_token", "token id_token"],
+            "acrs_supported": ["1", "2", "http://id.incommon.org/assurance/bronze"],
+            "user_id_types_supported": ["public", "pairwise"],
+            "userinfo_algs_supported": ["HS256", "RS256", "A128CBC", "A128KW", "RSA1_5"],
+            "id_token_signing_alg_values_supported": ["HS256", "RS256",
+                                                      "A128CBC", "A128KW",
+                                                      "RSA1_5"],
+            "request_object_algs_supported": ["HS256", "RS256", "A128CBC", "A128KW", "RSA1_5"],
+            "request_parameter_supported": True,
+            "request_uri_parameter_supported": True,
+            "require_request_uri_registration": True
+        }
+
+        pcr = ProviderConfigurationResponse(**resp)
+        self.mock_op.register_get_response(
+            '/.well-known/openid-configuration', pcr.to_json(), 200,
+            {'content-type': "application/json"})
+
+        self.mock_op.register_post_response(
+            '/connect/register', registration_callback, 200,
+            {'content-type': "application/json"})
+
+        res = self.rph.begin(user_id=user_id,
+                             behaviour_args={
+                                 "request_param": "request",
+                                 "request_object_signing_alg": "RS256"})
+        assert res
+
+        _url = res["url"]
+        _qp = parse_qs(urlparse(_url).query)
+        assert 'request' in _qp

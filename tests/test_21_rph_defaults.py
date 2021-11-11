@@ -72,7 +72,6 @@ class TestRPHandler(object):
         _context = client.client_get("service_context")
 
         # Calculating request so I can build a reasonable response
-        self.rph.add_callbacks(_context)
         _req = client.client_get("service",'registration').construct_request()
 
         with responses.RequestsMock() as rsps:
@@ -129,7 +128,6 @@ class TestRPHandler(object):
 
         _context = client.client_get("service_context")
         # Calculating request so I can build a reasonable response
-        self.rph.add_callbacks(_context)
         # Publishing a JWKS instead of a JWKS_URI
         _context.jwks_uri = ''
         _context.jwks = _context.keyjar.export_jwks()

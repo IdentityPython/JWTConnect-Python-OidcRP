@@ -53,10 +53,14 @@ def rp():
         uid = ''
 
     if iss or uid:
+        args = {
+            'req_args': {
+                "claims": {"id_token": {"acr": {"value": "https://refeds.org/profile/mfa"}}}
+            }
+        }
+
         if uid:
-            args = {'user_id': uid}
-        else:
-            args = {}
+            args['user_id'] = uid
 
         session['op_identifier'] = iss
         try:
@@ -145,6 +149,7 @@ def finalize(op_identifier, request_args):
         return render_template('opresult.html', endpoints=endpoints,
                                userinfo=res['userinfo'],
                                access_token=res['token'],
+                               id_token=res["id_token"],
                                **kwargs)
     else:
         return make_response(res['error'], 400)
@@ -152,7 +157,7 @@ def finalize(op_identifier, request_args):
 
 def get_op_identifier_by_cb_uri(url: str):
     uri = splitquery(url)[0]
-    for k,v in current_app.rph.issuer2rp.items():
+    for k, v in current_app.rph.issuer2rp.items():
         _cntx = v.get_service_context()
         for endpoint in ("redirect_uris",
                          "post_logout_redirect_uris",
@@ -180,10 +185,10 @@ def repost_fragment():
     return finalize(op_identifier, args)
 
 
-@oidc_rp_views.route('/ihf_cb')
-def ihf_cb(self, op_identifier='', **kwargs):
+@oidc_rp_views.route('/authz_im_cb')
+def authz_im_cb(op_identifier='', **kwargs):
     logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
-    return render_template('repost_fragment.html')
+    return render_template('repost_fragment.html', op_identifier=op_identifier)
 
 
 @oidc_rp_views.route('/session_iframe')

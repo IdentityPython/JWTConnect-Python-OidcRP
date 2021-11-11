@@ -108,8 +108,7 @@ class TestClient(object):
 
         token_response = AccessTokenResponse(refresh_token="refresh_with_me",
                                              access_token="access")
-        _context.state.store_item(token_response,
-                                                 'token_response', 'ABCDE')
+        _context.state.store_item(token_response, 'token_response', 'ABCDE')
 
         req_args = {}
         msg = self.client.client_get("service",'refresh_token').construct(
@@ -131,17 +130,14 @@ class TestClient(object):
             state='state'
         )
 
-        _context.state.store_item(auth_request,
-                                                 'auth_request', 'ABCDE')
+        _context.state.store_item(auth_request, 'auth_request', 'ABCDE')
 
         auth_response = AuthorizationResponse(code='access_code')
-        _context.state.store_item(auth_response,
-                                                 'auth_response', 'ABCDE')
+        _context.state.store_item(auth_response, 'auth_response', 'ABCDE')
 
         token_response = AccessTokenResponse(refresh_token="refresh_with_me",
                                              access_token="access")
-        _context.state.store_item(token_response,
-                                                 'token_response', 'ABCDE')
+        _context.state.store_item(token_response, 'token_response', 'ABCDE')
 
         _srv = self.client.client_get("service",'userinfo')
         _srv.endpoint = "https://example.com/userinfo"

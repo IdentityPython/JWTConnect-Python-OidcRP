@@ -382,7 +382,7 @@ class StateInterface(ImpExp):
         :param state: Key to the state
         """
         del self._db[state]
-        refs = json.loads(self._db_db.get("ref{}ref".format(state)))
+        refs = json.loads(self._db.get("ref{}ref".format(state)))
         if refs:
             for xtyp, _val in refs.items():
                 del self._db[KEY_PATTERN[xtyp].format(_val)]
