@@ -13,7 +13,7 @@ Welcome to oidcrp's documentation!
 
    rp_handler.rst
    oidcrp.rst
-
+   add_on/index.rst
 
 Indices and tables
 ==================

@@ -51,7 +51,7 @@ def push_authorization(request_args, service, **kwargs):
 def add_support(services, body_format="jws", signing_algorithm="RS256",
                 http_client=None, merge_rule="strict"):
     """
-    Add the necessary pieces to make pushed authorization happen.
+    Add the necessary pieces to make Demonstration of proof of possession (DPOP).
 
     :param merge_rule:
     :param http_client:

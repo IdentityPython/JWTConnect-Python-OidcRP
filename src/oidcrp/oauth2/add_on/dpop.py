@@ -1,5 +1,4 @@
 from typing import Optional
-from typing import Union
 import uuid
 
 from cryptojwt.jwk.jwk import key_from_jwk_dict
@@ -143,12 +142,12 @@ def dpop_header(service_context: ServiceContext,
     return headers
 
 
-def add_support(services, signing_algorithms: Optional[list] = None):
+def add_support(services, signing_algorithms):
     """
     Add the necessary pieces to make pushed authorization happen.
 
     :param services: A dictionary with all the services the client has access to.
-    :param signing_algorithms:
+    :param signing_algorithms: Allowed signing algorithms, there is no default algorithms
     """
 
     # Access token request should use DPoP header
