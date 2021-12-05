@@ -8,8 +8,6 @@ Proof Key for Code Exchange
 Introduction
 ------------
 
-
-
 OAuth 2.0 public clients utilizing the Authorization Code Grant are
 susceptible to the authorization code interception attack.  `RFC7636`_
 describes the attack as well as a technique to mitigate

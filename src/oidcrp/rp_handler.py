@@ -21,7 +21,7 @@ from oidcmsg.oidc import Claims
 from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.oidc import RegistrationRequest
 from oidcmsg.oidc.session import BackChannelLogoutRequest
-from oidcmsg.time_util import time_sans_frac
+from oidcmsg.time_util import utc_time_sans_frac
 
 from . import oidc
 from .defaults import DEFAULT_CLIENT_CONFIGS
@@ -836,7 +836,7 @@ class RPHandler(object):
             ['auth_response', 'token_response', 'refresh_token_response'])
 
         if _arg:
-            _now = time_sans_frac()
+            _now = utc_time_sans_frac()
             exp = _arg['__verified_id_token']['exp']
             return _now < exp
         else:
@@ -854,7 +854,7 @@ class RPHandler(object):
         exp = 0
         token = None
         indefinite = []
-        now = time_sans_frac()
+        now = utc_time_sans_frac()
 
         client = self.get_client_from_session_key(state)
         _context = client.client_get("service_context")

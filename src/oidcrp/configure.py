@@ -58,6 +58,7 @@ class Base:
                  conf: Dict,
                  base_path: str = '',
                  file_attributes: Optional[List[str]] = None,
+                 dir_attributes: Optional[List[str]] = None
                  ):
 
         if file_attributes is None:
