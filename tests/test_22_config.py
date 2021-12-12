@@ -1,8 +1,9 @@
 import os
 
+from oidcmsg.configure import create_from_config_file
+
 from oidcrp.configure import Configuration
 from oidcrp.configure import RPConfiguration
-from oidcrp.configure import create_from_config_file
 
 _dirname = os.path.dirname(os.path.abspath(__file__))
 
