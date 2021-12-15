@@ -3,9 +3,10 @@
 import os
 import sys
 
+from oidcmsg.configure import create_from_config_file
+
 from oidcrp.configure import Configuration
 from oidcrp.configure import RPConfiguration
-from oidcrp.configure import create_from_config_file
 from oidcrp.util import create_context
 
 try:

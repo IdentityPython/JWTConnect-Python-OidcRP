@@ -1,15 +1,13 @@
 import json
 import time
 
-import pytest
-import responses
 from cryptojwt.utils import as_bytes
 from oidcmsg.oidc import RegistrationResponse
+import pytest
+import responses
 
 from oidcrp.entity import Entity
 import requests
-from oidcrp.service_context import ServiceContext
-from oidcrp.service_factory import service_factory
 
 ISS = "https://example.com"
 RP_BASEURL = "https://example.com/rp"
@@ -44,8 +42,8 @@ class TestRegistrationRead(object):
 
         self.entity = Entity(config=client_config, services=services)
 
-        self.reg_service = self.entity.client_get("service",'registration')
-        self.read_service = self.entity.client_get("service",'registration_read')
+        self.reg_service = self.entity.client_get("service", 'registration')
+        self.read_service = self.entity.client_get("service", 'registration_read')
 
     def test_construct(self):
         self.reg_service.endpoint = "{}/registration".format(ISS)
@@ -70,7 +68,8 @@ class TestRegistrationRead(object):
         })
 
         with responses.RequestsMock() as rsps:
-            rsps.add(_param["method"], _param["url"], body=_client_registration_response, status=200)
+            rsps.add(_param["method"], _param["url"], body=_client_registration_response,
+                     status=200)
             _resp = requests.request(
                 _param["method"], _param["url"],
                 data=as_bytes(_param["body"]),
