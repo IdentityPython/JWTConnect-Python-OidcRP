@@ -186,10 +186,10 @@ class ServiceContext(OidcContext):
             if not os.path.isdir(self.requests_dir):
                 os.makedirs(self.requests_dir)
 
-        try:
-            self.import_keys(config['keys'])
-        except KeyError:
-            pass
+        # The name of the attribute used to be keys. Is not key_conf
+        _key_conf = config.get('keys', config.get('key_conf'))
+        if _key_conf:
+            self.import_keys(_key_conf)
 
     def __setitem__(self, key, value):
         setattr(self, key, value)
