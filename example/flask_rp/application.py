@@ -13,7 +13,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 def init_oidc_rp_handler(app):
     _rp_conf = app.rp_config
 
-    if _rp_conf.keys:
+    if _rp_conf.key_conf:
         _kj = init_key_jar(**_rp_conf.key_conf)
         _path = _rp_conf.key_conf['public_path']
         # removes ./ and / from the begin of the string
