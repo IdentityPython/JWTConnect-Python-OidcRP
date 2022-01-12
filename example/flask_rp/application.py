@@ -14,8 +14,8 @@ def init_oidc_rp_handler(app):
     _rp_conf = app.rp_config
 
     if _rp_conf.keys:
-        _kj = init_key_jar(**_rp_conf.keys)
-        _path = _rp_conf.keys['public_path']
+        _kj = init_key_jar(**_rp_conf.key_conf)
+        _path = _rp_conf.key_conf['public_path']
         # removes ./ and / from the begin of the string
         _path = re.sub('^(.)/', '', _path)
     else:
