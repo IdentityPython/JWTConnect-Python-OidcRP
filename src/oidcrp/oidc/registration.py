@@ -48,7 +48,8 @@ def create_callbacks(issuer: str,
                      form_post: Optional[bool] = False,
                      request_uris: Optional[bool] = False,
                      backchannel_logout_uri: Optional[bool] = False,
-                     frontchannel_logout_uri: Optional[bool] = False):
+                     frontchannel_logout_uri: Optional[bool] = False,
+                     add_hash: Optional[bool] = True):
     """
     To mitigate some security issues the redirect_uris should be OP/AS
     specific. This method creates a set of redirect_uris unique to the
@@ -60,33 +61,39 @@ def create_callbacks(issuer: str,
     :param issuer: Issuer ID
     :return: A set of redirect_uris
     """
-    _hash = hashlib.sha256()
-    _hash.update(hash_seed)
-    _hash.update(as_bytes(issuer))
-    _hex = _hash.hexdigest()
+    if add_hash:
+        _hash = hashlib.sha256()
+        _hash.update(hash_seed)
+        _hash.update(as_bytes(issuer))
+        _hex = _hash.hexdigest()
+        _div = "/"
+    else:
+        _hex = ''
+        _div = ''
 
     res = {'__hex': _hex}
+    _ext = f"{_div}{_hex}"
 
     if code:
-        res['code'] = f"{base_url}/authz_cb/{_hex}"
+        res['code'] = f"{base_url}/authz_cb{_ext}"
 
     if implicit:
-        res['implicit'] = f"{base_url}/authz_im_cb/{_hex}"
+        res['implicit'] = f"{base_url}/authz_im_cb{_ext}"
 
     if form_post:
-        res['form_post'] = f"{base_url}/authz_fp_cb/{_hex}"
+        res['form_post'] = f"{base_url}/authz_fp_cb{_ext}"
 
     if request_uris:
-        res["request_uris"] = f"{base_url}/req_uri/{_hex}"
+        res["request_uris"] = f"{base_url}/req_uri{_ext}"
 
     if backchannel_logout_uri or frontchannel_logout_uri:
-        res["post_logout_redirect_uris"] = [f"{base_url}/session_logout/{_hex}"]
+        res["post_logout_redirect_uris"] = [f"{base_url}/session_logout{_ext}"]
 
     if backchannel_logout_uri:
-        res["backchannel_logout_uri"] = f"{base_url}/bc_logout/{_hex}"
+        res["backchannel_logout_uri"] = f"{base_url}/bc_logout{_ext}"
 
     if frontchannel_logout_uri:
-        res["frontchannel_logout_uri"] = f"{base_url}/fc_logout/{_hex}"
+        res["frontchannel_logout_uri"] = f"{base_url}/fc_logout{_ext}"
 
     logger.debug(f"Created callback URIs: {res}")
     return res
@@ -111,7 +118,7 @@ def _in_config_or_client_preferences(config, attr, val):
     return _cmp(_val, val)
 
 
-def add_callbacks(context, ignore: Optional[List[str]] = None):
+def add_callbacks(context, ignore: Optional[List[str]] = None, add_hash: Optional[bool] = True):
     if ignore is None:
         ignore = []
     _iss = context.get('issuer')
@@ -153,6 +160,7 @@ def add_callbacks(context, ignore: Optional[List[str]] = None):
     callbacks = create_callbacks(_iss,
                                  hash_seed=context.get('hash_seed'),
                                  base_url=context.get("base_url"),
+                                 add_hash=add_hash,
                                  **_uris)
     context.hash2issuer[callbacks['__hex']] = _iss
 
@@ -178,7 +186,13 @@ def add_callback_uris(request_args=None, service=None, **kwargs):
 
     _context = service.client_get("service_context")
     _ignore = [k for k in list(request_args.keys()) if k in CALLBACK_URIS]
-    add_callbacks(_context, ignore=_ignore)
+    _behave_args = kwargs.get("behaviour_args")
+    if _behave_args:
+        _add_callback_args = _behave_args.get("add_callbacks", {})
+    else:
+        _add_callback_args = {}
+
+    add_callbacks(_context, ignore=_ignore, **_add_callback_args)
     for _key in CALLBACK_URIS:
         _req_val = request_args.get(_key)
         if not _req_val:
@@ -231,7 +245,7 @@ class Registration(Service):
                          client_authn_factory=client_authn_factory,
                          conf=conf)
         self.pre_construct = [self.add_client_behaviour_preference,
-                              #add_redirect_uris,
+                              # add_redirect_uris,
                               add_callback_uris,
                               add_jwks_uri_or_jwks]
         self.post_construct = [self.oidc_post_construct]
