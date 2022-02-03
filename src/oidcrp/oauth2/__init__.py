@@ -99,7 +99,6 @@ class Client(Entity):
                                     state=_state, **_info)
 
     def set_client_id(self, client_id):
-        self.client_id = client_id
         self._service_context.set('client_id', client_id)
 
     def get_response(self,

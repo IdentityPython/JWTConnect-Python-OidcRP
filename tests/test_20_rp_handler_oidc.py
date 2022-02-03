@@ -431,12 +431,13 @@ class TestRPHandler(object):
         client = self.rph.issuer2rp[_session['iss']]
 
         _github_id = iss_id('github')
-        client.client_get("service_context").keyjar.import_jwks(
+        _context = client.client_get("service_context")
+        _context.keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
-        _aud = client.client_id
+        _aud = _context.client_id
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
@@ -479,16 +480,17 @@ class TestRPHandler(object):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
+        _context = client.client_get("service_context")
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
-        _aud = client.client_id
+        _aud = _context.client_id
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
         }
 
         _github_id = iss_id('github')
-        client.client_get("service_context").keyjar.import_jwks(
+        _context.keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
@@ -520,16 +522,17 @@ class TestRPHandler(object):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
+        _context = client.client_get("service_context")
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
-        _aud = client.client_id
+        _aud = _context.client_id
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
         }
 
         _github_id = iss_id('github')
-        client.client_get("service_context").keyjar.import_jwks(
+        _context.keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
@@ -561,16 +564,17 @@ class TestRPHandler(object):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
+        _context = client.client_get("service_context")
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
-        _aud = client.client_id
+        _aud = _context.client_id
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
         }
 
         _github_id = iss_id('github')
-        client.client_get("service_context").keyjar.import_jwks(
+        _context.keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
@@ -612,9 +616,10 @@ class TestRPHandler(object):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
+        _context = client.client_get("service_context")
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
-        _aud = client.client_id
+        _aud = _context.client_id
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud, 'given_name': 'Diana', 'family_name': 'Krall',
@@ -645,16 +650,17 @@ class TestRPHandlerTier2(object):
         res = self.rph.begin(issuer_id='github')
         _session = self.rph.get_session_information(res['state'])
         client = self.rph.issuer2rp[_session['iss']]
+        _context = client.client_get("service_context")
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
-        _aud = client.client_id
+        _aud = _context.client_id
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud
         }
 
         _github_id = iss_id('github')
-        client.client_get("service_context").keyjar.import_jwks(
+        _context.keyjar.import_jwks(
             GITHUB_KEY.export_jwks(issuer_id=_github_id), _github_id)
 
         idts = IdToken(**idval)
