@@ -460,7 +460,7 @@ class Service(ImpExp):
             'verify': True
         }
 
-        _entity = _context.client_get("entity")
+        _entity = self.client_get("entity")
         kwargs['client_id'] = _entity.get_client_id()
 
         if self.service_name == "provider_info":
