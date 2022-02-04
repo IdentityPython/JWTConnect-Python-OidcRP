@@ -565,10 +565,10 @@ class TestRPHandler(object):
         res = rph_1.begin(issuer_id='github')
         _session = rph_1.get_session_information(res['state'])
         client = rph_1.issuer2rp[_session['iss']]
-        _context = client.client_get("service_context")
+        #_context = client.client_get("service_context")
         _nonce = _session['auth_request']['nonce']
         _iss = _session['iss']
-        _aud = _context.client_id
+        _aud = client.get_client_id()
         idval = {
             'nonce': _nonce, 'sub': 'EndUserSubject', 'iss': _iss,
             'aud': _aud, 'given_name': 'Diana', 'family_name': 'Krall',

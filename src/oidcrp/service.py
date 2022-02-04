@@ -460,9 +460,8 @@ class Service(ImpExp):
             'verify': True
         }
 
-        _client_id = _context.client_id
-        if _client_id:
-            kwargs['client_id'] = _client_id
+        _entity = _context.client_get("entity")
+        kwargs['client_id'] = _entity.get_client_id()
 
         if self.service_name == "provider_info":
             if _context.issuer.startswith("http://"):

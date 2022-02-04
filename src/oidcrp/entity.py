@@ -74,3 +74,9 @@ class Entity():
                 return service
 
         return None
+
+    def get_entity(self):
+        return self
+
+    def get_client_id(self):
+        return self._service_context.client_id
