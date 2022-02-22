@@ -42,10 +42,6 @@ class Entity():
         self._service_context = ServiceContext(keyjar=keyjar, config=config,
                                                jwks_uri=jwks_uri, httpc_params=self.httpc_params)
 
-        _cid = self._service_context.get('client_id')
-        if _cid:
-            self.client_id = _cid
-
         _cam = client_authn_factory or factory
 
         _srvs = services or DEFAULT_SERVICES
@@ -78,3 +74,9 @@ class Entity():
                 return service
 
         return None
+
+    def get_entity(self):
+        return self
+
+    def get_client_id(self):
+        return self._service_context.client_id

@@ -482,7 +482,7 @@ class JWSAuthnMethod(ClientAuthnMethod):
 
     def _construct_client_assertion(self, service, **kwargs):
         _context = service.client_get("service_context")
-
+        _entity = service.client_get("entity")
         audience, algorithm = self._get_audience_and_algorithm(_context, **kwargs)
 
         if 'kid' in kwargs:
@@ -500,7 +500,7 @@ class JWSAuthnMethod(ClientAuthnMethod):
 
         # construct the signed JWT with the assertions and add
         # it as value to the 'client_assertion' claim of the request
-        return assertion_jwt(_context.client_id, signing_key, audience, algorithm, **_args)
+        return assertion_jwt(_entity.get_client_id(), signing_key, audience, algorithm, **_args)
 
     def modify_request(self, request, service, **kwargs):
         """

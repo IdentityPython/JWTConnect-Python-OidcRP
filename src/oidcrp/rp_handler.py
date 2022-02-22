@@ -277,7 +277,7 @@ class RPHandler(object):
         # if _context.callback.get("post_logout_redirect_uri") is None:
         #     _context.callback["post_logout_redirect_uri"] = [self.base_url]
 
-        if not _context.client_id:  # means I have to do dynamic client registration
+        if not client.get_client_id():  # means I have to do dynamic client registration
             if request_args is None:
                 request_args = {}
 
@@ -514,7 +514,7 @@ class RPHandler(object):
             'state': state,
             'redirect_uri': authorization_request['redirect_uri'],
             'grant_type': 'authorization_code',
-            'client_id': _context.get('client_id'),
+            'client_id': client.get_client_id(),
             'client_secret': _context.get('client_secret')
         }
         logger.debug('request_args: {}'.format(req_args))
@@ -956,7 +956,7 @@ def backchannel_logout(client, request='', request_args=None):
 
     _context = client.client_get("service_context")
     kwargs = {
-        'aud': _context.get('client_id'),
+        'aud': client.get_client_id(),
         'iss': _context.get('issuer'),
         'keyjar': _context.keyjar,
         'allowed_sign_alg': _context.get('registration_response').get(

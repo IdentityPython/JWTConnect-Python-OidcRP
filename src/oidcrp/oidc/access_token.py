@@ -37,10 +37,10 @@ class AccessToken(access_token.AccessToken):
         :return: dictionary with arguments to the verify call
         """
         _context = self.client_get("service_context")
-        # Default is RS256
+        _entity = self.client_get("entity")
 
         kwargs = {
-            'client_id': _context.client_id,
+            'client_id': _entity.get_client_id(),
             'iss': _context.issuer,
             'keyjar': _context.keyjar,
             'verify': True,
