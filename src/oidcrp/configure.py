@@ -24,6 +24,9 @@ URIS = [
 
 
 class RPConfiguration(Base):
+
+    uris = URIS
+    
     def __init__(self,
                  conf: Dict,
                  base_path: Optional[str] = '',
@@ -52,6 +55,7 @@ class RPConfiguration(Base):
         self.services = lower_or_upper(conf, "services")
         self.base_url = lower_or_upper(conf, "base_url")
         self.httpc_params = lower_or_upper(conf, "httpc_params", {"verify": True})
+        self.clients = lower_or_upper(conf, "clients")
 
         if entity_conf:
             self.extend(entity_conf=entity_conf, conf=conf, base_path=base_path,
