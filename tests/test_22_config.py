@@ -25,7 +25,6 @@ def test_yaml_config():
     assert rp_config.clients['flop']
     assert rp_config.clients['flop']['redirect_uris']
     assert set(rp_config.clients['flop']['redirect_uris']) == {'https://127.0.0.1:8090/authz_cb/flop'}
-    
 
 
 def test_dict():
