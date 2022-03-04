@@ -25,7 +25,6 @@ if __name__ == "__main__":
                                       entity_conf=[{"class": RPConfiguration, "attr": "rp"}],
                                       filename=conf)
 
-
     app = application.oidc_provider_init_app(_config.rp, name, template_folder=template_dir)
     _web_conf = _config.web_conf
     context = create_context(dir_path, _web_conf)
