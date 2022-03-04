@@ -24,8 +24,7 @@ if __name__ == "__main__":
     _config = create_from_config_file(Configuration,
                                       entity_conf=[{"class": RPConfiguration, "attr": "rp"}],
                                       filename=conf)
-     
-    _config.format(_config, dir_path, domain=_config.domain, port=_config.port)
+
 
     app = application.oidc_provider_init_app(_config.rp, name, template_folder=template_dir)
     _web_conf = _config.web_conf
