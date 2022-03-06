@@ -1,11 +1,11 @@
 import os
 
+import pytest
 from cryptojwt.jws.jws import factory
 from cryptojwt.key_jar import init_key_jar
-import pytest
 
+from oidcrp.defaults import DEFAULT_OAUTH2_SERVICES
 from oidcrp.oauth2 import Client
-from oidcrp.oauth2 import DEFAULT_OAUTH2_SERVICES
 
 _dirname = os.path.dirname(os.path.abspath(__file__))
 

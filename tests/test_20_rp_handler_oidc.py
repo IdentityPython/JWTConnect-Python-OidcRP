@@ -4,7 +4,10 @@ from urllib.parse import parse_qs
 from urllib.parse import urlparse
 from urllib.parse import urlsplit
 
+import pytest
+import responses
 from cryptojwt.key_jar import init_key_jar
+from oidcmsg.client.entity import Entity
 from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationResponse
 from oidcmsg.oidc import IdToken
@@ -12,10 +15,7 @@ from oidcmsg.oidc import JRD
 from oidcmsg.oidc import Link
 from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.oidc import ProviderConfigurationResponse
-import pytest
-import responses
 
-from oidcrp.entity import Entity
 from oidcrp.oidc.registration import add_callbacks
 from oidcrp.rp_handler import RPHandler
 

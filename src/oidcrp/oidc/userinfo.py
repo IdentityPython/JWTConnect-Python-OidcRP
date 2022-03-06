@@ -3,11 +3,11 @@ from typing import Optional
 from typing import Union
 
 from oidcmsg import oidc
+from oidcmsg.client.service import Service
 from oidcmsg.exception import MissingSigningKey
 from oidcmsg.message import Message
 
 from oidcrp.oauth2.utils import get_state_parameter
-from oidcrp.service import Service
 
 logger = logging.getLogger(__name__)
 
@@ -144,4 +144,3 @@ class UserInfo(Service):
             pass
 
         return kwargs
-

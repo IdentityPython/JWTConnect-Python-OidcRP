@@ -10,13 +10,13 @@ from oidcmsg.oidc import make_openid_request
 from oidcmsg.oidc import verified_claim_name
 from oidcmsg.time_util import time_sans_frac
 from oidcmsg.time_util import utc_time_sans_frac
+from oidcmsg.util import rndstr
 
 from oidcrp.oauth2 import authorization
 from oidcrp.oauth2.utils import pre_construct_pick_redirect_uri
 from oidcrp.oidc import IDT2REG
 from oidcrp.oidc.utils import construct_request_uri
 from oidcrp.oidc.utils import request_object_encryption
-from oidcrp.util import rndstr
 
 __author__ = 'Roland Hedberg'
 

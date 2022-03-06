@@ -1,14 +1,11 @@
+import pytest
+from oidcmsg.client.service import Service
 from oidcmsg.oauth2 import Message
 from oidcmsg.oauth2 import SINGLE_OPTIONAL_INT
 from oidcmsg.oauth2 import SINGLE_OPTIONAL_STRING
 from oidcmsg.oauth2 import SINGLE_REQUIRED_STRING
-import pytest
 
 from oidcrp.entity import Entity
-from oidcrp.service import Service
-from oidcrp.service_context import ServiceContext
-from oidcrp.state_interface import InMemoryStateDataBase
-from oidcrp.state_interface import State
 
 
 class DummyMessage(Message):
@@ -77,7 +74,6 @@ class TestDummyService(object):
         msg = DummyMessage().from_urlencoded(
             self.service.get_urlinfo(_info['url']))
         assert msg.to_dict() == {'foo': 'bar', 'req_str': 'some string'}
-
 
 # class TestRequest(object):
 #     @pytest.fixture(autouse=True)

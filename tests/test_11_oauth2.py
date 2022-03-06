@@ -2,9 +2,12 @@ import os
 import sys
 import time
 
+import pytest
 from cryptojwt.jwk.rsa import import_private_rsa_key_from_file
 from cryptojwt.key_bundle import KeyBundle
-from oidcmsg.configure import create_from_config_file
+from oidcmsg.client.configure import RPConfiguration
+from oidcmsg.client.exception import OidcServiceError
+from oidcmsg.client.exception import ParseError
 from oidcmsg.oauth2 import AccessTokenRequest
 from oidcmsg.oauth2 import AccessTokenResponse
 from oidcmsg.oauth2 import AuthorizationRequest
@@ -13,11 +16,7 @@ from oidcmsg.oauth2 import RefreshAccessTokenRequest
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import IdToken
 from oidcmsg.time_util import utc_time_sans_frac
-import pytest
 
-from oidcrp.configure import RPConfiguration
-from oidcrp.exception import OidcServiceError
-from oidcrp.exception import ParseError
 from oidcrp.oauth2 import Client
 
 sys.path.insert(0, '.')

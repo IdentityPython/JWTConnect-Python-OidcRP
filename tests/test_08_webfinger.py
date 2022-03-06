@@ -1,19 +1,21 @@
 import json
-from urllib.parse import parse_qs, unquote_plus, urlsplit
+from urllib.parse import parse_qs
+from urllib.parse import unquote_plus
+from urllib.parse import urlsplit
+
+import pytest
+from oidcmsg.client.service_context import ServiceContext
+from oidcmsg.exception import MissingRequiredAttribute
+from oidcmsg.oidc import JRD
+from oidcmsg.oidc import Link
 
 from oidcrp.entity import Entity
-import pytest
-from oidcmsg.exception import MissingRequiredAttribute
-from oidcmsg.oidc import JRD, Link
-
 from oidcrp.oidc import OIC_ISSUER
 from oidcrp.oidc.webfinger import WebFinger
-from oidcrp.service_context import ServiceContext
 
 __author__ = 'Roland Hedberg'
 
 SERVICE_CONTEXT = ServiceContext()
-
 
 ENTITY = Entity(config={})
 

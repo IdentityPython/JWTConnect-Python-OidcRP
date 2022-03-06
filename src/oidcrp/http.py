@@ -6,9 +6,9 @@ import logging
 
 import requests
 
-from oidcrp.exception import NonFatalException
-from oidcrp.util import sanitize
-from oidcrp.util import set_cookie
+from oidcmsg.client.exception import NonFatalException
+from oidcmsg.client.util import sanitize
+from oidcmsg.client.util import set_cookie
 
 __author__ = 'roland'
 

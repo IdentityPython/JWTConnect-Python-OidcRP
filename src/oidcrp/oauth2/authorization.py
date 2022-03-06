@@ -2,6 +2,7 @@
 import logging
 
 from oidcmsg import oauth2
+from oidcmsg.client.service import Service
 from oidcmsg.exception import MissingParameter
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.time_util import time_sans_frac
@@ -9,7 +10,6 @@ from oidcmsg.time_util import time_sans_frac
 from oidcrp.oauth2.utils import get_state_parameter
 from oidcrp.oauth2.utils import pre_construct_pick_redirect_uri
 from oidcrp.oauth2.utils import set_state_parameter
-from oidcrp.service import Service
 
 LOGGER = logging.getLogger(__name__)
 
@@ -74,8 +74,9 @@ class Authorization(Service):
                 pass
             else:
                 if _key:
-                    item = self.client_get("service_context").state.get_item(oauth2.AuthorizationRequest,
-                                                                     'auth_request', _key)
+                    item = self.client_get("service_context").state.get_item(
+                        oauth2.AuthorizationRequest,
+                        'auth_request', _key)
                     try:
                         response["scope"] = item["scope"]
                     except KeyError:

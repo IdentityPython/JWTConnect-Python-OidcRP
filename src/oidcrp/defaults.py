@@ -14,6 +14,13 @@ DEFAULT_OIDC_SERVICES = {
     'userinfo': {'class': 'oidcrp.oidc.userinfo.UserInfo'}
 }
 
+DEFAULT_OAUTH2_SERVICES = {
+    "discovery": {'class': 'oidcrp.oauth2.provider_info_discovery.ProviderInfoDiscovery'},
+    'authorization': {'class': 'oidcrp.oauth2.authorization.Authorization'},
+    'access_token': {'class': 'oidcrp.oauth2.access_token.AccessToken'},
+    'refresh_access_token': {'class': 'oidcrp.oauth2.refresh_access_token.RefreshAccessToken'}
+}
+
 DEFAULT_CLIENT_PREFS = {
     'application_type': 'web',
     'application_name': 'rphandler',

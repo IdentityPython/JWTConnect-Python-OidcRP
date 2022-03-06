@@ -1,17 +1,16 @@
-from typing import Optional
 import uuid
+from typing import Optional
 
 from cryptojwt.jwk.jwk import key_from_jwk_dict
-from cryptojwt.jws.jws import JWS
 from cryptojwt.jws.jws import factory
+from cryptojwt.jws.jws import JWS
 from cryptojwt.key_bundle import key_by_alg
+from oidcmsg.client.service_context import ServiceContext
 from oidcmsg.message import Message
 from oidcmsg.message import SINGLE_REQUIRED_INT
 from oidcmsg.message import SINGLE_REQUIRED_JSON
 from oidcmsg.message import SINGLE_REQUIRED_STRING
 from oidcmsg.time_util import utc_time_sans_frac
-
-from oidcrp.service_context import ServiceContext
 
 
 class DPoPProof(Message):

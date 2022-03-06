@@ -1,4 +1,3 @@
-from inspect import currentframe
 import logging
 import sys
 import traceback
@@ -9,11 +8,13 @@ from cryptojwt.key_bundle import keybundle_from_local_file
 from cryptojwt.key_jar import init_key_jar
 from cryptojwt.utils import as_bytes
 from oidcmsg import verified_claim_name
+from oidcmsg.client.exception import ConfigurationError
+from oidcmsg.client.exception import OidcServiceError
 from oidcmsg.exception import MessageException
 from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.exception import NotForMe
-from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oauth2 import is_error_message
+from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import AccessTokenResponse
 from oidcmsg.oidc import AuthorizationRequest
 from oidcmsg.oidc import AuthorizationResponse
@@ -22,18 +23,16 @@ from oidcmsg.oidc import OpenIDSchema
 from oidcmsg.oidc import RegistrationRequest
 from oidcmsg.oidc.session import BackChannelLogoutRequest
 from oidcmsg.time_util import utc_time_sans_frac
+from oidcmsg.util import add_path
+from oidcmsg.util import rndstr
 
+from oidcrp.defaults import DEFAULT_CLIENT_CONFIGS
+from oidcrp.defaults import DEFAULT_OIDC_SERVICES
+from oidcrp.defaults import DEFAULT_RP_KEY_DEFS
 from . import oidc
-from .defaults import DEFAULT_CLIENT_CONFIGS
-from .defaults import DEFAULT_OIDC_SERVICES
-from .defaults import DEFAULT_RP_KEY_DEFS
-from .exception import OidcServiceError
 from .oauth2 import Client
 from .oauth2 import dynamic_provider_info_discovery
 from .oauth2.utils import pick_redirect_uri
-from .util import add_path
-from .util import load_registration_response
-from .util import rndstr
 
 logger = logging.getLogger(__name__)
 
@@ -187,9 +186,9 @@ class RPHandler(object):
         return client
 
     def do_provider_info(self,
-                         client: Optional[Client]=None,
-                         state: Optional[str]='',
-                         behaviour_args: Optional[dict]=None) -> str:
+                         client: Optional[Client] = None,
+                         state: Optional[str] = '',
+                         behaviour_args: Optional[dict] = None) -> str:
         """
         Either get the provider info from configuration or through dynamic
         discovery.
@@ -983,4 +982,28 @@ def backchannel_logout(client, request='', request_args=None):
         _state = _context.state.get_state_by_sub(sub)
     elif sid:
         _state = _context.state.get_state_by_sid(sid)
+    else:
+        _state = None
+
     return _state
+
+
+def load_registration_response(client, request_args=None):
+    """
+    If the client has been statically registered that information
+    must be provided during the configuration. If expected to be
+    done dynamically this method will do dynamic client registration.
+
+    :param client: A :py:class:`oidcmsg.client.oidc.Client` instance
+    """
+    if not client.client_get("service_context").get('client_id'):
+        try:
+            response = client.do_request('registration', request_args=request_args)
+        except KeyError:
+            raise ConfigurationError('No registration info')
+        except Exception as err:
+            logger.error(err)
+            raise
+        else:
+            if 'error' in response:
+                raise OidcServiceError(response.to_json())

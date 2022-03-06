@@ -5,9 +5,9 @@ import sys
 
 from oidcmsg.configure import create_from_config_file
 
-from oidcrp.configure import Configuration
-from oidcrp.configure import RPConfiguration
-from oidcrp.util import create_context
+from oidcmsg.client.configure import Configuration
+from oidcmsg.client.configure import RPConfiguration
+from oidcmsg.ssl_context import create_context
 
 try:
     from . import application

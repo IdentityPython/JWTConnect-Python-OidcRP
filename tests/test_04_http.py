@@ -2,13 +2,14 @@ import os
 from http.cookies import SimpleCookie
 
 import pytest
+from oidcmsg.client.util import set_cookie
 
 from oidcrp.cookie import CookieDealer
 from oidcrp.http import HTTPLib
-from oidcrp.util import set_cookie
 
 _dirname = os.path.dirname(os.path.abspath(__file__))
 _keydir = os.path.join(_dirname, "data", "keys")
+
 
 # CLIENT_CERT = open(os.path.join(_keydir,'cert.key')).read()
 # CA_CERT = open(os.path.join(_keydir, 'cacert.pem')).read()

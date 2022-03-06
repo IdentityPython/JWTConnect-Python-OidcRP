@@ -5,9 +5,8 @@ from typing import Optional
 
 from cryptojwt.utils import as_bytes
 from oidcmsg import oidc
+from oidcmsg.client.service import Service
 from oidcmsg.oauth2 import ResponseMessage
-
-from oidcrp.service import Service
 
 __author__ = 'Roland Hedberg'
 
@@ -231,7 +230,7 @@ class Registration(Service):
                          client_authn_factory=client_authn_factory,
                          conf=conf)
         self.pre_construct = [self.add_client_behaviour_preference,
-                              #add_redirect_uris,
+                              # add_redirect_uris,
                               add_callback_uris,
                               add_jwks_uri_or_jwks]
         self.post_construct = [self.oidc_post_construct]

@@ -13,9 +13,9 @@ from cryptojwt.jwe.utils import split_ctx_and_tag
 from cryptojwt.utils import as_bytes
 from cryptojwt.utils import as_unicode
 from oidcmsg import time_util
+from oidcmsg.util import rndstr
 
-from oidcrp.exception import ImproperlyConfigured
-from oidcrp.util import rndstr
+from oidcmsg.client.exception import ImproperlyConfigured
 
 __author__ = 'Roland Hedberg'
 

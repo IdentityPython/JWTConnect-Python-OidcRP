@@ -1,8 +1,7 @@
 from oidcmsg import oauth2
+from oidcmsg.client.service import Service
 from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.time_util import time_sans_frac
-
-from oidcrp.service import Service
 
 
 class CCRefreshAccessToken(Service):

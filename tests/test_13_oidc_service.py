@@ -1,12 +1,15 @@
 import json
 import os
 
+import pytest
+import responses
 from cryptojwt.exception import UnsupportedAlgorithm
 from cryptojwt.jws import jws
 from cryptojwt.jws.utils import left_hash
 from cryptojwt.jwt import JWT
 from cryptojwt.key_jar import build_keyjar
 from cryptojwt.key_jar import init_key_jar
+from oidcmsg.client.exception import ParameterError
 from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.oidc import AccessTokenRequest
 from oidcmsg.oidc import AccessTokenResponse
@@ -20,12 +23,9 @@ from oidcmsg.oidc import verified_claim_name
 from oidcmsg.oidc.session import CheckIDRequest
 from oidcmsg.oidc.session import CheckSessionRequest
 from oidcmsg.oidc.session import EndSessionRequest
-import pytest
-import responses
 
 from oidcrp.defaults import DEFAULT_OIDC_SERVICES
 from oidcrp.entity import Entity
-from oidcrp.exception import ParameterError
 from oidcrp.oidc.registration import add_jwks_uri_or_jwks
 from oidcrp.oidc.registration import response_types_to_grant_types
 

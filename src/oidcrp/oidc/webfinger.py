@@ -3,6 +3,7 @@ from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 
 from oidcmsg import oidc
+from oidcmsg.client.service import Service
 from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.oauth2 import Message
 from oidcmsg.oauth2 import ResponseMessage
@@ -10,7 +11,6 @@ from oidcmsg.oidc import JRD
 
 from oidcrp.oidc import OIC_ISSUER
 from oidcrp.oidc import WF_URL
-from oidcrp.service import Service
 
 __author__ = 'Roland Hedberg'
 

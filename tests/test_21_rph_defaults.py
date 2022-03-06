@@ -72,7 +72,7 @@ class TestRPHandler(object):
         _context = client.client_get("service_context")
 
         # Calculating request so I can build a reasonable response
-        _req = client.client_get("service",'registration').construct_request()
+        _req = client.client_get("service", 'registration').construct_request()
 
         with responses.RequestsMock() as rsps:
             request_uri = _context.get('provider_info')["registration_endpoint"]
@@ -132,7 +132,7 @@ class TestRPHandler(object):
         _context.jwks_uri = ''
         _context.jwks = _context.keyjar.export_jwks()
 
-        _req = client.client_get("service",'registration').construct_request()
+        _req = client.client_get("service", 'registration').construct_request()
 
         with responses.RequestsMock() as rsps:
             request_uri = _context.get('provider_info')["registration_endpoint"]

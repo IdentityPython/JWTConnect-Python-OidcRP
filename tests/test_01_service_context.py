@@ -5,7 +5,7 @@ import pytest
 import responses
 from cryptojwt.key_jar import build_keyjar
 
-from oidcrp.service_context import ServiceContext
+from oidcmsg.client.service_context import ServiceContext
 
 BASE_URL = "https://entity.example.org"
 
@@ -216,7 +216,7 @@ class TestClientInfo(object):
 
     def test_verify_requests_uri(self):
         self.service_context.provider_info= {'issuer': 'https://example.com/'}
-        url_list = self.service_context.generate_request_uris('/leading')
+        url_list = self.service_context.generate_redirect_uris('/leading')
         sp = urlsplit(url_list[0])
         p = sp.path.split('/')
         assert p[0] == ''
@@ -225,7 +225,7 @@ class TestClientInfo(object):
 
         # different for different OPs
         self.service_context.provider_info= {'issuer': 'https://op.example.org/'}
-        url_list = self.service_context.generate_request_uris('/leading')
+        url_list = self.service_context.generate_redirect_uris('/leading')
         sp = urlsplit(url_list[0])
         np = sp.path.split('/')
         assert np[0] == ''

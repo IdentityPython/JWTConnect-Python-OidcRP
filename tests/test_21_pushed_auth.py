@@ -6,7 +6,7 @@ import pytest
 import responses
 
 from oidcrp.oauth2 import Client
-from oidcrp.oauth2 import DEFAULT_OAUTH2_SERVICES
+from oidcrp.defaults import DEFAULT_OAUTH2_SERVICES
 
 _dirname = os.path.dirname(os.path.abspath(__file__))
 

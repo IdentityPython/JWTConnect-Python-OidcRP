@@ -1,13 +1,13 @@
 import json
 import time
 
+import pytest
+import requests
+import responses
 from cryptojwt.utils import as_bytes
 from oidcmsg.oidc import RegistrationResponse
-import pytest
-import responses
 
 from oidcrp.entity import Entity
-import requests
 
 ISS = "https://example.com"
 RP_BASEURL = "https://example.com/rp"

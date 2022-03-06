@@ -3,8 +3,7 @@ import os
 from cryptojwt.jwe.jwe import JWE
 from cryptojwt.jwe.utils import alg2keytype
 from oidcmsg.exception import MissingRequiredAttribute
-
-from oidcrp.util import rndstr
+from oidcmsg.util import rndstr
 
 
 def request_object_encryption(msg, service_context, **kwargs):

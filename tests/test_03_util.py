@@ -10,11 +10,11 @@ from oidcmsg.oauth2 import AccessTokenRequest
 from oidcmsg.oauth2 import AuthorizationRequest
 import pytest
 
-from oidcrp import util
-from oidcrp.exception import WrongContentType
-from oidcrp.util import JSON_ENCODED
-from oidcrp.util import URL_ENCODED
-from oidcrp.util import get_deserialization_method
+from oidcmsg.client import util
+from oidcmsg.client.exception import WrongContentType
+from oidcmsg.client.util import JSON_ENCODED
+from oidcmsg.client.util import URL_ENCODED
+from oidcmsg.client.util import get_deserialization_method
 
 __author__ = 'Roland Hedberg'
 

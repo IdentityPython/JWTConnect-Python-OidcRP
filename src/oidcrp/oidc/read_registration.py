@@ -1,10 +1,9 @@
 import logging
 
 from oidcmsg import oidc
+from oidcmsg.client.service import Service
 from oidcmsg.message import Message
 from oidcmsg.oauth2 import ResponseMessage
-
-from oidcrp.service import Service
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +19,8 @@ class RegistrationRead(Service):
 
     def get_endpoint(self):
         try:
-            return self.client_get("service_context").registration_response["registration_client_uri"]
+            return self.client_get("service_context").registration_response[
+                "registration_client_uri"]
         except KeyError:
             return ''
 

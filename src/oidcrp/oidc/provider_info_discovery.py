@@ -1,9 +1,9 @@
 import logging
 
 from oidcmsg import oidc
+from oidcmsg.client.exception import ConfigurationError
 from oidcmsg.oauth2 import ResponseMessage
 
-from oidcrp.exception import ConfigurationError
 from oidcrp.oauth2 import provider_info_discovery
 
 __author__ = 'Roland Hedberg'
@@ -172,5 +172,5 @@ class ProviderInfoDiscovery(provider_info_discovery.ProviderInfoDiscovery):
             if key not in PREFERENCE2PROVIDER:
                 _behaviour[key] = val
 
-        _context.behaviour= _behaviour
+        _context.behaviour = _behaviour
         logger.debug('service_context behaviour: {}'.format(_behaviour))

@@ -1,9 +1,9 @@
 import logging
 
-from oidcmsg.oauth2 import Message, ResponseMessage
+from oidcmsg.client.service import Service
+from oidcmsg.oauth2 import Message
+from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import session
-
-from oidcrp.service import Service
 
 __author__ = 'Roland Hedberg'
 

@@ -11,9 +11,9 @@ from flask import session
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
 import werkzeug
+from oidcmsg.client.exception import OidcServiceError
 
 from oidcrp import rp_handler
-from oidcrp.exception import OidcServiceError
 
 logger = logging.getLogger(__name__)
 

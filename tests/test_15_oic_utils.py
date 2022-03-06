@@ -1,10 +1,10 @@
 from cryptojwt.jwe.jwe import factory
 from cryptojwt.key_jar import build_keyjar
+from oidcmsg.client.service_context import ServiceContext
 from oidcmsg.oidc import AuthorizationRequest
 
 from oidcrp.oidc.utils import construct_request_uri
 from oidcrp.oidc.utils import request_object_encryption
-from oidcrp.service_context import ServiceContext
 
 KEYSPEC = [
     {"type": "RSA", "use": ["enc"]},

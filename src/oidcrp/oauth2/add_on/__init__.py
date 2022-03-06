@@ -1,4 +1,4 @@
-from oidcrp.util import importer
+from oidcmsg.client.util import importer
 
 
 def do_add_ons(add_ons, services):

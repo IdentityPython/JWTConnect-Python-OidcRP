@@ -1,21 +1,21 @@
-from json import JSONDecodeError
 import logging
+from json import JSONDecodeError
 from typing import Optional
 
+from oidcmsg.client.exception import ConfigurationError
+from oidcmsg.client.exception import OidcServiceError
+from oidcmsg.client.exception import ParseError
+from oidcmsg.client.service import REQUEST_INFO
+from oidcmsg.client.service import Service
+from oidcmsg.client.service import SUCCESSFUL
+from oidcmsg.client.util import do_add_ons
+from oidcmsg.client.util import get_deserialization_method
 from oidcmsg.exception import FormatError
 from oidcmsg.message import Message
 from oidcmsg.oauth2 import is_error_message
 
 from oidcrp.entity import Entity
-from oidcrp.exception import ConfigurationError
-from oidcrp.exception import OidcServiceError
-from oidcrp.exception import ParseError
 from oidcrp.http import HTTPLib
-from oidcrp.service import REQUEST_INFO
-from oidcrp.service import SUCCESSFUL
-from oidcrp.service import Service
-from oidcrp.util import do_add_ons
-from oidcrp.util import get_deserialization_method
 
 __author__ = 'Roland Hedberg'
 
@@ -26,22 +26,6 @@ Version = "2.0"
 
 class ExpiredToken(Exception):
     pass
-
-
-DEFAULT_OAUTH2_SERVICES = {
-    "discovery": {
-        'class': 'oidcrp.oauth2.provider_info_discovery.ProviderInfoDiscovery'
-    },
-    'authorization': {
-        'class': 'oidcrp.oauth2.authorization.Authorization'
-    },
-    'access_token': {
-        'class': 'oidcrp.oauth2.access_token.AccessToken'
-    },
-    'refresh_access_token': {
-        'class': 'oidcrp.oauth2.refresh_access_token.RefreshAccessToken'
-    }
-}
 
 
 # =============================================================================
@@ -269,7 +253,7 @@ class Client(Entity):
                 reqresp.text, reqresp.status_code, reqresp.url))
 
 
-def dynamic_provider_info_discovery(client: Client, behaviour_args: Optional[dict]=None):
+def dynamic_provider_info_discovery(client: Client, behaviour_args: Optional[dict] = None):
     """
     This is about performing dynamic Provider Info discovery
 

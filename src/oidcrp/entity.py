@@ -3,29 +3,15 @@ from typing import Optional
 from typing import Union
 
 from cryptojwt import KeyJar
+from oidcmsg.client.client_auth import factory
+from oidcmsg.client.configure import Configuration
+from oidcmsg.client.service import init_services
+from oidcmsg.client.service_context import ServiceContext
 
-from oidcrp.client_auth import factory
-from oidcrp.configure import Configuration
-from oidcrp.service import init_services
-from oidcrp.service_context import ServiceContext
-
-DEFAULT_SERVICES = {
-    "discovery": {
-        'class': 'oidcrp.oauth2.provider_info_discovery.ProviderInfoDiscovery'
-    },
-    'authorization': {
-        'class': 'oidcrp.oauth2.authorization.Authorization'
-    },
-    'access_token': {
-        'class': 'oidcrp.oauth2.access_token.AccessToken'
-    },
-    'refresh_access_token': {
-        'class': 'oidcrp.oauth2.refresh_access_token.RefreshAccessToken'
-    }
-}
+from .defaults import DEFAULT_OAUTH2_SERVICES
 
 
-class Entity():
+class Entity(object):
     def __init__(self,
                  client_authn_factory: Optional[Callable] = None,
                  keyjar: Optional[KeyJar] = None,
@@ -44,7 +30,7 @@ class Entity():
 
         _cam = client_authn_factory or factory
 
-        _srvs = services or DEFAULT_SERVICES
+        _srvs = services or DEFAULT_OAUTH2_SERVICES
 
         self._service = init_services(service_definitions=_srvs,
                                       client_get=self.client_get,

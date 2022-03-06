@@ -2,11 +2,10 @@ import logging
 from typing import Optional
 from typing import Union
 
+from oidcmsg.client.service import Service
 from oidcmsg.exception import MissingParameter
 from oidcmsg.exception import MissingRequiredAttribute
 from oidcmsg.message import Message
-
-from oidcrp.service import Service
 
 logger = logging.getLogger(__name__)
 

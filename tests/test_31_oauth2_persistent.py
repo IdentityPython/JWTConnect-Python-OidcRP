@@ -2,7 +2,6 @@ import os
 import sys
 import time
 
-import pytest
 from cryptojwt.jwk.rsa import import_private_rsa_key_from_file
 from cryptojwt.key_bundle import KeyBundle
 from oidcmsg.oauth2 import AccessTokenRequest
@@ -10,11 +9,8 @@ from oidcmsg.oauth2 import AccessTokenResponse
 from oidcmsg.oauth2 import AuthorizationRequest
 from oidcmsg.oauth2 import AuthorizationResponse
 from oidcmsg.oauth2 import RefreshAccessTokenRequest
-from oidcmsg.oauth2 import ResponseMessage
 from oidcmsg.oidc import IdToken
 from oidcmsg.time_util import utc_time_sans_frac
-from oidcrp.exception import OidcServiceError
-from oidcrp.exception import ParseError
 
 from oidcrp.oauth2 import Client
 
@@ -70,9 +66,9 @@ class TestClient(object):
         _context2.load(_state_dump)
 
         auth_response = AuthorizationResponse(code='access_code')
-        _context2.state.store_item(auth_response,'auth_response', _state)
+        _context2.state.store_item(auth_response, 'auth_response', _state)
 
-        msg = client_2.client_get("service",'accesstoken').construct(request_args={}, state=_state)
+        msg = client_2.client_get("service", 'accesstoken').construct(request_args={}, state=_state)
 
         assert isinstance(msg, AccessTokenRequest)
         assert msg.to_dict() == {
@@ -95,7 +91,8 @@ class TestClient(object):
             state=_state
         )
 
-        client_1.client_get("service_context").state.store_item(auth_request, 'auth_request', _state)
+        client_1.client_get("service_context").state.store_item(auth_request, 'auth_request',
+                                                                _state)
 
         # Client 2 carries on
         client_2 = Client(config=CONF)
@@ -103,19 +100,22 @@ class TestClient(object):
         client_2.client_get("service_context").load(_state_dump)
 
         auth_response = AuthorizationResponse(code='access_code')
-        client_2.client_get("service_context").state.store_item(auth_response, 'auth_response', _state)
+        client_2.client_get("service_context").state.store_item(auth_response, 'auth_response',
+                                                                _state)
 
         token_response = AccessTokenResponse(refresh_token="refresh_with_me",
                                              access_token="access")
 
-        client_2.client_get("service_context").state.store_item(token_response, 'token_response', _state)
+        client_2.client_get("service_context").state.store_item(token_response, 'token_response',
+                                                                _state)
 
         # Next up is Client 1
         _state_dump = client_2.client_get("service_context").dump()
         client_1.client_get("service_context").load(_state_dump)
 
         req_args = {}
-        msg = client_1.client_get("service",'refresh_token').construct(request_args=req_args, state=_state)
+        msg = client_1.client_get("service", 'refresh_token').construct(request_args=req_args,
+                                                                        state=_state)
         assert isinstance(msg, RefreshAccessTokenRequest)
         assert msg.to_dict() == {
             'client_id': 'client_1',

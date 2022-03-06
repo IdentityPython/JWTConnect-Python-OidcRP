@@ -3,11 +3,11 @@ import logging
 
 from cryptojwt.key_jar import KeyJar
 from oidcmsg import oauth2
+from oidcmsg.client.exception import OidcServiceError
+from oidcmsg.client.service import Service
 from oidcmsg.oauth2 import ResponseMessage
 
 from oidcrp.defaults import OIDCONF_PATTERN
-from oidcrp.exception import OidcServiceError
-from oidcrp.service import Service
 
 LOGGER = logging.getLogger(__name__)
 

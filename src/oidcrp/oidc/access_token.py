@@ -3,11 +3,11 @@ from typing import Optional
 from typing import Union
 
 from oidcmsg import oidc
+from oidcmsg.client.exception import ParameterError
 from oidcmsg.message import Message
 from oidcmsg.oidc import verified_claim_name
 from oidcmsg.time_util import time_sans_frac
 
-from oidcrp.exception import ParameterError
 from oidcrp.oauth2 import access_token
 from oidcrp.oidc import IDT2REG
 
@@ -24,7 +24,7 @@ class AccessToken(access_token.AccessToken):
     def __init__(self,
                  client_get,
                  client_authn_factory=None,
-                 conf: Optional[dict]=None):
+                 conf: Optional[dict] = None):
         access_token.AccessToken.__init__(self, client_get,
                                           client_authn_factory=client_authn_factory, conf=conf)
 

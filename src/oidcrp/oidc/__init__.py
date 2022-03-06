@@ -1,7 +1,9 @@
 import json
 import logging
 
-from oidcrp.client_auth import BearerHeader
+from oidcmsg.client.client_auth import BearerHeader
+from oidcrp.defaults import DEFAULT_OIDC_SERVICES
+
 from oidcrp.oidc.registration import CALLBACK_URIS
 
 try:
@@ -19,30 +21,6 @@ logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 #
-
-DEFAULT_SERVICES = {
-    "discovery": {
-        'class': 'oidcrp.oidc.provider_info_discovery.ProviderInfoDiscovery'
-    },
-    'registration': {
-        'class': 'oidcrp.oidc.registration.Registration'
-    },
-    'authorization': {
-        'class': 'oidcrp.oidc.authorization.Authorization'
-    },
-    'access_token': {
-        'class': 'oidcrp.oidc.access_token.AccessToken'
-    },
-    'refresh_access_token': {
-        'class': 'oidcrp.oidc.refresh_access_token.RefreshAccessToken'
-    },
-    'userinfo': {
-        'class': 'oidcrp.oidc.userinfo.UserInfo'
-    },
-    'end_session': {
-        'class': 'oidcrp.oidc.end_session.EndSession'
-    }
-}
 
 WF_URL = "https://{}/.well-known/webfinger"
 OIC_ISSUER = "http://openid.net/specs/connect/1.0/issuer"
@@ -107,7 +85,7 @@ class RP(oauth2.Client):
                  keyjar=None, verify_ssl=True, config=None,
                  httplib=None, services=None, httpc_params=None):
 
-        _srvs = services or DEFAULT_SERVICES
+        _srvs = services or DEFAULT_OIDC_SERVICES
 
         oauth2.Client.__init__(self, client_authn_factory=client_authn_factory,
                                keyjar=keyjar, verify_ssl=verify_ssl, config=config,

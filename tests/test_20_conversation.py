@@ -128,7 +128,7 @@ def test_conversation():
 
     # ======================== WebFinger ========================
 
-    webfinger_service = entity.client_get("service",'webfinger')
+    webfinger_service = entity.client_get("service", 'webfinger')
     info = webfinger_service.get_request_parameters(
         request_args={'resource': 'foobar@example.org'})
 
@@ -160,7 +160,7 @@ def test_conversation():
     entity.client_get("service_context").issuer = OP_BASEURL
 
     # =================== Provider info discovery ====================
-    provider_info_service = entity.client_get("service",'provider_info')
+    provider_info_service = entity.client_get("service", 'provider_info')
     info = provider_info_service.get_request_parameters()
 
     assert info[
@@ -263,7 +263,7 @@ def test_conversation():
     assert _pi['registration_endpoint'] == 'https://example.org/op/registration'
 
     # =================== Client registration ====================
-    registration_service = entity.client_get("service",'registration')
+    registration_service = entity.client_get("service", 'registration')
     info = registration_service.get_request_parameters()
 
     assert info['url'] == 'https://example.org/op/registration'
@@ -315,7 +315,7 @@ def test_conversation():
     STATE = 'Oh3w3gKlvoM2ehFqlxI3HIK5'
     NONCE = 'UvudLKz287YByZdsY3AJoPAlEXQkJ0dK'
 
-    auth_service = entity.client_get("service",'authorization')
+    auth_service = entity.client_get("service", 'authorization')
     _state_interface = service_context.state
 
     info = auth_service.get_request_parameters(request_args={'state': STATE, 'nonce': NONCE})
@@ -345,7 +345,7 @@ def test_conversation():
 
     # =================== Access token ====================
 
-    token_service = entity.client_get("service",'accesstoken')
+    token_service = entity.client_get("service", 'accesstoken')
     request_args = {
         'state': STATE,
         'redirect_uri': service_context.redirect_uris[0]
@@ -408,7 +408,7 @@ def test_conversation():
 
     # =================== User info ====================
 
-    userinfo_service = entity.client_get("service",'userinfo')
+    userinfo_service = entity.client_get("service", 'userinfo')
     info = userinfo_service.get_request_parameters(state=STATE)
 
     assert info['url'] == 'https://example.org/op/userinfo'
