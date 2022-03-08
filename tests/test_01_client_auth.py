@@ -2,25 +2,24 @@ import base64
 import os
 from urllib.parse import quote_plus
 
-import pytest
 from cryptojwt.exception import MissingKey
 from cryptojwt.jwk.rsa import new_rsa_key
-from cryptojwt.jws.jws import factory
 from cryptojwt.jws.jws import JWS
+from cryptojwt.jws.jws import factory
 from cryptojwt.jwt import JWT
 from cryptojwt.key_bundle import KeyBundle
 from cryptojwt.key_jar import KeyJar
-from oidcmsg.client.client_auth import assertion_jwt
 from oidcmsg.client.client_auth import AuthnFailure
-from oidcmsg.client.client_auth import bearer_auth
 from oidcmsg.client.client_auth import BearerBody
 from oidcmsg.client.client_auth import BearerHeader
 from oidcmsg.client.client_auth import ClientSecretBasic
 from oidcmsg.client.client_auth import ClientSecretJWT
 from oidcmsg.client.client_auth import ClientSecretPost
 from oidcmsg.client.client_auth import PrivateKeyJWT
+from oidcmsg.client.client_auth import assertion_jwt
+from oidcmsg.client.client_auth import bearer_auth
 from oidcmsg.client.client_auth import valid_service_context
-from oidcmsg.client.defaults import JWT_BEARER
+from oidcmsg.defaults import JWT_BEARER
 from oidcmsg.message import Message
 from oidcmsg.oauth2 import AccessTokenRequest
 from oidcmsg.oauth2 import AccessTokenResponse
@@ -28,6 +27,7 @@ from oidcmsg.oauth2 import AuthorizationRequest
 from oidcmsg.oauth2 import AuthorizationResponse
 from oidcmsg.oauth2 import CCAccessTokenRequest
 from oidcmsg.oauth2 import ResourceRequest
+import pytest
 
 from oidcrp.entity import Entity
 

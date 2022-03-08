@@ -4,13 +4,6 @@ from oidcrp.oidc import RP
 from oidcrp.rp_handler import load_registration_response
 
 
-def test_add_path():
-    assert add_path('https://example.com/', '/usr') == 'https://example.com/usr'
-    assert add_path('https://example.com/', 'usr') == 'https://example.com/usr'
-    assert add_path('https://example.com', '/usr') == 'https://example.com/usr'
-    assert add_path('https://example.com', 'usr') == 'https://example.com/usr'
-
-
 def test_load_registration_response():
     conf = {
         'redirect_uris': ['https://example.com/cli/authz_cb'],
