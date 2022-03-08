@@ -5,8 +5,8 @@ from cryptojwt.key_jar import init_key_jar
 import pytest
 import responses
 
-from oidcrp.oauth2 import Client
 from oidcrp.defaults import DEFAULT_OAUTH2_SERVICES
+from oidcrp.oauth2 import Client
 
 _dirname = os.path.dirname(os.path.abspath(__file__))
 

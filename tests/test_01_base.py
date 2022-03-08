@@ -1,7 +1,7 @@
-from oidcmsg.client.util import add_path
-from oidcmsg.client.util import load_registration_response
+from oidcmsg.util import add_path
 
 from oidcrp.oidc import RP
+from oidcrp.rp_handler import load_registration_response
 
 
 def test_add_path():

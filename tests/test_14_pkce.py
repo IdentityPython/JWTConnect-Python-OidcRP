@@ -1,14 +1,14 @@
 import os
 
-import pytest
 from cryptojwt.key_jar import init_key_jar
 from oidcmsg.client.service import Service
 from oidcmsg.message import Message
 from oidcmsg.message import SINGLE_REQUIRED_STRING
 from oidcmsg.oauth2 import AuthorizationResponse
+import pytest
 
+from oidcrp.defaults import DEFAULT_OAUTH2_SERVICES
 from oidcrp.entity import Entity
-from oidcrp.oauth2 import DEFAULT_OAUTH2_SERVICES
 from oidcrp.oauth2.add_on import do_add_ons
 from oidcrp.oauth2.add_on.pkce import add_code_challenge
 from oidcrp.oauth2.add_on.pkce import add_code_verifier
