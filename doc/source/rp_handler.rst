@@ -8,7 +8,7 @@ The Relying Party Handler
 Introduction
 ------------
 
-Imaging that you have a web service where some of the functions that service
+Imagine that you have a web service where some of the functions that service
 provides are protected and should only be accessible to authenticated users or
 that some of the functions the service provides needs access to some user
 related resources on a resource server. That's when you need OpenID Connect
